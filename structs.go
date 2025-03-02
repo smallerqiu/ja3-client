@@ -21,14 +21,17 @@ type ProfileData struct {
 }
 
 type Ja3Request struct {
-	Method        string
-	URL           string
-	Headers       map[string][]string
-	Proxy         string
-	Impersonate   string
-	JA3String     string
-	Client        string
-	ClientVersion string
-	ForceHTTP1    bool
-	Body          []byte
+	Method               string
+	URL                  string
+	Headers              map[string][]string
+	Proxy                string
+	Impersonate          string
+	JA3String            string
+	Client               string
+	ClientVersion        string
+	ForceHTTP1           bool
+	Body                 []byte
+	RandomExtensionOrder bool
+	Timeout              int // default 30s
+	NotFollowRedirects   bool
 }

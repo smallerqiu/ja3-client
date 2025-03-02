@@ -6,8 +6,8 @@ github.com/klauspost/compress v1.17.4 h1:Ej5ixsIri7BrIjBkRZLTo6ghwrEtHFk7ijlczPW
 github.com/klauspost/compress v1.17.4/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
 github.com/smallerqiu/fhttp v1.0.1 h1:kff+TZ1wJqbc3T90RcMuIvz4/pYg/9mY8Sw4jNpZyFk=
 github.com/smallerqiu/fhttp v1.0.1/go.mod h1:O/hd3bJSdvCnVbtH7JbPcsxlLP7tHfgMiEm32onfa+E=
-github.com/smallerqiu/utls v1.0.7 h1:dFoYjyvAmHfDkzq0V+SnXsncTubbpC9Hqbwx9rmidPg=
-github.com/smallerqiu/utls v1.0.7/go.mod h1:EPpyfxpZhEM8x6H+F9umzayroaWGOHUTdNT0DP46w4g=
+github.com/smallerqiu/utls v1.0.9 h1:XF5VaCwuBC+BUod23tnhaGyf0r66ptw1/xf8YhSS8PY=
+github.com/smallerqiu/utls v1.0.9/go.mod h1:EPpyfxpZhEM8x6H+F9umzayroaWGOHUTdNT0DP46w4g=
 github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 h1:YqAladjX7xpA6BM04leXMWAEjS0mTZ5kUU9KRBriQJc=
 github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5/go.mod h1:2JjD2zLQYH5HO74y5+aE3remJQvl6q4Sn6aWA2wD1Ng=
 golang.org/x/crypto v0.33.0 h1:IOBPskki6Lysi0lo9qQvbxiQ+FvsCC/YWOecCHAixus=

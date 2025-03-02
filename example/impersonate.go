@@ -89,11 +89,12 @@ Impersonate list of client :
 
 func main() {
 	reqBody := &client.Ja3Request{
-		Method:      "GET",
-		URL:         "https://www.google.com",
-		Proxy:       "http://127.0.0.1:8080",
-		Headers:     make(map[string][]string),
-		Impersonate: "chrome_133",
+		Method:               "GET",
+		URL:                  "https://www.google.com",
+		Proxy:                "http://127.0.0.1:8080",
+		Headers:              make(map[string][]string),
+		Impersonate:          "chrome_133",
+		RandomExtensionOrder: true,
 	}
 	// 创建 TLS 会话
 	var client, request, err = client.CreateSession(reqBody)

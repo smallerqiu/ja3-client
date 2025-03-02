@@ -1,3 +1,5 @@
+If you're having trouble with the fucking “just a moment” in your project, you might want to try using this. It may help you . 
+
 # Features
  - Proxy support : HTTP ,HTTPS , Socks4 , Socks5, Socks5h
  - Custom headers
@@ -23,7 +25,8 @@ $ go get github.com/smallerqiu/ja3-client
 # Usage
 
 ## Custom ja3 string
-use custom ja3 string do http request
+use custom ja3 string do http request .
+If you're going to use a customized JA3 , you'd better know the browser type.  Or you can just use the Custom Client
 ```go
 package main
 
@@ -33,18 +36,34 @@ import (
 
 	client "github.com/smallerqiu/ja3-client"
 )
+/**
+Client types :
+
+"Firefox"
+"QQ Browser Mobile"
+"QQ Browser"
+"Mobile Safari"
+"Safari"
+"MiuiBrowser"
+"Samsung Internet"
+"UC Browser"
+"Opera"
+"Edge"
+"Chrome"
+"360"
+*/
 
 func main() {
 	reqBody := &client.Ja3Request{
 		Method:        "GET",
 		URL:           "https://www.google.com",
-		Proxy:         "http://127.0.0.1:8080",
+		Proxy:         "http://127.0.0.1:7890",
 		Headers:       make(map[string][]string),
 		JA3String:     "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
-		Client:        "Safari",
-		ClientVersion: "18.1",
+		Client:        "Safari", // if you don't know the browser type , you can use `Chrome`
+		ClientVersion: "18.1",	 // if you don't know the version , you can use `133`
 	}
-	// 创建 TLS 会话
+	
 	var client, request, err = client.CreateSession(reqBody)
 
 	if err != nil {
@@ -166,13 +185,14 @@ Impersonate list of client :
 
 func main() {
 	reqBody := &client.Ja3Request{
-		Method:      "GET",
-		URL:         "https://www.google.com",
-		Proxy:       "http://127.0.0.1:8080",
-		Headers:     make(map[string][]string),
-		Impersonate: "chrome_133",
+		Method:               "GET",
+		URL:                  "https://tls.browserleaks.com/json",
+		Proxy:                "http://127.0.0.1:7890",
+		Headers:              make(map[string][]string),
+		Impersonate:          "chrome_133",
+		RandomExtensionOrder: true,
 	}
-	// 创建 TLS 会话
+	
 	var client, request, err = client.CreateSession(reqBody)
 
 	if err != nil {

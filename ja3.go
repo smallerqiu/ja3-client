@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -14,17 +13,18 @@ import (
 )
 
 var (
-	Firefox = "Firefox"
-	QQ      = "QQ Browser Mobile"
-	IOS     = "Mobile Safari"
-	Safari  = "Safari"
-	Xiaomi  = "MiuiBrowser"
-	Samsung = "Samsung Internet"
-	UC      = "UC Browser"
-	Opera   = "Opera"
-	Edge    = "Edge"
-	Chrome  = "Chrome"
-	QH360   = "Chrome"
+	Firefox  = "Firefox"
+	QQ       = "QQ Browser"
+	QQMobile = "QQ Browser Mobile"
+	IOS      = "Mobile Safari"
+	Safari   = "Safari"
+	Xiaomi   = "MiuiBrowser"
+	Samsung  = "Samsung Internet"
+	UC       = "UC Browser"
+	Opera    = "Opera"
+	Edge     = "Edge"
+	Chrome   = "Chrome"
+	QH360    = "360"
 )
 
 type CandidateCipherSuites struct {
@@ -32,120 +32,7 @@ type CandidateCipherSuites struct {
 	AeadId string
 }
 
-// func GetSpecFromJa3String(ja3 string) (func() (tls.ClientHelloSpec, error), error) {
-// 	return func() (tls.ClientHelloSpec, error) {
-// 		return tls.ClientHelloSpec{
-// 			CipherSuites:       suites,
-// 			CompressionMethods: []byte{tls.CompressionNone},
-// 			Extensions:         exts,
-// 			GetSessionID:       sha256.Sum256,
-// 		}, nil
-// 	}
-// }
-
-func GetSpecFactoryFromJa3String(ja3String string, supportedSignatureAlgorithms, supportedDelegatedCredentialsAlgorithms, supportedVersions, keyShareCurves, supportedProtocolsALPN, supportedProtocolsALPS []string, echCandidateCipherSuites []CandidateCipherSuites, candidatePayloads []uint16, certCompressionAlgo string) (func() (tls.ClientHelloSpec, error), error) {
-	return func() (tls.ClientHelloSpec, error) {
-		var mappedSignatureAlgorithms []tls.SignatureScheme
-
-		for _, supportedSignatureAlgorithm := range supportedSignatureAlgorithms {
-			signatureAlgorithm, ok := signatureAlgorithms[supportedSignatureAlgorithm]
-			if ok {
-				mappedSignatureAlgorithms = append(mappedSignatureAlgorithms, signatureAlgorithm)
-			} else {
-				supportedSignatureAlgorithmAsUint, err := strconv.ParseUint(supportedSignatureAlgorithm, 16, 16)
-
-				if err != nil {
-					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid supportedSignatureAlgorithm", supportedSignatureAlgorithm)
-				}
-
-				mappedSignatureAlgorithms = append(mappedSignatureAlgorithms, tls.SignatureScheme(uint16(supportedSignatureAlgorithmAsUint)))
-			}
-		}
-
-		var mappedDelegatedCredentialsAlgorithms []tls.SignatureScheme
-
-		for _, supportedDelegatedCredentialsAlgorithm := range supportedDelegatedCredentialsAlgorithms {
-			delegatedCredentialsAlgorithm, ok := delegatedCredentialsAlgorithms[supportedDelegatedCredentialsAlgorithm]
-			if ok {
-				mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, delegatedCredentialsAlgorithm)
-			} else {
-				supportedDelegatedCredentialsAlgorithmAsUint, err := strconv.ParseUint(supportedDelegatedCredentialsAlgorithm, 16, 16)
-
-				if err != nil {
-					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid supportedDelegatedCredentialsAlgorithm", supportedDelegatedCredentialsAlgorithm)
-				}
-
-				mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, tls.SignatureScheme(uint16(supportedDelegatedCredentialsAlgorithmAsUint)))
-			}
-		}
-
-		var mappedHpkeSymmetricCipherSuites []tls.HPKESymmetricCipherSuite
-
-		for _, echCandidateCipherSuites := range echCandidateCipherSuites {
-			kdfId, ok1 := kdfIds[echCandidateCipherSuites.KdfId]
-
-			aeadId, ok2 := aeadIds[echCandidateCipherSuites.AeadId]
-			if ok1 && ok2 {
-				mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
-					KdfId:  kdfId,
-					AeadId: aeadId,
-				})
-			} else {
-				kdfId, err := strconv.ParseUint(echCandidateCipherSuites.KdfId, 16, 16)
-				if err != nil {
-					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid KdfId", echCandidateCipherSuites.KdfId)
-				}
-
-				aeadId, err := strconv.ParseUint(echCandidateCipherSuites.AeadId, 16, 16)
-				if err != nil {
-					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid aeadId", echCandidateCipherSuites.AeadId)
-				}
-
-				mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
-					KdfId:  uint16(kdfId),
-					AeadId: uint16(aeadId),
-				})
-			}
-		}
-
-		var mappedTlsVersions []uint16
-
-		for _, version := range supportedVersions {
-			mappedVersion, ok := tlsVersions[version]
-			if ok {
-				mappedTlsVersions = append(mappedTlsVersions, mappedVersion)
-			}
-		}
-
-		var mappedKeyShares []tls.KeyShare
-
-		for _, keyShareCurve := range keyShareCurves {
-			resolvedKeyShare, ok := curves[keyShareCurve]
-
-			if !ok {
-				continue
-			}
-
-			mappedKeyShare := tls.KeyShare{Group: resolvedKeyShare}
-
-			if keyShareCurve == "GREASE" {
-				mappedKeyShare.Data = []byte{0}
-			}
-
-			mappedKeyShares = append(mappedKeyShares, mappedKeyShare)
-		}
-
-		compressionAlgo, ok := certCompression[certCompressionAlgo]
-
-		if !ok {
-			return stringToSpec(ja3String, mappedSignatureAlgorithms, mappedDelegatedCredentialsAlgorithms, mappedTlsVersions, mappedKeyShares, mappedHpkeSymmetricCipherSuites, candidatePayloads, supportedProtocolsALPN, supportedProtocolsALPS, nil)
-		}
-
-		return stringToSpec(ja3String, mappedSignatureAlgorithms, mappedDelegatedCredentialsAlgorithms, mappedTlsVersions, mappedKeyShares, mappedHpkeSymmetricCipherSuites, candidatePayloads, supportedProtocolsALPN, supportedProtocolsALPS, &compressionAlgo)
-	}, nil
-}
-
-func FormatJa3(ja3 string, browserType string, version string) (pfile browser.ClientProfile, err error) {
+func FormatJa3(ja3 string, browserType string, version string, randomExtensionOrder bool) (pfile browser.ClientProfile, err error) {
 	extMap := getExtensionBaseMap()
 	ja3StringParts := strings.Split(ja3, ",")
 
@@ -216,8 +103,8 @@ func FormatJa3(ja3 string, browserType string, version string) (pfile browser.Cl
 	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: mapSignatureAlgorithms}
 
 	// 16
-	// extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: profile.supportedProtocolsALPN}
-	extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1"}}
+	extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: profile.supportedProtocolsALPN}
+	// extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1"}}
 	//
 	// 34 firefox 独有特性
 	var mappedDelegatedCredentialsAlgorithms []tls.SignatureScheme
@@ -238,7 +125,7 @@ func FormatJa3(ja3 string, browserType string, version string) (pfile browser.Cl
 	extMap[tls.ExtensionDelegatedCredentials] = &tls.DelegatedCredentialsExtension{
 		SupportedSignatureAlgorithms: mappedDelegatedCredentialsAlgorithms,
 	}
-	// 43 tls 版本 , ser
+	// 43 tls 版本 , 已知bug , 这里不能使用浏览器直接特性
 	// var mappedTlsVersions []uint16
 	// for _, version := range profile.supportedVersions {
 	// 	mappedVersion, ok := tlsVersions[version]
@@ -248,7 +135,7 @@ func FormatJa3(ja3 string, browserType string, version string) (pfile browser.Cl
 	// }
 	// extMap[tls.ExtensionSupportedVersions] = &tls.SupportedVersionsExtension{Versions: mappedTlsVersions}
 
-	// 43 tls 版本 772 不支持, bug
+	// 43 tls 版本 772 不支持, bug ,会造成304 错误
 	tlsVersion := ja3StringParts[0]
 	ver, err := strconv.ParseUint(tlsVersion, 10, 16)
 	if err != nil {
@@ -350,10 +237,9 @@ func FormatJa3(ja3 string, browserType string, version string) (pfile browser.Cl
 
 		exts = append(exts, te)
 	}
-	log.Print(exts)
 	return browser.NewClientProfile(tls.ClientHelloID{
 			Client:               browserType,
-			RandomExtensionOrder: false,
+			RandomExtensionOrder: randomExtensionOrder,
 			Version:              version,
 			Seed:                 nil,
 			SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -376,6 +262,7 @@ func FormatJa3(ja3 string, browserType string, version string) (pfile browser.Cl
 			profile.headerPriority),
 		nil
 }
+
 func createTlsVersion(ver uint16) (tlsMaxVersion uint16, tlsMinVersion uint16, tlsSuppor tls.TLSExtension, err error) {
 	switch ver {
 	case tls.VersionTLS13:
@@ -413,136 +300,6 @@ func createTlsVersion(ver uint16) (tlsMaxVersion uint16, tlsMinVersion uint16, t
 	}
 	return
 }
-
-func stringToSpec(ja3 string, signatureAlgorithms []tls.SignatureScheme,
-	delegatedCredentialsAlgorithms []tls.SignatureScheme,
-	tlsVersions []uint16,
-	keyShares []tls.KeyShare,
-	hpkeSymmetricCipherSuites []tls.HPKESymmetricCipherSuite,
-	candidatePayloads []uint16, supportedProtocolsALPN,
-	supportedProtocolsALPS []string,
-	certCompression *tls.CertCompressionAlgo) (tls.ClientHelloSpec, error) {
-	extMap := getExtensionBaseMap()
-	ja3StringParts := strings.Split(ja3, ",")
-
-	ciphers := strings.Split(ja3StringParts[1], "-")
-	extensions := strings.Split(ja3StringParts[2], "-")
-	curves := strings.Split(ja3StringParts[3], "-")
-
-	if len(curves) == 1 && curves[0] == "" {
-		curves = []string{}
-	}
-
-	pointFormats := strings.Split(ja3StringParts[4], "-")
-	if len(pointFormats) == 1 && pointFormats[0] == "" {
-		pointFormats = []string{}
-	}
-
-	var targetCurves []tls.CurveID
-	for _, c := range curves {
-		cid, err := strconv.ParseUint(c, 10, 16)
-		if err != nil {
-			return tls.ClientHelloSpec{}, err
-		}
-		targetCurves = append(targetCurves, tls.CurveID(cid))
-	}
-	// 10
-	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
-
-	// parse point formats
-	var targetPointFormats []byte
-	for _, p := range pointFormats {
-		pid, err := strconv.ParseUint(p, 10, 8)
-		if err != nil {
-			return tls.ClientHelloSpec{}, err
-		}
-		targetPointFormats = append(targetPointFormats, byte(pid))
-	}
-	// 11
-	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
-	// 43
-	extMap[tls.ExtensionSupportedVersions] = &tls.SupportedVersionsExtension{Versions: tlsVersions}
-
-	if certCompression == nil && strings.Contains(ja3StringParts[2], fmt.Sprintf("%d", tls.ExtensionCompressCertificate)) {
-		fmt.Println("attention our ja3 defines ExtensionCompressCertificate but you did not specify certCompression")
-	}
-
-	if certCompression != nil {
-		// 27
-		extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{*certCompression}}
-	}
-	// 51
-	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: keyShares}
-	// 65037
-	extMap[tls.ExtensionECH] = &tls.GREASEEncryptedClientHelloExtension{
-		CandidateCipherSuites: hpkeSymmetricCipherSuites,
-		CandidatePayloadLens:  candidatePayloads,
-	}
-	// 13
-	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{
-		SupportedSignatureAlgorithms: signatureAlgorithms,
-	}
-	// 50
-	extMap[tls.ExtensionSignatureAlgorithmsCert] = &tls.SignatureAlgorithmsExtension{
-		SupportedSignatureAlgorithms: signatureAlgorithms,
-	}
-	// 34
-	extMap[tls.ExtensionDelegatedCredentials] = &tls.DelegatedCredentialsExtension{
-		SupportedSignatureAlgorithms: delegatedCredentialsAlgorithms,
-	}
-	// 16
-	extMap[tls.ExtensionALPN] = &tls.ALPNExtension{
-		AlpnProtocols: supportedProtocolsALPN,
-	}
-	// 17513
-	extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
-		CodePoint:          tls.ExtensionALPSOld,
-		SupportedProtocols: supportedProtocolsALPS,
-	}
-	// 17613
-	extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
-		CodePoint:          tls.ExtensionALPS,
-		SupportedProtocols: supportedProtocolsALPS,
-	}
-
-	var exts []tls.TLSExtension
-	for _, e := range extensions {
-		eId, err := strconv.ParseUint(e, 10, 16)
-
-		if err != nil {
-			return tls.ClientHelloSpec{}, err
-		}
-
-		if uint16(eId) == tls.GREASE_PLACEHOLDER {
-			// if we use multiple grease extensions with need to generate always a new value. therefore we are creating a new instance here
-			exts = append(exts, &tls.UtlsGREASEExtension{})
-			continue
-		}
-
-		te, ok := extMap[uint16(eId)]
-		if !ok {
-			return tls.ClientHelloSpec{}, fmt.Errorf("unknown extension with id %s provided", e)
-		}
-		exts = append(exts, te)
-	}
-
-	var suites []uint16
-	for _, c := range ciphers {
-		cid, err := strconv.ParseUint(c, 10, 16)
-		if err != nil {
-			return tls.ClientHelloSpec{}, err
-		}
-		suites = append(suites, uint16(cid))
-	}
-
-	return tls.ClientHelloSpec{
-		CipherSuites:       suites,
-		CompressionMethods: []byte{tls.CompressionNone},
-		Extensions:         exts,
-		GetSessionID:       sha256.Sum256,
-	}, nil
-}
-
 func getExtensionBaseMap() map[uint16]tls.TLSExtension {
 	return map[uint16]tls.TLSExtension{
 		// This extension needs to be instantiated every time and not be reused if it occurs multiple times in the same ja3
@@ -607,7 +364,12 @@ func getClientProfile(browserType string) ProfileData {
 	// uc , 360, qq ,opera ,chrome,xiaomi ,samsung
 	connectionFlow := uint32(15663105)
 	//
-	settingsOrder := []http2.SettingID{}
+	settingsOrder := []http2.SettingID{
+		http2.SettingHeaderTableSize,
+		http2.SettingEnablePush,
+		http2.SettingInitialWindowSize,
+		http2.SettingMaxHeaderListSize,
+	}
 	// qq ,opera ,!360 ,!firefox ,chrome
 	settings := map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
@@ -638,7 +400,7 @@ func getClientProfile(browserType string) ProfileData {
 
 	//key_share ,51
 	// !qq , !opera ,!360 ,!firefox ,!chrome ,!safari
-	keyShareCurves := []string{"GREASE", "X25519Kyber768", "X25519"}
+	keyShareCurves := []string{"GREASE", "X25519"}
 
 	//protocol_name_list ,16
 	// qq ,firefox ,360 ,opera ,uc ,chrome ,safari,xiaomi ,sansung
@@ -662,6 +424,7 @@ func getClientProfile(browserType string) ProfileData {
 	}
 	echCandidateCipherSuites := []CandidateCipherSuites{}
 
+	// for firefox
 	priorities := []http2.Priority{}
 	headerPriority := &http2.PriorityParam{}
 
@@ -951,7 +714,7 @@ func getClientProfile(browserType string) ProfileData {
 			http2.SettingInitialWindowSize,
 			http2.SettingMaxHeaderListSize,
 		}
-	case QQ:
+	case QQ, QQMobile:
 		candidatePayloads = []uint16{2, 32, 144}
 		headerPriority = &http2.PriorityParam{
 			Weight:    0,
@@ -1101,6 +864,19 @@ func getClientProfile(browserType string) ProfileData {
 			"sec-fetch-user",
 			"te",
 		}
+	default:
+		candidatePayloads = []uint16{129, 32, 208}
+		echCandidateCipherSuites = []CandidateCipherSuites{
+			{
+				KdfId:  "HKDF_SHA256",
+				AeadId: "AEAD_AES_128_GCM",
+			},
+		}
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
 	}
 
 	return ProfileData{
@@ -1121,25 +897,4 @@ func getClientProfile(browserType string) ProfileData {
 		echCandidateCipherSuites:                echCandidateCipherSuites,
 	}
 
-}
-func GetCustomClientProfile(ja3String string, browserType string, version string) browser.ClientProfile {
-
-	profile := getClientProfile(ja3String)
-	specFactory, _ := GetSpecFactoryFromJa3String(ja3String,
-		profile.supportedSignatureAlgorithms,
-		profile.supportedDelegatedCredentialsAlgorithms,
-		profile.supportedVersions, profile.keyShareCurves,
-		profile.supportedProtocolsALPN,
-		profile.supportedProtocolsALPS,
-		profile.echCandidateCipherSuites,
-		profile.candidatePayloads,
-		profile.certCompressionAlgo)
-
-	return browser.NewClientProfile(tls.ClientHelloID{
-		Client:               browserType,
-		RandomExtensionOrder: false,
-		Version:              version,
-		Seed:                 nil,
-		SpecFactory:          specFactory,
-	}, profile.settings, profile.settingsOrder, profile.pseudoHeaderOrder, profile.connectionFlow, profile.priorities, profile.headerPriority)
 }

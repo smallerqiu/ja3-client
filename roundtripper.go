@@ -160,18 +160,18 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	conn := tls.UClient(rawConn, tlsConfig, rt.clientHelloId, rt.withRandomTlsExtensionOrder, rt.forceHttp1)
 
 	// fix handshake state
-	var spec, err1 = rt.clientHelloId.ToSpec()
-	if err1 != nil {
-		return nil, err
-	}
-	err = conn.ApplyPreset(&spec)
-	if err != nil {
-		return nil, err
-	}
-	err = conn.BuildHandshakeState()
-	if err != nil {
-		return nil, err
-	}
+	// var spec, err1 = rt.clientHelloId.ToSpec()
+	// if err1 != nil {
+	// 	return nil, err
+	// }
+	// err = conn.ApplyPreset(&spec)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = conn.BuildHandshakeState()
+	// if err != nil {
+	// 	return nil, err
+	// }
 	// end
 
 	if err = conn.HandshakeContext(ctx); err != nil {
