@@ -2,6 +2,7 @@ package ja3_client
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -375,9 +376,44 @@ func FormatJa3(ja3 string, browserType string, version string) (pfile browser.Cl
 			profile.headerPriority),
 		nil
 }
+func createTlsVersion(ver uint16) (tlsMaxVersion uint16, tlsMinVersion uint16, tlsSuppor tls.TLSExtension, err error) {
+	switch ver {
+	case tls.VersionTLS13:
+		tlsMaxVersion = tls.VersionTLS13
+		tlsMinVersion = tls.VersionTLS12
+		tlsSuppor = &tls.SupportedVersionsExtension{
+			Versions: []uint16{
+				tls.GREASE_PLACEHOLDER,
+				tls.VersionTLS13,
+				tls.VersionTLS12,
+			},
+		}
+	case tls.VersionTLS12:
+		tlsMaxVersion = tls.VersionTLS12
+		tlsMinVersion = tls.VersionTLS11
+		tlsSuppor = &tls.SupportedVersionsExtension{
+			Versions: []uint16{
+				tls.GREASE_PLACEHOLDER,
+				tls.VersionTLS12,
+				tls.VersionTLS11,
+			},
+		}
+	case tls.VersionTLS11:
+		tlsMaxVersion = tls.VersionTLS11
+		tlsMinVersion = tls.VersionTLS10
+		tlsSuppor = &tls.SupportedVersionsExtension{
+			Versions: []uint16{
+				tls.GREASE_PLACEHOLDER,
+				tls.VersionTLS11,
+				tls.VersionTLS10,
+			},
+		}
+	default:
+		err = errors.New("ja3Str tls version error")
+	}
+	return
+}
 
-// lost 17 , 22 ,24 ,49 ,50 , 57 ,30032
-// 0,5,10,11,13,16,18,21,23,27,28,34,35,41,42,43,44,45,51,13172,17513,17613,65037,65281
 func stringToSpec(ja3 string, signatureAlgorithms []tls.SignatureScheme,
 	delegatedCredentialsAlgorithms []tls.SignatureScheme,
 	tlsVersions []uint16,
