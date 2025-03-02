@@ -1,0 +1,1109 @@
+package ja3_client
+
+import (
+	"crypto/sha256"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+
+	"github.com/smallerqiu/fhttp/http2"
+	tls "github.com/smallerqiu/utls"
+	browser "github.com/smallerqiu/utls/browser"
+)
+
+var (
+	Firefox = "Firefox"
+	QQ      = "QQ Browser Mobile"
+	IOS     = "Mobile Safari"
+	Safari  = "Safari"
+	Xiaomi  = "MiuiBrowser"
+	Samsung = "Samsung Internet"
+	UC      = "UC Browser"
+	Opera   = "Opera"
+	Edge    = "Edge"
+	Chrome  = "Chrome"
+	QH360   = "Chrome"
+)
+
+type CandidateCipherSuites struct {
+	KdfId  string
+	AeadId string
+}
+
+// func GetSpecFromJa3String(ja3 string) (func() (tls.ClientHelloSpec, error), error) {
+// 	return func() (tls.ClientHelloSpec, error) {
+// 		return tls.ClientHelloSpec{
+// 			CipherSuites:       suites,
+// 			CompressionMethods: []byte{tls.CompressionNone},
+// 			Extensions:         exts,
+// 			GetSessionID:       sha256.Sum256,
+// 		}, nil
+// 	}
+// }
+
+func GetSpecFactoryFromJa3String(ja3String string, supportedSignatureAlgorithms, supportedDelegatedCredentialsAlgorithms, supportedVersions, keyShareCurves, supportedProtocolsALPN, supportedProtocolsALPS []string, echCandidateCipherSuites []CandidateCipherSuites, candidatePayloads []uint16, certCompressionAlgo string) (func() (tls.ClientHelloSpec, error), error) {
+	return func() (tls.ClientHelloSpec, error) {
+		var mappedSignatureAlgorithms []tls.SignatureScheme
+
+		for _, supportedSignatureAlgorithm := range supportedSignatureAlgorithms {
+			signatureAlgorithm, ok := signatureAlgorithms[supportedSignatureAlgorithm]
+			if ok {
+				mappedSignatureAlgorithms = append(mappedSignatureAlgorithms, signatureAlgorithm)
+			} else {
+				supportedSignatureAlgorithmAsUint, err := strconv.ParseUint(supportedSignatureAlgorithm, 16, 16)
+
+				if err != nil {
+					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid supportedSignatureAlgorithm", supportedSignatureAlgorithm)
+				}
+
+				mappedSignatureAlgorithms = append(mappedSignatureAlgorithms, tls.SignatureScheme(uint16(supportedSignatureAlgorithmAsUint)))
+			}
+		}
+
+		var mappedDelegatedCredentialsAlgorithms []tls.SignatureScheme
+
+		for _, supportedDelegatedCredentialsAlgorithm := range supportedDelegatedCredentialsAlgorithms {
+			delegatedCredentialsAlgorithm, ok := delegatedCredentialsAlgorithms[supportedDelegatedCredentialsAlgorithm]
+			if ok {
+				mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, delegatedCredentialsAlgorithm)
+			} else {
+				supportedDelegatedCredentialsAlgorithmAsUint, err := strconv.ParseUint(supportedDelegatedCredentialsAlgorithm, 16, 16)
+
+				if err != nil {
+					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid supportedDelegatedCredentialsAlgorithm", supportedDelegatedCredentialsAlgorithm)
+				}
+
+				mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, tls.SignatureScheme(uint16(supportedDelegatedCredentialsAlgorithmAsUint)))
+			}
+		}
+
+		var mappedHpkeSymmetricCipherSuites []tls.HPKESymmetricCipherSuite
+
+		for _, echCandidateCipherSuites := range echCandidateCipherSuites {
+			kdfId, ok1 := kdfIds[echCandidateCipherSuites.KdfId]
+
+			aeadId, ok2 := aeadIds[echCandidateCipherSuites.AeadId]
+			if ok1 && ok2 {
+				mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
+					KdfId:  kdfId,
+					AeadId: aeadId,
+				})
+			} else {
+				kdfId, err := strconv.ParseUint(echCandidateCipherSuites.KdfId, 16, 16)
+				if err != nil {
+					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid KdfId", echCandidateCipherSuites.KdfId)
+				}
+
+				aeadId, err := strconv.ParseUint(echCandidateCipherSuites.AeadId, 16, 16)
+				if err != nil {
+					return tls.ClientHelloSpec{}, fmt.Errorf("%s is not a valid aeadId", echCandidateCipherSuites.AeadId)
+				}
+
+				mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
+					KdfId:  uint16(kdfId),
+					AeadId: uint16(aeadId),
+				})
+			}
+		}
+
+		var mappedTlsVersions []uint16
+
+		for _, version := range supportedVersions {
+			mappedVersion, ok := tlsVersions[version]
+			if ok {
+				mappedTlsVersions = append(mappedTlsVersions, mappedVersion)
+			}
+		}
+
+		var mappedKeyShares []tls.KeyShare
+
+		for _, keyShareCurve := range keyShareCurves {
+			resolvedKeyShare, ok := curves[keyShareCurve]
+
+			if !ok {
+				continue
+			}
+
+			mappedKeyShare := tls.KeyShare{Group: resolvedKeyShare}
+
+			if keyShareCurve == "GREASE" {
+				mappedKeyShare.Data = []byte{0}
+			}
+
+			mappedKeyShares = append(mappedKeyShares, mappedKeyShare)
+		}
+
+		compressionAlgo, ok := certCompression[certCompressionAlgo]
+
+		if !ok {
+			return stringToSpec(ja3String, mappedSignatureAlgorithms, mappedDelegatedCredentialsAlgorithms, mappedTlsVersions, mappedKeyShares, mappedHpkeSymmetricCipherSuites, candidatePayloads, supportedProtocolsALPN, supportedProtocolsALPS, nil)
+		}
+
+		return stringToSpec(ja3String, mappedSignatureAlgorithms, mappedDelegatedCredentialsAlgorithms, mappedTlsVersions, mappedKeyShares, mappedHpkeSymmetricCipherSuites, candidatePayloads, supportedProtocolsALPN, supportedProtocolsALPS, &compressionAlgo)
+	}, nil
+}
+
+func FormatJa3(ja3 string, browserType string, version string) (pfile browser.ClientProfile, err error) {
+	extMap := getExtensionBaseMap()
+	ja3StringParts := strings.Split(ja3, ",")
+
+	// 1. 密码
+	ciphers := strings.Split(ja3StringParts[1], "-")
+	var suites []uint16
+	for _, c := range ciphers {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return pfile, err
+		}
+		suites = append(suites, uint16(cid))
+	}
+
+	// 3. 曲线
+	mapCurves := strings.Split(ja3StringParts[3], "-")
+	if len(curves) == 1 && mapCurves[0] == "" {
+		mapCurves = []string{}
+	}
+	var targetCurves []tls.CurveID
+	for _, c := range mapCurves {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return pfile, err
+		}
+		targetCurves = append(targetCurves, tls.CurveID(cid))
+	}
+	// 10
+	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
+
+	// 4. 点格式
+	pointFormats := strings.Split(ja3StringParts[4], "-")
+	if len(pointFormats) == 1 && pointFormats[0] == "" {
+		pointFormats = []string{}
+	}
+
+	var targetPointFormats []byte
+	for _, p := range pointFormats {
+		pid, err := strconv.ParseUint(p, 10, 8)
+		if err != nil {
+			return pfile, err
+		}
+		targetPointFormats = append(targetPointFormats, byte(pid))
+	}
+	// 11
+	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
+
+	//end
+	profile := getClientProfile(browserType)
+
+	// 补充浏览器特性
+	// 13
+	var mapSignatureAlgorithms []tls.SignatureScheme
+	for _, supportedSignatureAlgorithm := range profile.supportedSignatureAlgorithms {
+		signatureAlgorithm, ok := signatureAlgorithms[supportedSignatureAlgorithm]
+		if ok {
+			mapSignatureAlgorithms = append(mapSignatureAlgorithms, signatureAlgorithm)
+		} else {
+			supportedSignatureAlgorithmAsUint, err := strconv.ParseUint(supportedSignatureAlgorithm, 16, 16)
+
+			if err != nil {
+				return pfile, fmt.Errorf("%s is not a valid supportedSignatureAlgorithm", supportedSignatureAlgorithm)
+			}
+
+			mapSignatureAlgorithms = append(mapSignatureAlgorithms, tls.SignatureScheme(uint16(supportedSignatureAlgorithmAsUint)))
+		}
+	}
+	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: mapSignatureAlgorithms}
+
+	// 16
+	// extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: profile.supportedProtocolsALPN}
+	extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1"}}
+	//
+	// 34 firefox 独有特性
+	var mappedDelegatedCredentialsAlgorithms []tls.SignatureScheme
+	for _, supportedDelegatedCredentialsAlgorithm := range profile.supportedDelegatedCredentialsAlgorithms {
+		delegatedCredentialsAlgorithm, ok := delegatedCredentialsAlgorithms[supportedDelegatedCredentialsAlgorithm]
+		if ok {
+			mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, delegatedCredentialsAlgorithm)
+		} else {
+			supportedDelegatedCredentialsAlgorithmAsUint, err := strconv.ParseUint(supportedDelegatedCredentialsAlgorithm, 16, 16)
+
+			if err != nil {
+				return pfile, fmt.Errorf("%s is not a valid supportedDelegatedCredentialsAlgorithm", supportedDelegatedCredentialsAlgorithm)
+			}
+
+			mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, tls.SignatureScheme(uint16(supportedDelegatedCredentialsAlgorithmAsUint)))
+		}
+	}
+	extMap[tls.ExtensionDelegatedCredentials] = &tls.DelegatedCredentialsExtension{
+		SupportedSignatureAlgorithms: mappedDelegatedCredentialsAlgorithms,
+	}
+	// 43 tls 版本 , ser
+	// var mappedTlsVersions []uint16
+	// for _, version := range profile.supportedVersions {
+	// 	mappedVersion, ok := tlsVersions[version]
+	// 	if ok {
+	// 		mappedTlsVersions = append(mappedTlsVersions, mappedVersion)
+	// 	}
+	// }
+	// extMap[tls.ExtensionSupportedVersions] = &tls.SupportedVersionsExtension{Versions: mappedTlsVersions}
+
+	// 43 tls 版本 772 不支持, bug
+	tlsVersion := ja3StringParts[0]
+	ver, err := strconv.ParseUint(tlsVersion, 10, 16)
+	if err != nil {
+		return pfile, err
+	}
+	tlsMaxVersion, tlsMinVersion, tlsExtension, err := createTlsVersion(uint16(ver))
+	if err != nil {
+		return pfile, err
+	}
+	extMap[tls.ExtensionSupportedVersions] = tlsExtension
+
+	//51 keyshare
+	var mappedKeyShares []tls.KeyShare
+	for _, keyShareCurve := range profile.keyShareCurves {
+		resolvedKeyShare, ok := curves[keyShareCurve]
+		if !ok {
+			continue
+		}
+		mappedKeyShare := tls.KeyShare{Group: resolvedKeyShare}
+		if keyShareCurve == "GREASE" {
+			mappedKeyShare.Data = []byte{0}
+		}
+		mappedKeyShares = append(mappedKeyShares, mappedKeyShare)
+	}
+	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: mappedKeyShares}
+
+	// 65037 部分浏览器才支持的扩展
+	var mappedHpkeSymmetricCipherSuites []tls.HPKESymmetricCipherSuite
+
+	for _, echCandidateCipherSuites := range profile.echCandidateCipherSuites {
+		kdfId, ok1 := kdfIds[echCandidateCipherSuites.KdfId]
+
+		aeadId, ok2 := aeadIds[echCandidateCipherSuites.AeadId]
+		if ok1 && ok2 {
+			mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
+				KdfId:  kdfId,
+				AeadId: aeadId,
+			})
+		} else {
+			kdfId, err := strconv.ParseUint(echCandidateCipherSuites.KdfId, 16, 16)
+			if err != nil {
+				return browser.ClientProfile{}, fmt.Errorf("%s is not a valid KdfId", echCandidateCipherSuites.KdfId)
+			}
+
+			aeadId, err := strconv.ParseUint(echCandidateCipherSuites.AeadId, 16, 16)
+			if err != nil {
+				return browser.ClientProfile{}, fmt.Errorf("%s is not a valid aeadId", echCandidateCipherSuites.AeadId)
+			}
+
+			mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
+				KdfId:  uint16(kdfId),
+				AeadId: uint16(aeadId),
+			})
+		}
+	}
+	extMap[tls.ExtensionECH] = &tls.GREASEEncryptedClientHelloExtension{
+		CandidateCipherSuites: mappedHpkeSymmetricCipherSuites,
+		CandidatePayloadLens:  profile.candidatePayloads,
+	}
+
+	// 27 压缩类型
+	compressionAlgo, ok := certCompression[profile.certCompressionAlgo]
+	if !ok && strings.Contains(ja3StringParts[2], fmt.Sprintf("%d", tls.ExtensionCompressCertificate)) {
+		fmt.Println("attention our ja3 defines ExtensionCompressCertificate but you did not specify certCompression")
+	}
+	if certCompression != nil {
+		extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{compressionAlgo}}
+	}
+
+	// 50 支持加密类型
+	extMap[tls.ExtensionSignatureAlgorithmsCert] = &tls.SignatureAlgorithmsExtension{
+		SupportedSignatureAlgorithms: mapSignatureAlgorithms,
+	}
+
+	// 17513
+	extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
+		// CodePoint:          tls.ExtensionALPSOld,
+		SupportedProtocols: profile.supportedProtocolsALPS,
+	}
+
+	// 17613
+	extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
+		// CodePoint:          tls.ExtensionALPS,
+		SupportedProtocols: profile.supportedProtocolsALPS,
+	}
+
+	// 2. 扩展
+	extensions := strings.Split(ja3StringParts[2], "-")
+	var exts []tls.TLSExtension
+	for _, e := range extensions {
+		eId, err := strconv.ParseUint(e, 10, 16)
+		if err != nil {
+			return browser.ClientProfile{}, err
+		}
+		te, ok := extMap[uint16(eId)]
+		if !ok {
+			return browser.ClientProfile{}, fmt.Errorf("don't suport this ext: %s ", e)
+		}
+
+		exts = append(exts, te)
+	}
+	log.Print(exts)
+	return browser.NewClientProfile(tls.ClientHelloID{
+			Client:               browserType,
+			RandomExtensionOrder: false,
+			Version:              version,
+			Seed:                 nil,
+			SpecFactory: func() (tls.ClientHelloSpec, error) {
+				return tls.ClientHelloSpec{
+					TLSVersMin:         tlsMinVersion,
+					TLSVersMax:         tlsMaxVersion,
+					CipherSuites:       suites,
+					CompressionMethods: []byte{0},
+					Extensions:         exts,
+					GetSessionID:       sha256.Sum256,
+				}, nil
+
+			},
+		},
+			profile.settings,
+			profile.settingsOrder,
+			profile.pseudoHeaderOrder,
+			profile.connectionFlow,
+			profile.priorities,
+			profile.headerPriority),
+		nil
+}
+
+// lost 17 , 22 ,24 ,49 ,50 , 57 ,30032
+// 0,5,10,11,13,16,18,21,23,27,28,34,35,41,42,43,44,45,51,13172,17513,17613,65037,65281
+func stringToSpec(ja3 string, signatureAlgorithms []tls.SignatureScheme,
+	delegatedCredentialsAlgorithms []tls.SignatureScheme,
+	tlsVersions []uint16,
+	keyShares []tls.KeyShare,
+	hpkeSymmetricCipherSuites []tls.HPKESymmetricCipherSuite,
+	candidatePayloads []uint16, supportedProtocolsALPN,
+	supportedProtocolsALPS []string,
+	certCompression *tls.CertCompressionAlgo) (tls.ClientHelloSpec, error) {
+	extMap := getExtensionBaseMap()
+	ja3StringParts := strings.Split(ja3, ",")
+
+	ciphers := strings.Split(ja3StringParts[1], "-")
+	extensions := strings.Split(ja3StringParts[2], "-")
+	curves := strings.Split(ja3StringParts[3], "-")
+
+	if len(curves) == 1 && curves[0] == "" {
+		curves = []string{}
+	}
+
+	pointFormats := strings.Split(ja3StringParts[4], "-")
+	if len(pointFormats) == 1 && pointFormats[0] == "" {
+		pointFormats = []string{}
+	}
+
+	var targetCurves []tls.CurveID
+	for _, c := range curves {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return tls.ClientHelloSpec{}, err
+		}
+		targetCurves = append(targetCurves, tls.CurveID(cid))
+	}
+	// 10
+	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
+
+	// parse point formats
+	var targetPointFormats []byte
+	for _, p := range pointFormats {
+		pid, err := strconv.ParseUint(p, 10, 8)
+		if err != nil {
+			return tls.ClientHelloSpec{}, err
+		}
+		targetPointFormats = append(targetPointFormats, byte(pid))
+	}
+	// 11
+	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
+	// 43
+	extMap[tls.ExtensionSupportedVersions] = &tls.SupportedVersionsExtension{Versions: tlsVersions}
+
+	if certCompression == nil && strings.Contains(ja3StringParts[2], fmt.Sprintf("%d", tls.ExtensionCompressCertificate)) {
+		fmt.Println("attention our ja3 defines ExtensionCompressCertificate but you did not specify certCompression")
+	}
+
+	if certCompression != nil {
+		// 27
+		extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{*certCompression}}
+	}
+	// 51
+	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: keyShares}
+	// 65037
+	extMap[tls.ExtensionECH] = &tls.GREASEEncryptedClientHelloExtension{
+		CandidateCipherSuites: hpkeSymmetricCipherSuites,
+		CandidatePayloadLens:  candidatePayloads,
+	}
+	// 13
+	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{
+		SupportedSignatureAlgorithms: signatureAlgorithms,
+	}
+	// 50
+	extMap[tls.ExtensionSignatureAlgorithmsCert] = &tls.SignatureAlgorithmsExtension{
+		SupportedSignatureAlgorithms: signatureAlgorithms,
+	}
+	// 34
+	extMap[tls.ExtensionDelegatedCredentials] = &tls.DelegatedCredentialsExtension{
+		SupportedSignatureAlgorithms: delegatedCredentialsAlgorithms,
+	}
+	// 16
+	extMap[tls.ExtensionALPN] = &tls.ALPNExtension{
+		AlpnProtocols: supportedProtocolsALPN,
+	}
+	// 17513
+	extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
+		CodePoint:          tls.ExtensionALPSOld,
+		SupportedProtocols: supportedProtocolsALPS,
+	}
+	// 17613
+	extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
+		CodePoint:          tls.ExtensionALPS,
+		SupportedProtocols: supportedProtocolsALPS,
+	}
+
+	var exts []tls.TLSExtension
+	for _, e := range extensions {
+		eId, err := strconv.ParseUint(e, 10, 16)
+
+		if err != nil {
+			return tls.ClientHelloSpec{}, err
+		}
+
+		if uint16(eId) == tls.GREASE_PLACEHOLDER {
+			// if we use multiple grease extensions with need to generate always a new value. therefore we are creating a new instance here
+			exts = append(exts, &tls.UtlsGREASEExtension{})
+			continue
+		}
+
+		te, ok := extMap[uint16(eId)]
+		if !ok {
+			return tls.ClientHelloSpec{}, fmt.Errorf("unknown extension with id %s provided", e)
+		}
+		exts = append(exts, te)
+	}
+
+	var suites []uint16
+	for _, c := range ciphers {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return tls.ClientHelloSpec{}, err
+		}
+		suites = append(suites, uint16(cid))
+	}
+
+	return tls.ClientHelloSpec{
+		CipherSuites:       suites,
+		CompressionMethods: []byte{tls.CompressionNone},
+		Extensions:         exts,
+		GetSessionID:       sha256.Sum256,
+	}, nil
+}
+
+func getExtensionBaseMap() map[uint16]tls.TLSExtension {
+	return map[uint16]tls.TLSExtension{
+		// This extension needs to be instantiated every time and not be reused if it occurs multiple times in the same ja3
+		//tls.GREASE_PLACEHOLDER:     &tls.UtlsGREASEExtension{},
+
+		// 0
+		tls.ExtensionServerName: &tls.SNIExtension{},
+		//5
+		tls.ExtensionStatusRequest: &tls.StatusRequestExtension{},
+
+		// These are applied later
+		// tls.ExtensionSupportedCurves: &tls.SupportedCurvesExtension{...}
+		// tls.ExtensionSupportedPoints: &tls.SupportedPointsExtension{...}
+		// tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{...}
+		// tls.ExtensionCompressCertificate:  &tls.UtlsCompressCertExtension{...},
+		// tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{...}
+		// tls.ExtensionKeyShare:     &tls.KeyShareExtension{...},
+		// tls.ExtensionDelegatedCredentials: &tls.DelegatedCredentialsExtension{},
+		// tls.ExtensionALPN: &tls.ALPNExtension{},
+		// tls.ExtensionALPS:         &tls.ApplicationSettingsExtension{},
+		// 17
+		tls.ExtensionStatusRequestV2: &tls.GenericExtension{Id: 17}, //status_request_v2
+		// 18
+		tls.ExtensionSCT: &tls.SCTExtension{},
+		// 21
+		tls.ExtensionPadding: &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
+		// 22
+		tls.ExtensionEncryptThenMac: &tls.GenericExtension{Id: 22}, //status_request_v2
+		// 23
+		tls.ExtensionExtendedMasterSecret: &tls.ExtendedMasterSecretExtension{},
+		// 24
+		tls.ExtensionFakeTokenBinding: &tls.FakeTokenBindingExtension{},
+		// 28
+		tls.ExtensionRecordSizeLimit: &tls.FakeRecordSizeLimitExtension{},
+		// 35
+		tls.ExtensionSessionTicket: &tls.SessionTicketExtension{},
+		// 41
+		tls.ExtensionPreSharedKey: &tls.UtlsPreSharedKeyExtension{},
+		// 42
+		tls.ExtensionEarlyData: &tls.GenericExtension{Id: tls.ExtensionEarlyData},
+		// 44
+		tls.ExtensionCookie: &tls.CookieExtension{},
+		// 45
+		tls.ExtensionPSKModes: &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
+		// 49
+		tls.ExtensionPostHandShakeAuth: &tls.GenericExtension{Id: 49},
+		// 57
+		tls.ExtensionQUICTransportParameters: &tls.QUICTransportParametersExtension{},
+		// 13172
+		tls.ExtensionNextProtoNeg: &tls.NPNExtension{},
+		// 65281
+		tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{
+			Renegotiation: tls.RenegotiateOnceAsClient,
+		},
+		//30032
+		tls.ExtensionChannelId: &tls.GenericExtension{Id: 0x7550, Data: []byte{0}}, //FIXME
+	}
+}
+
+func getClientProfile(browserType string) ProfileData {
+	// WINDOW_UPDATE
+	// uc , 360, qq ,opera ,chrome,xiaomi ,samsung
+	connectionFlow := uint32(15663105)
+	//
+	settingsOrder := []http2.SettingID{}
+	// qq ,opera ,!360 ,!firefox ,chrome
+	settings := map[http2.SettingID]uint32{
+		http2.SettingHeaderTableSize:   65536,
+		http2.SettingEnablePush:        0,
+		http2.SettingInitialWindowSize: 6291456,
+		http2.SettingMaxHeaderListSize: 262144,
+	}
+	// signature_algorithms ,13
+	// qq , opera , 360 , !firefox ,uc ,chrome ,xiaomi, samsung
+	supportedSignatureAlgorithms := []string{
+		"ECDSAWithP256AndSHA256", //1027
+		"PSSWithSHA256",          //2052
+		"PKCS1WithSHA256",        //1025
+		"ECDSAWithP384AndSHA384", //1283
+		"PSSWithSHA384",          //2053
+		"PKCS1WithSHA384",        //1281
+		"PSSWithSHA512",          //2054
+		"PKCS1WithSHA512",        //1537
+	}
+
+	//delegated_credentials 34
+	// !qq, !opera ,!360 !firefox ,只有firefox有 ,!chrome
+	supportedDelegatedCredentialsAlgorithms := []string{}
+
+	//supported_versions ,43
+	// qq , opera , !firefox ,!360 , chrome ,samsung,edge
+	supportedVersions := []string{"GREASE", "1.3", "1.2"}
+
+	//key_share ,51
+	// !qq , !opera ,!360 ,!firefox ,!chrome ,!safari
+	keyShareCurves := []string{"GREASE", "X25519Kyber768", "X25519"}
+
+	//protocol_name_list ,16
+	// qq ,firefox ,360 ,opera ,uc ,chrome ,safari,xiaomi ,sansung
+	supportedProtocolsALPN := []string{"h2", "http/1.1"}
+
+	// supported_protocols ,17613
+	// qq ,opera ,!firefox ,360 ,uc ,chrome ,!xiaomi,sansung
+	supportedProtocolsALPS := []string{"h2"}
+
+	// 65037 构建helloid
+	// !uc ,!360
+	candidatePayloads := []uint16{}
+	// qq ,opera ,360 ,!firefox ,uc ,chrome ,xiaomi,sansung
+	certCompressionAlgo := "brotli"
+	// qq ,opera ,firefox ,360 ,uc ,chrome ,xiaomi,17个
+	pseudoHeaderOrder := []string{
+		":method",
+		":authority",
+		":scheme",
+		":path",
+	}
+	echCandidateCipherSuites := []CandidateCipherSuites{}
+
+	priorities := []http2.Priority{}
+	headerPriority := &http2.PriorityParam{}
+
+	switch browserType {
+	case Edge:
+		settings = map[http2.SettingID]uint32{
+			http2.SettingHeaderTableSize:   65536,
+			http2.SettingEnablePush:        0,
+			http2.SettingInitialWindowSize: 6291456,
+			http2.SettingMaxHeaderListSize: 262144,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingEnablePush,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+		pseudoHeaderOrder = []string{":method",
+			":authority",
+			":scheme",
+			":path",
+		}
+		keyShareCurves = []string{"GREASE", "X25519MLKEM768", "X25519"}
+		headerPriority = &http2.PriorityParam{
+			StreamDep: 0,
+			Exclusive: true,
+			Weight:    0,
+		}
+		supportedProtocolsALPN = []string{"http/1.1", "h2"}
+
+	case Samsung:
+		settings = map[http2.SettingID]uint32{
+			http2.SettingHeaderTableSize:   65536,
+			http2.SettingEnablePush:        0,
+			http2.SettingInitialWindowSize: 6291456,
+			http2.SettingMaxHeaderListSize: 262144,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingEnablePush,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+		keyShareCurves = []string{"GREASE", "X25519"}
+		headerPriority = &http2.PriorityParam{
+			StreamDep: 0,
+			Exclusive: true,
+			Weight:    0,
+		}
+		pseudoHeaderOrder = []string{":method",
+			":authority",
+			":scheme",
+			":path",
+			"sec-ch-ua",
+			"sec-ch-ua-mobile",
+			"sec-ch-ua-platform",
+			"accept-language",
+			"upgrade-insecure-requests",
+			"user-agent",
+			"accept",
+			"sec-fetch-site",
+			"sec-fetch-mode",
+			"sec-fetch-dest",
+			"accept-encoding",
+			"priority",
+		}
+
+	case Xiaomi:
+		settings = map[http2.SettingID]uint32{
+			http2.SettingHeaderTableSize:      65536,
+			http2.SettingMaxConcurrentStreams: 1000,
+			http2.SettingInitialWindowSize:    6291456,
+			http2.SettingMaxHeaderListSize:    262144,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingMaxConcurrentStreams,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+		supportedProtocolsALPS = []string{}
+
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
+		keyShareCurves = []string{"GREASE", "X25519"}
+		supportedVersions = []string{"GREASE", "1.3", "1.2", "1.1", "1.0"}
+		pseudoHeaderOrder = []string{
+			":method", ":authority", ":scheme", ":path",
+		}
+	case Safari, IOS:
+		certCompressionAlgo = "zlib"
+		keyShareCurves = []string{"GREASE", "X25519"}
+		supportedVersions = []string{"GREASE", "1.3", "1.2", "1.1", "1.0"}
+		settings = map[http2.SettingID]uint32{
+			http2.SettingEnablePush:           0,
+			http2.SettingInitialWindowSize:    4194304,
+			http2.SettingMaxConcurrentStreams: 100,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingEnablePush,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxConcurrentStreams,
+		}
+		connectionFlow = uint32(10485760)
+		pseudoHeaderOrder = []string{
+			":method",
+			":scheme",
+			":path",
+			":authority",
+			"accept",
+			"sec-fetch-site",
+			"accept-encoding",
+			"sec-fetch-mode",
+			"user-agent",
+			"accept-language",
+			"sec-fetch-dest",
+		}
+		headerPriority = &http2.PriorityParam{
+			Weight:    255,
+			StreamDep: 0,
+			Exclusive: false,
+		}
+		supportedSignatureAlgorithms = []string{
+			"ECDSAWithP256AndSHA256",
+			"PSSWithSHA256",
+			"PKCS1WithSHA256",
+			"ECDSAWithP384AndSHA384",
+			"ECDSAWithSHA1",
+			"PSSWithSHA384",
+			"PSSWithSHA384",
+			"PKCS1WithSHA384",
+			"PSSWithSHA512",
+			"PKCS1WithSHA512",
+			"PKCS1WithSHA1",
+		}
+	case Chrome:
+		//133
+		candidatePayloads = []uint16{129, 32, 208}
+		keyShareCurves = []string{"GREASE", "X25519MLKEM768", "X25519"} //2570 ,4588,29,
+		pseudoHeaderOrder = []string{
+			":method",
+			":authority",
+			":scheme",
+			":path",
+			"sec-ch-ua",
+			"sec-ch-ua-mobile",
+			"sec-ch-ua-platform",
+			"upgrade-insecure-requests",
+			"user-agent",
+			"accept",
+			"sec-fetch-site",
+			"sec-fetch-mode",
+			"sec-fetch-user",
+			"sec-fetch-dest",
+			"accept-encoding",
+			"accept-language",
+			"priority",
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingEnablePush,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+
+		echCandidateCipherSuites = []CandidateCipherSuites{
+			{
+				KdfId:  "HKDF_SHA256",
+				AeadId: "AEAD_AES_128_GCM",
+			},
+		}
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
+	case UC:
+		keyShareCurves = []string{"GREASE", "X25519", "CurveP256", "CurveP384"} //2570 ,29,23,24
+		supportedVersions = []string{"GREASE", "1.3", "1.2", "1.1", "1.0"}
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
+		settings = map[http2.SettingID]uint32{
+			http2.SettingHeaderTableSize:      65536,
+			http2.SettingMaxConcurrentStreams: 1000,
+			http2.SettingInitialWindowSize:    6291456,
+			http2.SettingMaxHeaderListSize:    262144,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingMaxConcurrentStreams,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+		pseudoHeaderOrder = []string{
+			":method",
+			":authority",
+			":scheme",
+			":path",
+			"sec-fetch-dest",
+			"user-agent",
+			"accept",
+			"x-ucbrowser-ua",
+			"sec-fetch-site",
+			"sec-fetch-mode",
+			"accept-encoding",
+			"accept-language",
+		}
+
+	case QH360:
+		supportedVersions = []string{"GREASE", "1.3", "1.2", "1.1", "1.0"}
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
+		settings = map[http2.SettingID]uint32{
+			http2.SettingHeaderTableSize:      65536,
+			http2.SettingEnablePush:           0,
+			http2.SettingMaxConcurrentStreams: 1000,
+			http2.SettingInitialWindowSize:    6291456,
+			http2.SettingMaxHeaderListSize:    262144,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingEnablePush,
+			http2.SettingMaxConcurrentStreams,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+
+		pseudoHeaderOrder = []string{
+			":method",
+			":authority",
+			":scheme",
+			":path",
+			"cache-control",
+			"sec-ch-ua",
+			"sec-ch-ua-mobile",
+			"sec-ch-ua-platform",
+			"upgrade-insecure-requests",
+			"user-agent",
+			"accept",
+			"sec-fetch-site",
+			"sec-fetch-mode",
+			"sec-fetch-user",
+			"sec-fetch-dest",
+			"accept-encoding",
+			"accept-language",
+		}
+	case Opera:
+		candidatePayloads = []uint16{234, 32, 176}
+		keyShareCurves = []string{"GREASE", "X25519MLKEM768", "X25519"}
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
+		pseudoHeaderOrder = []string{
+			":method",
+			":authority",
+			":scheme",
+			":path",
+			"cache-control",
+			"sec-ch-ua",
+			"sec-ch-ua-mobile",
+			"sec-ch-ua-platform",
+			"upgrade-insecure-requests",
+			"user-agent",
+			"accept",
+			"sec-fetch-site",
+			"sec-fetch-mode",
+			"sec-fetch-user",
+			"sec-fetch-dest",
+			"accept-encoding",
+			"accept-language",
+			"priority",
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingEnablePush,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+	case QQ:
+		candidatePayloads = []uint16{2, 32, 144}
+		headerPriority = &http2.PriorityParam{
+			Weight:    0,
+			StreamDep: 0,
+			Exclusive: true,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingEnablePush,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+		keyShareCurves = []string{"GREASE", "X25519"}
+		echCandidateCipherSuites = []CandidateCipherSuites{
+			{
+				KdfId:  "HKDF_SHA256",
+				AeadId: "AEAD_AES_128_GCM",
+			},
+		}
+		pseudoHeaderOrder = []string{
+			":method",
+			":authority",
+			":scheme",
+			":path",
+			"sec-ch-ua",
+			"sec-ch-ua-mobile",
+			"sec-ch-ua-platform",
+			"upgrade-insecure-requests",
+			"user-agent",
+			"accept",
+			"sec-fetch-site",
+			"sec-fetch-mode",
+			"sec-fetch-user",
+			"sec-fetch-dest",
+			"accept-encoding",
+			"accept-language",
+		}
+	case Firefox:
+		supportedProtocolsALPS = []string{}
+		connectionFlow = uint32(12451840)
+		candidatePayloads = []uint16{65, 32, 239}
+		supportedSignatureAlgorithms = []string{
+			"ECDSAWithP256AndSHA256",
+			"ECDSAWithP384AndSHA384",
+			"ECDSAWithP521AndSHA512",
+			"PSSWithSHA256",
+			"PSSWithSHA384",
+			"PSSWithSHA512",
+			"PKCS1WithSHA256",
+			"PKCS1WithSHA384",
+			"PKCS1WithSHA512",
+			"ECDSAWithSHA1",
+			"PKCS1WithSHA1",
+		}
+		supportedVersions = []string{"1.3", "1.2"}
+		supportedDelegatedCredentialsAlgorithms = []string{
+			"ECDSAWithP256AndSHA256",
+			"ECDSAWithP384AndSHA384",
+			"ECDSAWithP521AndSHA512",
+			"ECDSAWithSHA1",
+		}
+		settings = map[http2.SettingID]uint32{
+			http2.SettingHeaderTableSize:   65536,
+			http2.SettingInitialWindowSize: 131072,
+			http2.SettingMaxHeaderListSize: 16384,
+		}
+		settingsOrder = []http2.SettingID{
+			http2.SettingHeaderTableSize,
+			http2.SettingInitialWindowSize,
+			http2.SettingMaxHeaderListSize,
+		}
+		keyShareCurves = []string{"CurveP256", "X25519"} //23 29 ,
+		echCandidateCipherSuites = []CandidateCipherSuites{
+			{
+				KdfId:  "HKDF_SHA256",
+				AeadId: "AEAD_AES_128_GCM",
+			},
+		}
+		headerPriority = &http2.PriorityParam{
+			Weight:    42,
+			StreamDep: 13,
+			Exclusive: false,
+		}
+		priorities = []http2.Priority{
+			{
+				StreamID: 3,
+				PriorityParam: http2.PriorityParam{
+					Exclusive: false,
+					StreamDep: 0,
+					Weight:    201,
+				},
+			},
+			{
+				StreamID: 5,
+				PriorityParam: http2.PriorityParam{
+					Exclusive: false,
+					StreamDep: 0,
+					Weight:    101,
+				},
+			},
+			{
+				StreamID: 7,
+				PriorityParam: http2.PriorityParam{
+					Exclusive: false,
+					StreamDep: 0,
+					Weight:    1,
+				},
+			},
+			{
+				StreamID: 9,
+				PriorityParam: http2.PriorityParam{
+					Exclusive: false,
+					StreamDep: 7,
+					Weight:    1,
+				},
+			},
+			{
+				StreamID: 11,
+				PriorityParam: http2.PriorityParam{
+					Exclusive: false,
+					StreamDep: 3,
+					Weight:    1,
+				},
+			},
+			{
+				StreamID: 13,
+				PriorityParam: http2.PriorityParam{
+					Exclusive: false,
+					StreamDep: 0,
+					Weight:    241,
+				},
+			},
+		}
+		pseudoHeaderOrder = []string{
+			":method",
+			":path",
+			":authority",
+			":scheme",
+			"user-agent",
+			"accept",
+			"accept-language",
+			"accept-encoding",
+			"upgrade-insecure-requests",
+			"sec-fetch-dest",
+			"sec-fetch-mode",
+			"sec-fetch-site",
+			"sec-fetch-user",
+			"te",
+		}
+	}
+
+	return ProfileData{
+		connectionFlow:                          connectionFlow,
+		settingsOrder:                           settingsOrder,
+		settings:                                settings,
+		supportedSignatureAlgorithms:            supportedSignatureAlgorithms,
+		supportedDelegatedCredentialsAlgorithms: supportedDelegatedCredentialsAlgorithms,
+		supportedVersions:                       supportedVersions,
+		keyShareCurves:                          keyShareCurves,
+		supportedProtocolsALPN:                  supportedProtocolsALPN,
+		supportedProtocolsALPS:                  supportedProtocolsALPS,
+		candidatePayloads:                       candidatePayloads,
+		pseudoHeaderOrder:                       pseudoHeaderOrder,
+		priorities:                              priorities,
+		headerPriority:                          headerPriority,
+		certCompressionAlgo:                     certCompressionAlgo,
+		echCandidateCipherSuites:                echCandidateCipherSuites,
+	}
+
+}
+func GetCustomClientProfile(ja3String string, browserType string, version string) browser.ClientProfile {
+
+	profile := getClientProfile(ja3String)
+	specFactory, _ := GetSpecFactoryFromJa3String(ja3String,
+		profile.supportedSignatureAlgorithms,
+		profile.supportedDelegatedCredentialsAlgorithms,
+		profile.supportedVersions, profile.keyShareCurves,
+		profile.supportedProtocolsALPN,
+		profile.supportedProtocolsALPS,
+		profile.echCandidateCipherSuites,
+		profile.candidatePayloads,
+		profile.certCompressionAlgo)
+
+	return browser.NewClientProfile(tls.ClientHelloID{
+		Client:               browserType,
+		RandomExtensionOrder: false,
+		Version:              version,
+		Seed:                 nil,
+		SpecFactory:          specFactory,
+	}, profile.settings, profile.settingsOrder, profile.pseudoHeaderOrder, profile.connectionFlow, profile.priorities, profile.headerPriority)
+}
