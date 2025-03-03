@@ -35,3 +35,10 @@ type Ja3Request struct {
 	Timeout              int // default 30s
 	NotFollowRedirects   bool
 }
+
+type Response struct {
+	StatusCode int
+	Headers    map[string][]string
+	Cookies    map[string]string
+	Body       string
+}

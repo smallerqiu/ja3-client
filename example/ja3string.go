@@ -7,7 +7,7 @@ import (
 	client "github.com/smallerqiu/ja3-client"
 )
 
-func main() {
+func testJa3Key() {
 	reqBody := &client.Ja3Request{
 		Method:        "GET",
 		URL:           "https://www.google.com",

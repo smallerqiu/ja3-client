@@ -87,7 +87,7 @@ Impersonate list of client :
 "okhttp4_android_13"
 */
 
-func main() {
+func testImpersonate() {
 	reqBody := &client.Ja3Request{
 		Method:               "GET",
 		URL:                  "https://www.google.com",
