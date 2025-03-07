@@ -35,7 +35,9 @@ type CandidateCipherSuites struct {
 func FormatJa3(ja3 string, browserType string, version string, randomExtensionOrder bool) (pfile browser.ClientProfile, err error) {
 	extMap := getExtensionBaseMap()
 	ja3StringParts := strings.Split(ja3, ",")
-
+	if len(ja3StringParts) < 4 {
+		return pfile, errors.New("ja3 format error")
+	}
 	// 1. 密码
 	ciphers := strings.Split(ja3StringParts[1], "-")
 	var suites []uint16

@@ -1,4 +1,7 @@
-If you're having trouble with the fucking “just a moment” in your project, you might want to try using this. It may help you . 
+# 🔥🔥🔥 ja3-client 
+If you're having trouble with the fucking “just a moment” or fucking status code 429 in your project, you might want to try using this. It may help you . 
+
+Demonstrates good performance with 10 million concurrent requests. It is safe to use.  Of course, you can also look at other projects, such as [curl_cffi](https://github.com/lexiforest/curl_cffi), [REQ](https://github.com/imroc/req) etc.
 
 # Features
  - Proxy support : HTTP ,HTTPS , Socks4 , Socks5, Socks5h
@@ -220,7 +223,4 @@ func main() {
 }
 
 ```
-
-# Others 
-
-Demonstrates good performance with 10 million concurrent requests. It is safe to use.  Of course, you can also look at other projects, such as [curl_cffi](https://github.com/lexiforest/curl_cffi), [REQ](https://github.com/imroc/req/v3) etc.
+ 
