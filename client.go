@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	// http "github.com/smallerqiu/ja3-client/http"
 	http "github.com/smallerqiu/fhttp"
 	"github.com/smallerqiu/fhttp/httputil"
 	browser "github.com/smallerqiu/utls/browser"

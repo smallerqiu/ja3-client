@@ -1,6 +1,6 @@
 package ja3_client
 
-import "github.com/smallerqiu/fhttp/http2"
+import "github.com/smallerqiu/ja3-client/http2"
 
 type ProfileData struct {
 	connectionFlow                          uint32
