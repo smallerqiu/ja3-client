@@ -4,11 +4,11 @@ import (
 	"io"
 	"log"
 
-	client "github.com/smallerqiu/ja3-client"
+	tls "github.com/smallerqiu/ja3-client"
 )
 
 func testJa3Key() {
-	reqBody := &client.Ja3Request{
+	reqBody := &tls.Ja3Request{
 		Method:        "GET",
 		URL:           "https://www.google.com",
 		Proxy:         "http://127.0.0.1:8080",
@@ -18,7 +18,7 @@ func testJa3Key() {
 		ClientVersion: "18.1",
 	}
 	// 创建 TLS 会话
-	var client, request, err = client.CreateSession(reqBody)
+	var client, request, err = tls.CreateSession(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)

@@ -5,11 +5,11 @@ import (
 	"log"
 	"testing"
 
-	client "github.com/smallerqiu/ja3-client"
+	tls "github.com/smallerqiu/ja3-client"
 )
 
 func TestClient(t *testing.T) {
-	reqBody := &client.Ja3Request{
+	reqBody := &tls.Ja3Request{
 		Method:               "GET",
 		URL:                  "https://tls.browserleaks.com/json",
 		Proxy:                "http://127.0.0.1:7890",
@@ -18,7 +18,7 @@ func TestClient(t *testing.T) {
 		RandomExtensionOrder: true,
 	}
 	// 创建 TLS 会话
-	var client, request, err = client.CreateSession(reqBody)
+	var client, request, err = tls.CreateSession(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)

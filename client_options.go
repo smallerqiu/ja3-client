@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	http "github.com/smallerqiu/ja3-client/http"
-	browser "github.com/smallerqiu/utls/browser"
+	"github.com/smallerqiu/ja3-client/browser"
+	"github.com/smallerqiu/ja3-client/http"
 )
 
 type HttpClientOption func(config *httpClientConfig)

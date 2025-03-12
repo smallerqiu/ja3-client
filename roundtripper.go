@@ -9,12 +9,10 @@ import (
 	"sync"
 	"time"
 
-	http "github.com/smallerqiu/fhttp"
-	"github.com/smallerqiu/fhttp/http2"
-
-	// "github.com/smallerqiu/ja3-client/http2"
+	"github.com/smallerqiu/ja3-client/browser"
+	"github.com/smallerqiu/ja3-client/http"
+	"github.com/smallerqiu/ja3-client/http2"
 	tls "github.com/smallerqiu/utls"
-	browser "github.com/smallerqiu/utls/browser"
 	"golang.org/x/net/proxy"
 )
 

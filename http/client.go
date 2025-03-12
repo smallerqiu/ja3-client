@@ -105,53 +105,6 @@ type Client struct {
 	Timeout time.Duration
 }
 
-// didTimeout is non-nil only if err != nil.
-func (c *Client) send(req *Request, deadline time.Time) (resp *Response, didTimeout func() bool, err error) {
-	if c.Jar != nil {
-		for _, cookie := range c.Jar.Cookies(req.URL) {
-			req.AddCookie(cookie)
-		}
-	}
-	resp, didTimeout, err = send(req, c.transport(), deadline)
-	if err != nil {
-		return nil, didTimeout, err
-	}
-	if c.Jar != nil {
-		if rc := resp.Cookies(); len(rc) > 0 {
-			c.Jar.SetCookies(req.URL, rc)
-		}
-	}
-	return resp, nil, nil
-}
-
-func (c *Client) deadline() time.Time {
-	if c.Timeout > 0 {
-		return time.Now().Add(c.Timeout)
-	}
-	return time.Time{}
-}
-
-func (c *Client) transport() RoundTripper {
-	if c.Transport != nil {
-		return c.Transport
-	}
-	return DefaultTransport
-}
-func (c *Client) Get(url string) (resp *Response, err error) {
-	req, err := NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	return c.Do(req)
-}
-func (c *Client) checkRedirect(req *Request, via []*Request) error {
-	fn := c.CheckRedirect
-	if fn == nil {
-		fn = defaultCheckRedirect
-	}
-	return fn(req, via)
-}
-
 // DefaultClient is the default Client and is used by Get, Head, and Post.
 var DefaultClient = &Client{}
 
@@ -210,6 +163,39 @@ func refererForURL(lastReq, newReq *url.URL) string {
 		referer = strings.Replace(referer, auth, "", 1)
 	}
 	return referer
+}
+
+// didTimeout is non-nil only if err != nil.
+func (c *Client) send(req *Request, deadline time.Time) (resp *Response, didTimeout func() bool, err error) {
+	if c.Jar != nil {
+		for _, cookie := range c.Jar.Cookies(req.URL) {
+			req.AddCookie(cookie)
+		}
+	}
+	resp, didTimeout, err = send(req, c.transport(), deadline)
+	if err != nil {
+		return nil, didTimeout, err
+	}
+	if c.Jar != nil {
+		if rc := resp.Cookies(); len(rc) > 0 {
+			c.Jar.SetCookies(req.URL, rc)
+		}
+	}
+	return resp, nil, nil
+}
+
+func (c *Client) deadline() time.Time {
+	if c.Timeout > 0 {
+		return time.Now().Add(c.Timeout)
+	}
+	return time.Time{}
+}
+
+func (c *Client) transport() RoundTripper {
+	if c.Transport != nil {
+		return c.Transport
+	}
+	return DefaultTransport
 }
 
 // send issues an HTTP request.
@@ -460,6 +446,34 @@ func Get(url string) (resp *Response, err error) {
 	return DefaultClient.Get(url)
 }
 
+// Get issues a GET to the specified URL. If the response is one of the
+// following redirect codes, Get follows the redirect after calling the
+// Client's CheckRedirect function:
+//
+//	301 (Moved Permanently)
+//	302 (Found)
+//	303 (See Other)
+//	307 (Temporary Redirect)
+//	308 (Permanent Redirect)
+//
+// An error is returned if the Client's CheckRedirect function fails
+// or if there was an HTTP protocol error. A non-2xx response doesn't
+// cause an error. Any returned error will be of type *url.Error. The
+// url.Error value's Timeout method will report true if the request
+// timed out.
+//
+// When err is nil, resp always contains a non-nil resp.Body.
+// Caller should close resp.Body when done reading from it.
+//
+// To make a request with custom headers, use NewRequest and Client.Do.
+func (c *Client) Get(url string) (resp *Response, err error) {
+	req, err := NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.Do(req)
+}
+
 func alwaysFalse() bool { return false }
 
 // ErrUseLastResponse can be returned by Client.CheckRedirect hooks to
@@ -470,6 +484,13 @@ var ErrUseLastResponse = errors.New("net/http: use last response")
 
 // checkRedirect calls either the user's configured CheckRedirect
 // function, or the default.
+func (c *Client) checkRedirect(req *Request, via []*Request) error {
+	fn := c.CheckRedirect
+	if fn == nil {
+		fn = defaultCheckRedirect
+	}
+	return fn(req, via)
+}
 
 // redirectBehavior describes what should happen when the
 // client encounters a 3xx status code from the server
@@ -511,15 +532,6 @@ func urlErrorOp(method string) string {
 	}
 	return method[:1] + strings.ToLower(method[1:])
 }
-
-type httpError struct {
-	err     string
-	timeout bool
-}
-
-func (e *httpError) Error() string   { return e.err }
-func (e *httpError) Timeout() bool   { return e.timeout }
-func (e *httpError) Temporary() bool { return true }
 
 // Do sends an HTTP request and returns an HTTP response, following
 // policy (such as redirects, cookies, auth) as configured on the

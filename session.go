@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"strings"
 
-	http "github.com/smallerqiu/fhttp"
-	browser "github.com/smallerqiu/utls/browser"
+	"github.com/smallerqiu/ja3-client/browser"
+	"github.com/smallerqiu/ja3-client/http"
 )
 
 // 创建定制 TLS 会话

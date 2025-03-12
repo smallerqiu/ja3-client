@@ -37,7 +37,7 @@ import (
 	"io"
 	"log"
 
-	client "github.com/smallerqiu/ja3-client"
+	tls "github.com/smallerqiu/ja3-client"
 )
 /**
 Client types :
@@ -57,7 +57,7 @@ Client types :
 */
 
 func main() {
-	reqBody := &client.Ja3Request{
+	reqBody := &tls.Ja3Request{
 		Method:        "GET",
 		URL:           "https://www.google.com",
 		Proxy:         "http://127.0.0.1:7890",
@@ -67,7 +67,7 @@ func main() {
 		ClientVersion: "18.1",	 // if you don't know the version , you can use `133`
 	}
 	
-	var client, request, err = client.CreateSession(reqBody)
+	var client, request, err = tls.CreateSession(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)
@@ -103,7 +103,7 @@ import (
 	"io"
 	"log"
 
-	client "github.com/smallerqiu/ja3-client"
+	tls "github.com/smallerqiu/ja3-client"
 )
 
 /*
@@ -187,7 +187,7 @@ Impersonate list of client :
 */
 
 func main() {
-	reqBody := &client.Ja3Request{
+	reqBody := &tls.Ja3Request{
 		Method:               "GET",
 		URL:                  "https://tls.browserleaks.com/json",
 		Proxy:                "http://127.0.0.1:7890",
@@ -196,7 +196,7 @@ func main() {
 		RandomExtensionOrder: true,
 	}
 	
-	var client, request, err = client.CreateSession(reqBody)
+	var client, request, err = tls.CreateSession(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)

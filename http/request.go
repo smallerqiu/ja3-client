@@ -17,7 +17,6 @@ import (
 	"mime"
 	"mime/multipart"
 	"net"
-	"net/http/httptrace"
 	"net/textproto"
 	"net/url"
 	urlpkg "net/url"
@@ -26,6 +25,8 @@ import (
 	"sync"
 
 	tls "github.com/smallerqiu/utls"
+
+	"github.com/smallerqiu/fhttp/httptrace"
 
 	"golang.org/x/net/idna"
 )
@@ -400,12 +401,6 @@ func (r *Request) ProtoAtLeast(major, minor int) bool {
 	return r.ProtoMajor > major ||
 		r.ProtoMajor == major && r.ProtoMinor >= minor
 }
-func (r *Request) closeBody() error {
-	if r.Body == nil {
-		return nil
-	}
-	return r.Body.Close()
-}
 
 // UserAgent returns the client's User-Agent, if sent in the request.
 func (r *Request) UserAgent() string {
@@ -504,7 +499,7 @@ func (r *Request) isH2Upgrade() bool {
 }
 
 // Return value if nonempty, def otherwise.
-func valueOrDefault(value, def string) string {
+func ValueOrDefault(value, def string) string {
 	if value != "" {
 		return value
 	}
@@ -615,7 +610,7 @@ func (r *Request) write(w io.Writer, usingProxy bool, extraHeaders Header, waitF
 		w = bw
 	}
 
-	_, err = fmt.Fprintf(w, "%s %s HTTP/1.1\r\n", valueOrDefault(r.Method, "GET"), ruri)
+	_, err = fmt.Fprintf(w, "%s %s HTTP/1.1\r\n", ValueOrDefault(r.Method, "GET"), ruri)
 	if err != nil {
 		return err
 	}
@@ -1401,7 +1396,7 @@ func (r *Request) closeBody() error {
 
 func (r *Request) isReplayable() bool {
 	if r.Body == nil || r.Body == NoBody || r.GetBody != nil {
-		switch valueOrDefault(r.Method, "GET") {
+		switch ValueOrDefault(r.Method, "GET") {
 		case "GET", "HEAD", "OPTIONS", "TRACE":
 			return true
 		}

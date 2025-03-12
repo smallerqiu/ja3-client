@@ -5,15 +5,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	// http "github.com/smallerqiu/ja3-client/http"
-	http "github.com/smallerqiu/fhttp"
-	"github.com/smallerqiu/fhttp/httputil"
-	browser "github.com/smallerqiu/utls/browser"
+	"github.com/smallerqiu/ja3-client/browser"
+
+	http "github.com/smallerqiu/ja3-client/http"
 	"golang.org/x/net/proxy"
 )
 
@@ -338,7 +338,7 @@ func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
 			req.Body = requestBody
 		}
 
-		requestBytes, err := httputil.DumpRequestOut(debugReq, debugReq.ContentLength > 0)
+		requestBytes, err := http.DumpRequestOut(debugReq, debugReq.ContentLength > 0)
 		if err != nil {
 			return nil, err
 		}
@@ -359,7 +359,7 @@ func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
 	c.logger.Debug("requested %s : status %d", req.URL.String(), resp.StatusCode)
 
 	if c.config.debug {
-		responseBytes, err := httputil.DumpResponse(resp, resp.ContentLength > 0)
+		responseBytes, err := http.DumpResponse(resp, resp.ContentLength > 0)
 		if err != nil {
 			return nil, err
 		}
