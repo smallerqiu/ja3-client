@@ -18,7 +18,6 @@ import (
 	"net"
 	"net/textproto"
 	"net/url"
-	urlpkg "net/url"
 	"os"
 	"path"
 	"runtime"
@@ -2136,8 +2135,8 @@ func StripPrefix(prefix string, h Handler) Handler {
 // to "text/html; charset=utf-8" and writes a small HTML body.
 // Setting the Content-Type header to any value, including nil,
 // disables that behavior.
-func Redirect(w ResponseWriter, r *Request, url string, code int) {
-	if u, err := urlpkg.Parse(url); err == nil {
+func Redirect(w ResponseWriter, r *Request, Url string, code int) {
+	if u, err := url.Parse(Url); err == nil {
 		// If url was relative, make its path absolute by
 		// combining with request path.
 		// The client would probably do this for us,
@@ -2150,24 +2149,24 @@ func Redirect(w ResponseWriter, r *Request, url string, code int) {
 			}
 
 			// no leading http://server
-			if url == "" || url[0] != '/' {
+			if Url == "" || Url[0] != '/' {
 				// make relative path absolute
 				olddir, _ := path.Split(oldpath)
-				url = olddir + url
+				Url = olddir + Url
 			}
 
 			var query string
-			if i := strings.Index(url, "?"); i != -1 {
-				url, query = url[:i], url[i:]
+			if i := strings.Index(Url, "?"); i != -1 {
+				Url, query = Url[:i], Url[i:]
 			}
 
 			// clean up but preserve trailing slash
-			trailing := strings.HasSuffix(url, "/")
-			url = path.Clean(url)
-			if trailing && !strings.HasSuffix(url, "/") {
-				url += "/"
+			trailing := strings.HasSuffix(Url, "/")
+			Url = path.Clean(Url)
+			if trailing && !strings.HasSuffix(Url, "/") {
+				Url += "/"
 			}
-			url += query
+			Url += query
 		}
 	}
 
@@ -2178,7 +2177,7 @@ func Redirect(w ResponseWriter, r *Request, url string, code int) {
 	// Do it only if the request didn't already have a Content-Type header.
 	_, hadCT := h["Content-Type"]
 
-	h.Set("Location", hexEscapeNonASCII(url))
+	h.Set("Location", hexEscapeNonASCII(Url))
 	if !hadCT && (r.Method == "GET" || r.Method == "HEAD") {
 		h.Set("Content-Type", "text/html; charset=utf-8")
 	}
@@ -2186,7 +2185,7 @@ func Redirect(w ResponseWriter, r *Request, url string, code int) {
 
 	// Shouldn't send the body for POST or HEAD; that leaves GET.
 	if !hadCT && r.Method == "GET" {
-		body := "<a href=\"" + htmlEscape(url) + "\">" + statusText[code] + "</a>.\n"
+		body := "<a href=\"" + htmlEscape(Url) + "\">" + statusText[code] + "</a>.\n"
 		fmt.Fprintln(w, body)
 	}
 }

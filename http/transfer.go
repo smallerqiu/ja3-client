@@ -18,9 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/smallerqiu/fhttp/httptrace"
-	// "github.com/smallerqiu/fhttp/internal"
-
+	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
 	"golang.org/x/net/http/httpguts"
 )
 

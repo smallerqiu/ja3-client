@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	http "github.com/smallerqiu/fhttp"
+	http "github.com/smallerqiu/ja3-client/http"
 	tls "github.com/smallerqiu/utls"
 	"github.com/tam7t/hpkp"
 )

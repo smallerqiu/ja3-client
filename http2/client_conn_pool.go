@@ -9,9 +9,8 @@ package http2
 import (
 	"sync"
 
-	tls "github.com/smallerqiu/utls"
-
 	http "github.com/smallerqiu/ja3-client/http"
+	tls "github.com/smallerqiu/utls"
 )
 
 // ClientConnPool manages a pool of HTTP/2 client connections.

@@ -47,8 +47,8 @@ import (
 
 	tls "github.com/smallerqiu/utls"
 
-	"github.com/smallerqiu/fhttp/http2/hpack"
 	http "github.com/smallerqiu/ja3-client/http"
+	"github.com/smallerqiu/ja3-client/http2/hpack"
 
 	"golang.org/x/net/http/httpguts"
 )

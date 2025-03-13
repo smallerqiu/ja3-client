@@ -1,8 +1,7 @@
 package ja3_client
 
 import (
-	// "github.com/smallerqiu/ja3-client/http2"
-	"github.com/smallerqiu/fhttp/http2"
+	"github.com/smallerqiu/ja3-client/http2"
 	tls "github.com/smallerqiu/utls"
 	"github.com/smallerqiu/utls/dicttls"
 )

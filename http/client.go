@@ -325,10 +325,7 @@ func knownRoundTripperImpl(rt RoundTripper, req *Request) bool {
 	// package. But I know of none, and the only problem would be
 	// some temporarily leaked goroutines if the transport didn't
 	// support contexts. So this is a good enough heuristic:
-	if reflect.TypeOf(rt).String() == "*http2.Transport" {
-		return true
-	}
-	return false
+	return reflect.TypeOf(rt).String() == "*http2.Transport"
 }
 
 // setRequestCancel sets req.Cancel and adds a deadline context to req

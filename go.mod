@@ -12,7 +12,6 @@ require (
 require (
 	github.com/andybalholm/brotli v1.0.6
 	github.com/klauspost/compress v1.17.4
-	github.com/smallerqiu/fhttp v1.0.1
 )
 
 require (

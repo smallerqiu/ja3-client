@@ -34,9 +34,8 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 
+	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
 	tls "github.com/smallerqiu/utls"
-
-	"github.com/smallerqiu/fhttp/httptrace"
 
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http/httpproxy"
@@ -2509,7 +2508,7 @@ var errTimeout error = &httpError{err: "net/http: timeout awaiting response head
 
 // errRequestCanceled is set to be identical to the one from h2 to facilitate
 // testing.
-var errRequestCanceled = http2errRequestCanceled
+var errRequestCanceled = errHttp2RequestCanceled
 var errRequestCanceledConn = errors.New("net/http: request canceled while waiting for connection") // TODO: unify?
 
 func nop() {}

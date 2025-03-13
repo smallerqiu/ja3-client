@@ -28,10 +28,10 @@ import (
 
 	tls "github.com/smallerqiu/utls"
 
-	"github.com/smallerqiu/fhttp/httptrace"
 	http "github.com/smallerqiu/ja3-client/http"
+	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
 
-	"github.com/smallerqiu/fhttp/http2/hpack"
+	"github.com/smallerqiu/ja3-client/http2/hpack"
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/idna"
 )

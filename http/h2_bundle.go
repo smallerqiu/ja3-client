@@ -33,7 +33,6 @@ import (
 	"fmt"
 	tls "github.com/smallerqiu/utls"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	mathrand "math/rand"
@@ -50,10 +49,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/smallerqiu/fhttp/http2/hpack"
-	"github.com/smallerqiu/fhttp/httptrace"
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/idna"
+	"github.com/smallerqiu/ja3-client/http2/hpack"
+	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
 )
 
 // A list of the possible cipher suite ids. Taken from
@@ -3618,7 +3617,7 @@ func (e *http2httpError) Timeout() bool { return e.timeout }
 
 func (e *http2httpError) Temporary() bool { return true }
 
-var http2errTimeout error = &http2httpError{msg: "http2: timeout awaiting response headers", timeout: true}
+var errHttp2Timeout error = &http2httpError{msg: "http2: timeout awaiting response headers", timeout: true}
 
 type http2connectionStater interface {
 	ConnectionState() tls.ConnectionState
@@ -3740,7 +3739,7 @@ func (p *http2pipe) Read(d []byte) (n int, err error) {
 	}
 }
 
-var http2errClosedPipeWrite = errors.New("write on closed buffer")
+var errHttp2ClosedPipeWrite = errors.New("write on closed buffer")
 
 // Write copies bytes from p into the buffer and wakes a reader.
 // It is an error to write more data than the buffer can hold.
@@ -3752,7 +3751,7 @@ func (p *http2pipe) Write(d []byte) (n int, err error) {
 	}
 	defer p.c.Signal()
 	if p.err != nil {
-		return 0, http2errClosedPipeWrite
+		return 0, errHttp2ClosedPipeWrite
 	}
 	if p.breakErr != nil {
 		p.unread += len(d)
@@ -4013,10 +4012,10 @@ const (
 )
 
 var (
-	http2errClientDisconnected = errors.New("client disconnected")
-	http2errClosedBody         = errors.New("body closed by handler")
-	http2errHandlerComplete    = errors.New("http2: request body closed due to handler exiting")
-	http2errStreamClosed       = errors.New("http2: stream closed")
+	errHttp2ClientDisconnected = errors.New("client disconnected")
+	errHttp2ClosedBody         = errors.New("body closed by handler")
+	errHttp2HandlerComplete    = errors.New("http2: request body closed due to handler exiting")
+	errHttp2StreamClosed       = errors.New("http2: stream closed")
 )
 
 var http2responseWriterStatePool = sync.Pool{
@@ -4677,7 +4676,7 @@ func (sc *http2serverConn) condlogf(err error, format string, args ...interface{
 	if err == nil {
 		return
 	}
-	if err == io.EOF || err == io.ErrUnexpectedEOF || http2isClosedConnError(err) || err == http2errPrefaceTimeout {
+	if err == io.EOF || err == io.ErrUnexpectedEOF || http2isClosedConnError(err) || err == errHttp2PrefaceTimeout {
 		// Boring, expected errors.
 		sc.vlogf(format, args...)
 	} else {
@@ -4760,7 +4759,7 @@ func (sc *http2serverConn) writeFrameAsync(wr http2FrameWriteRequest) {
 func (sc *http2serverConn) closeAllStreamsOnConnClose() {
 	sc.serveG.check()
 	for _, st := range sc.streams {
-		sc.closeStream(st, http2errClientDisconnected)
+		sc.closeStream(st, errHttp2ClientDisconnected)
 	}
 }
 
@@ -4939,7 +4938,7 @@ func (sc *http2serverConn) sendServeMsg(msg interface{}) {
 	}
 }
 
-var http2errPrefaceTimeout = errors.New("timeout waiting for client preface")
+var errHttp2PrefaceTimeout = errors.New("timeout waiting for client preface")
 
 // readPreface reads the ClientPreface greeting from the peer or
 // returns errPrefaceTimeout on timeout, or an error if the greeting
@@ -4961,7 +4960,7 @@ func (sc *http2serverConn) readPreface() error {
 	defer timer.Stop()
 	select {
 	case <-timer.C:
-		return http2errPrefaceTimeout
+		return errHttp2PrefaceTimeout
 	case err := <-errc:
 		if err == nil {
 			if http2VerboseLogs {
@@ -4972,7 +4971,7 @@ func (sc *http2serverConn) readPreface() error {
 	}
 }
 
-var http2errChanPool = sync.Pool{
+var errHttp2ChanPool = sync.Pool{
 	New: func() interface{} { return make(chan error, 1) },
 }
 
@@ -4983,7 +4982,7 @@ var http2writeDataPool = sync.Pool{
 // writeDataFromHandler writes DATA response frames from a handler on
 // the given stream.
 func (sc *http2serverConn) writeDataFromHandler(stream *http2stream, data []byte, endStream bool) error {
-	ch := http2errChanPool.Get().(chan error)
+	ch := errHttp2ChanPool.Get().(chan error)
 	writeArg := http2writeDataPool.Get().(*http2writeData)
 	*writeArg = http2writeData{endStream, data, stream.id}
 	err := sc.writeFrameFromHandler(http2FrameWriteRequest{
@@ -4999,7 +4998,7 @@ func (sc *http2serverConn) writeDataFromHandler(stream *http2stream, data []byte
 	case err = <-ch:
 		frameWriteDone = true
 	case <-sc.doneServing:
-		return http2errClientDisconnected
+		return errHttp2ClientDisconnected
 	case <-stream.cw:
 		// If both ch and stream.cw were ready (as might
 		// happen on the final Write after an http.Handler
@@ -5012,10 +5011,10 @@ func (sc *http2serverConn) writeDataFromHandler(stream *http2stream, data []byte
 		case err = <-ch:
 			frameWriteDone = true
 		default:
-			return http2errStreamClosed
+			return errHttp2StreamClosed
 		}
 	}
-	http2errChanPool.Put(ch)
+	errHttp2ChanPool.Put(ch)
 	if frameWriteDone {
 		http2writeDataPool.Put(writeArg)
 	}
@@ -5038,7 +5037,7 @@ func (sc *http2serverConn) writeFrameFromHandler(wr http2FrameWriteRequest) erro
 	case <-sc.doneServing:
 		// Serve loop is gone.
 		// Client has closed their connection to the server.
-		return http2errClientDisconnected
+		return errHttp2ClientDisconnected
 	}
 }
 
@@ -5161,7 +5160,7 @@ func (sc *http2serverConn) startFrameWrite(wr http2FrameWriteRequest) {
 // errHandlerPanicked is the error given to any callers blocked in a read from
 // Request.Body when the main goroutine panics. Since most handlers read in the
 // main ServeHTTP goroutine, this will show up rarely.
-var http2errHandlerPanicked = errors.New("http2: handler panicked")
+var errHttp2HandlerPanicked = errors.New("http2: handler panicked")
 
 // wroteFrame is called on the serve goroutine with the result of
 // whatever happened on writeFrameAsync.
@@ -5199,7 +5198,7 @@ func (sc *http2serverConn) wroteFrame(res http2frameWriteResult) {
 			// a complete response.
 			sc.resetStream(http2streamError(st.id, http2ErrCodeNo))
 		case http2stateHalfClosedRemote:
-			sc.closeStream(st, http2errHandlerComplete)
+			sc.closeStream(st, errHttp2HandlerComplete)
 		}
 	} else {
 		switch v := wr.write.(type) {
@@ -5209,7 +5208,7 @@ func (sc *http2serverConn) wroteFrame(res http2frameWriteResult) {
 				sc.closeStream(st, v)
 			}
 		case http2handlerPanicRST:
-			sc.closeStream(wr.stream, http2errHandlerPanicked)
+			sc.closeStream(wr.stream, errHttp2HandlerPanicked)
 		}
 	}
 
@@ -6189,7 +6188,7 @@ func (sc *http2serverConn) writeHeaders(st *http2stream, headerData *http2writeR
 		// waiting for this frame to be written, so an http.Flush mid-handler
 		// writes out the correct value of keys, before a handler later potentially
 		// mutates it.
-		errc = http2errChanPool.Get().(chan error)
+		errc = errHttp2ChanPool.Get().(chan error)
 	}
 	if err := sc.writeFrameFromHandler(http2FrameWriteRequest{
 		write:  headerData,
@@ -6201,12 +6200,12 @@ func (sc *http2serverConn) writeHeaders(st *http2stream, headerData *http2writeR
 	if errc != nil {
 		select {
 		case err := <-errc:
-			http2errChanPool.Put(errc)
+			errHttp2ChanPool.Put(errc)
 			return err
 		case <-sc.doneServing:
-			return http2errClientDisconnected
+			return errHttp2ClientDisconnected
 		case <-st.cw:
-			return http2errStreamClosed
+			return errHttp2StreamClosed
 		}
 	}
 
@@ -6309,7 +6308,7 @@ type http2requestBody struct {
 
 func (b *http2requestBody) Close() error {
 	if b.pipe != nil && !b.closed {
-		b.pipe.BreakWithError(http2errClosedBody)
+		b.pipe.BreakWithError(errHttp2ClosedBody)
 	}
 	b.closed = true
 
@@ -6746,8 +6745,8 @@ func (w *http2responseWriter) handlerDone() {
 
 // Push errors.
 var (
-	http2ErrPushLimitReached = errors.New("http2: push would exceed peer's SETTINGS_MAX_CONCURRENT_STREAMS")
-	http2ErrRecursivePush    = errors.New("http2: recursive push not allowed")
+	errHttp2PushLimitReached = errors.New("http2: push would exceed peer's SETTINGS_MAX_CONCURRENT_STREAMS")
+	errHttp2RecursivePush    = errors.New("http2: recursive push not allowed")
 )
 
 var _ Pusher = (*http2responseWriter)(nil)
@@ -6760,7 +6759,7 @@ func (w *http2responseWriter) Push(target string, opts *PushOptions) error {
 	// No recursive pushes: "PUSH_PROMISE frames MUST only be sent on a peer-initiated stream."
 	// http://tools.ietf.org/html/rfc7540#section-6.6
 	if st.isPushed() {
-		return http2ErrRecursivePush
+		return errHttp2RecursivePush
 	}
 
 	if opts == nil {
@@ -6819,24 +6818,24 @@ func (w *http2responseWriter) Push(target string, opts *PushOptions) error {
 		method: opts.Method,
 		url:    u,
 		header: http2cloneHeader(opts.Header),
-		done:   http2errChanPool.Get().(chan error),
+		done:   errHttp2ChanPool.Get().(chan error),
 	}
 
 	select {
 	case <-sc.doneServing:
-		return http2errClientDisconnected
+		return errHttp2ClientDisconnected
 	case <-st.cw:
-		return http2errStreamClosed
+		return errHttp2StreamClosed
 	case sc.serveMsgCh <- msg:
 	}
 
 	select {
 	case <-sc.doneServing:
-		return http2errClientDisconnected
+		return errHttp2ClientDisconnected
 	case <-st.cw:
-		return http2errStreamClosed
+		return errHttp2StreamClosed
 	case err := <-msg.done:
-		http2errChanPool.Put(msg.done)
+		errHttp2ChanPool.Put(msg.done)
 		return err
 	}
 }
@@ -6856,7 +6855,7 @@ func (sc *http2serverConn) startPush(msg *http2startPushRequest) {
 	// is in either the "open" or "half-closed (remote)" state.
 	if msg.parent.state != http2stateOpen && msg.parent.state != http2stateHalfClosedRemote {
 		// responseWriter.Push checks that the stream is peer-initiated.
-		msg.done <- http2errStreamClosed
+		msg.done <- errHttp2StreamClosed
 
 		return
 	}
@@ -6881,7 +6880,7 @@ func (sc *http2serverConn) startPush(msg *http2startPushRequest) {
 		}
 		// http://tools.ietf.org/html/rfc7540#section-6.5.2.
 		if sc.curPushedStreams+1 > sc.clientMaxStreams {
-			return 0, http2ErrPushLimitReached
+			return 0, errHttp2PushLimitReached
 		}
 
 		// http://tools.ietf.org/html/rfc7540#section-5.1.1.
@@ -6891,7 +6890,7 @@ func (sc *http2serverConn) startPush(msg *http2startPushRequest) {
 		if sc.maxPushPromiseID+2 >= 1<<31 {
 			sc.startGracefulShutdownInternal()
 
-			return 0, http2ErrPushLimitReached
+			return 0, errHttp2PushLimitReached
 		}
 		sc.maxPushPromiseID += 2
 		promisedID := sc.maxPushPromiseID
@@ -7356,7 +7355,7 @@ func http2awaitRequestCancel(req *Request, done <-chan struct{}) error {
 	}
 	select {
 	case <-req.Cancel:
-		return http2errRequestCanceled
+		return errHttp2RequestCanceled
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-done:
@@ -7407,7 +7406,7 @@ func (cs *http2clientStream) checkResetOrDone() error {
 	case <-cs.peerReset:
 		return cs.resetErr
 	case <-cs.done:
-		return http2errStreamClosed
+		return errHttp2StreamClosed
 	default:
 		return nil
 	}
@@ -7566,10 +7565,10 @@ func (t *http2Transport) CloseIdleConnections() {
 }
 
 var (
-	http2errClientConnClosed               = errors.New("http2: client conn is closed")
-	http2errClientConnGotGoAway            = errors.New("http2: Transport received Server's graceful shutdown GOAWAY")
-	http2errClientConnUnusable             = errors.New("http2: client conn not usable")
-	http2errSettingsIncludeIllegalSettings = errors.New("http2: Settings contains either SettingInitialWindowSize or SettingHeaderTableSize, which should be specified in transport instead")
+	errHttp2ClientConnClosed               = errors.New("http2: client conn is closed")
+	errHttp2ClientConnGotGoAway            = errors.New("http2: Transport received Server's graceful shutdown GOAWAY")
+	errHttp2ClientConnUnusable             = errors.New("http2: client conn not usable")
+	errHttp2SettingsIncludeIllegalSettings = errors.New("http2: Settings contains either SettingInitialWindowSize or SettingHeaderTableSize, which should be specified in transport instead")
 )
 
 // shouldRetryRequest is called by RoundTrip when a request fails to get
@@ -7613,7 +7612,7 @@ func http2shouldRetryRequest(req *Request, err error, afterBodyWrite bool) (*Req
 }
 
 func http2canRetryError(err error) bool {
-	if err == http2errClientConnUnusable || err == http2errClientConnGotGoAway {
+	if err == errHttp2ClientConnUnusable || err == errHttp2ClientConnGotGoAway {
 		return true
 	}
 	if se, ok := err.(http2StreamError); ok {
@@ -7768,7 +7767,7 @@ func (t *http2Transport) newClientConn(c net.Conn, addr string, singleUse bool) 
 				setMaxHeader = true
 			}
 			if setting.ID == http2SettingHeaderTableSize || setting.ID == http2SettingInitialWindowSize {
-				return nil, http2errSettingsIncludeIllegalSettings
+				return nil, errHttp2SettingsIncludeIllegalSettings
 			}
 			initialSettings = append(initialSettings, setting)
 		}
@@ -7836,7 +7835,7 @@ func (cc *http2ClientConn) setGoAway(f *http2GoAwayFrame) {
 	for streamID, cs := range cc.streams {
 		if streamID > last {
 			select {
-			case cs.resc <- http2resAndError{err: http2errClientConnGotGoAway}:
+			case cs.resc <- http2resAndError{err: errHttp2ClientConnGotGoAway}:
 			default:
 			}
 		}
@@ -8077,7 +8076,7 @@ func (cc *http2ClientConn) putFrameScratchBuffer(buf []byte) {
 
 // errRequestCanceled is a copy of net/http's errRequestCanceled because it's not
 // exported. At least they'll be DeepEqual for h1-vs-h2 comparisons tests.
-var http2errRequestCanceled = errors.New("net/http: request canceled")
+var errHttp2RequestCanceled = errors.New("net/http: request canceled")
 
 func http2commaSeparatedTrailers(req *Request) (string, error) {
 	keys := make([]string, 0, len(req.Trailer))
@@ -8248,7 +8247,7 @@ func (cc *http2ClientConn) roundTrip(req *Request) (res *Response, gotErrAfterRe
 			// heuristic to avoid adding knobs to Transport. Hopefully
 			// we can keep it.
 			bodyWriter.cancel()
-			cs.abortRequestBodyWrite(http2errStopReqBodyWrite)
+			cs.abortRequestBodyWrite(errHttp2StopReqBodyWrite)
 			if hasBody && !bodyWritten {
 				<-bodyWriter.resc
 			}
@@ -8273,17 +8272,17 @@ func (cc *http2ClientConn) roundTrip(req *Request) (res *Response, gotErrAfterRe
 				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil)
 			} else {
 				bodyWriter.cancel()
-				cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel)
+				cs.abortRequestBodyWrite(errHttp2StopReqBodyWriteAndCancel)
 				<-bodyWriter.resc
 			}
 			cc.forgetStreamID(cs.ID)
-			return nil, cs.getStartedWrite(), http2errTimeout
+			return nil, cs.getStartedWrite(), errHttp2Timeout
 		case <-ctx.Done():
 			if !hasBody || bodyWritten {
 				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil)
 			} else {
 				bodyWriter.cancel()
-				cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel)
+				cs.abortRequestBodyWrite(errHttp2StopReqBodyWriteAndCancel)
 				<-bodyWriter.resc
 			}
 			cc.forgetStreamID(cs.ID)
@@ -8293,11 +8292,11 @@ func (cc *http2ClientConn) roundTrip(req *Request) (res *Response, gotErrAfterRe
 				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil)
 			} else {
 				bodyWriter.cancel()
-				cs.abortRequestBodyWrite(http2errStopReqBodyWriteAndCancel)
+				cs.abortRequestBodyWrite(errHttp2StopReqBodyWriteAndCancel)
 				<-bodyWriter.resc
 			}
 			cc.forgetStreamID(cs.ID)
-			return nil, cs.getStartedWrite(), http2errRequestCanceled
+			return nil, cs.getStartedWrite(), errHttp2RequestCanceled
 		case <-cs.peerReset:
 			// processResetStream already removed the
 			// stream from the streams map; no need for
@@ -8337,7 +8336,7 @@ func (cc *http2ClientConn) awaitOpenSlotForRequest(req *Request) error {
 				close(waitingForConn)
 			}
 
-			return http2errClientConnUnusable
+			return errHttp2ClientConnUnusable
 		}
 		cc.lastIdle = time.Time{}
 		if int64(len(cc.streams))+1 <= int64(cc.maxConcurrentStreams) {
@@ -8427,12 +8426,12 @@ func (cc *http2ClientConn) requestGzip(req *Request) bool {
 
 // internal error values; they don't escape to callers
 var (
-	http2errReqBodyTooLong = errors.New("http2: request body larger than specified content length")
+	errHttp2ReqBodyTooLong = errors.New("http2: request body larger than specified content length")
 	// abort request body write; don't send cancel
-	http2errStopReqBodyWrite = errors.New("http2: aborting request body write")
+	errHttp2StopReqBodyWrite = errors.New("http2: aborting request body write")
 
 	// abort request body write, but send stream reset of cancel.
-	http2errStopReqBodyWriteAndCancel = errors.New("http2: canceling request")
+	errHttp2StopReqBodyWriteAndCancel = errors.New("http2: canceling request")
 )
 
 func (cs *http2clientStream) writeRequestBody(body io.Reader, bodyCloser io.Closer) (err error) {
@@ -8476,7 +8475,7 @@ func (cs *http2clientStream) writeRequestBody(body io.Reader, bodyCloser io.Clos
 				remainLen -= int64(n1)
 			}
 			if remainLen < 0 {
-				err = http2errReqBodyTooLong
+				err = errHttp2ReqBodyTooLong
 				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, err)
 
 				return err
@@ -8496,9 +8495,9 @@ func (cs *http2clientStream) writeRequestBody(body io.Reader, bodyCloser io.Clos
 			var allowed int32
 			allowed, err = cs.awaitFlowControl(len(remain))
 			switch {
-			case err == http2errStopReqBodyWrite:
+			case err == errHttp2StopReqBodyWrite:
 				return err
-			case err == http2errStopReqBodyWriteAndCancel:
+			case err == errHttp2StopReqBodyWriteAndCancel:
 				cc.writeStreamReset(cs.ID, http2ErrCodeCancel, nil)
 				return err
 			case err != nil:
@@ -8576,7 +8575,7 @@ func (cs *http2clientStream) awaitFlowControl(maxBytes int) (taken int32, err er
 	defer cc.mu.Unlock()
 	for {
 		if cc.closed {
-			return 0, http2errClientConnClosed
+			return 0, errHttp2ClientConnClosed
 		}
 		if cs.stopReqBody != nil {
 			return 0, cs.stopReqBody
@@ -8801,7 +8800,7 @@ func (cc *http2ClientConn) encodeHeaders(req *Request, addGzipHeader bool, trail
 	})
 
 	if hlSize > cc.peerMaxHeaderListSize {
-		return nil, http2errRequestHeaderListSize
+		return nil, errHttp2RequestHeaderListSize
 	}
 
 	trace := httptrace.ContextClientTrace(req.Context())
@@ -8858,7 +8857,7 @@ func (cc *http2ClientConn) encodeTrailers(req *Request) ([]byte, error) {
 		}
 	}
 	if hlSize > cc.peerMaxHeaderListSize {
-		return nil, http2errRequestHeaderListSize
+		return nil, errHttp2RequestHeaderListSize
 	}
 
 	for k, vv := range req.Trailer {
@@ -9173,7 +9172,7 @@ func (rl *http2clientConnReadLoop) processHeaders(f *http2MetaHeadersFrame) erro
 // frame (currently only used for 1xx responses).
 func (rl *http2clientConnReadLoop) handleResponse(cs *http2clientStream, f *http2MetaHeadersFrame) (*Response, error) {
 	if f.Truncated {
-		return nil, http2errResponseHeaderListSize
+		return nil, errHttp2ResponseHeaderListSize
 	}
 
 	status := f.PseudoValue("status")
@@ -9381,7 +9380,7 @@ func (b http2transportResponseBody) Read(p []byte) (n int, err error) {
 	return
 }
 
-var http2errClosedResponseBody = errors.New("http2: response body closed")
+var errHttp2ClosedResponseBody = errors.New("http2: response body closed")
 
 func (b http2transportResponseBody) Close() error {
 	cs := b.cs
@@ -9407,7 +9406,7 @@ func (b http2transportResponseBody) Close() error {
 		cc.mu.Unlock()
 	}
 
-	cs.bufPipe.BreakWithError(http2errClosedResponseBody)
+	cs.bufPipe.BreakWithError(errHttp2ClosedResponseBody)
 	cc.forgetStreamID(cs.ID)
 
 	return nil
@@ -9828,8 +9827,8 @@ func (cc *http2ClientConn) writeStreamReset(streamID uint32, code http2ErrCode, 
 }
 
 var (
-	http2errRequestHeaderListSize  = errors.New("http2: request header list larger than peer's advertised limit")
-	http2errResponseHeaderListSize = errors.New("http2: response header list larger than advertised limit")
+	errHttp2RequestHeaderListSize  = errors.New("http2: request header list larger than peer's advertised limit")
+	errHttp2ResponseHeaderListSize = errors.New("http2: response header list larger than advertised limit")
 )
 
 func (cc *http2ClientConn) logf(format string, args ...interface{}) {
@@ -9850,7 +9849,7 @@ func (t *http2Transport) logf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }
 
-var http2noBody io.ReadCloser = ioutil.NopCloser(bytes.NewReader(nil))
+var http2noBody io.ReadCloser = io.NopCloser(bytes.NewReader(nil))
 
 func http2strSliceContains(ss []string, s string) bool {
 	for _, v := range ss {

@@ -10,7 +10,7 @@ package http2
 import (
 	"net/textproto"
 
-	"github.com/smallerqiu/fhttp/httptrace"
+	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
 )
 
 func traceHasWroteHeaderField(trace *httptrace.ClientTrace) bool {

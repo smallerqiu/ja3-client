@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	http "github.com/smallerqiu/fhttp"
+	http "github.com/smallerqiu/ja3-client/http"
 )
 
 var (
