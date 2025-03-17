@@ -54,6 +54,7 @@ var Sansung_27_1 = ClientProfile{
 						tls.VersionTLS12,
 					}},
 					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 					&tls.SCTExtension{}, //18 ,signed_certificate_timestamp

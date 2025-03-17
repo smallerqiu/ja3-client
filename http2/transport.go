@@ -1671,6 +1671,10 @@ func (cs *clientStream) awaitFlowControl(maxBytes int) (taken int32, err error) 
 	}
 }
 
+func isNormalConnect(req *http.Request) bool {
+	return req.Method == "CONNECT" && req.Header.Get(":protocol") == ""
+}
+
 // requires cc.mu be held.
 func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trailers string, contentLength int64) ([]byte, error) {
 	cc.hbuf.Reset()
@@ -1685,7 +1689,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	}
 
 	var path string
-	if req.Method != "CONNECT" {
+	if !isNormalConnect(req) {
 		path = req.URL.RequestURI()
 		if !validPseudoPath(path) {
 			orig := path
@@ -1704,7 +1708,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	// potentially pollute our hpack state. (We want to be able to
 	// continue to reuse the hpack encoder for future requests)
 	for k, vv := range req.Header {
-		if !httpguts.ValidHeaderFieldName(k) {
+		if !httpguts.ValidHeaderFieldName(k) && k != ":protocol" {
 			// If the header is magic key, the headers would have been ordered
 			// by this step. It is ok to delete and not raise an error
 			if k == http.HeaderOrderKey || k == http.PHeaderOrderKey {
@@ -1764,7 +1768,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 		} else {
 			f(":authority", host)
 			f(":method", m)
-			if req.Method != "CONNECT" {
+			if !isNormalConnect(req) {
 				f(":path", path)
 				f(":scheme", req.URL.Scheme)
 			}
@@ -1800,7 +1804,14 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 		}
 
 		for _, kv := range kvs {
-			if strings.EqualFold(kv.Key, "host") {
+			if len(kv.Values) == 0 {
+				// feat: skip empty headers
+				// for skip auto headers
+				// header["User-Agent"] = make([]string, 0)
+				// header["User-Agent"] = []string{}
+				continue
+			} else if strings.EqualFold(kv.Key, "host") {
+
 				// Host is :authority, already sent.
 				continue
 			} else if strings.EqualFold(kv.Key, "connection") || strings.EqualFold(kv.Key, "proxy-connection") ||
@@ -2670,6 +2681,10 @@ func (rl *clientConnReadLoop) processSettings(f *SettingsFrame) error {
 			cc.cond.Broadcast()
 
 			cc.initialWindowSize = s.Val
+		case SettingEnableConnectProtocol:
+			if err := s.Valid(); err != nil {
+				return err
+			}
 		default:
 			// TODO(bradfitz): handle more settings? SETTINGS_HEADER_TABLE_SIZE probably.
 			cc.vlogf("Unhandled Setting: %v", s)

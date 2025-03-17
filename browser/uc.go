@@ -77,6 +77,7 @@ var UC_17_3 = ClientProfile{
 						tls.PKCS1WithSHA512,        //1537
 					}},
 					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 

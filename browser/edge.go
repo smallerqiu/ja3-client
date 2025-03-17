@@ -45,6 +45,7 @@ var Edge_133 = ClientProfile{
 					&tls.SCTExtension{},           //18 ,signed_certificate_timestamp
 					&tls.SessionTicketExtension{}, // 35  ,session_ticket
 					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{ //27 ,compress_certificate

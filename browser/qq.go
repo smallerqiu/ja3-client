@@ -78,6 +78,7 @@ var QQ_13_5 = ClientProfile{
 						tls.CertCompressionBrotli,
 					}},
 					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 

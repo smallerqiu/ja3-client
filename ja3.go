@@ -214,13 +214,13 @@ func FormatJa3(ja3 string, browserType string, version string, randomExtensionOr
 
 	// 17513
 	extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
-		// CodePoint:          tls.ExtensionALPSOld,
+		CodePoint:          tls.ExtensionALPSOld,
 		SupportedProtocols: profile.supportedProtocolsALPS,
 	}
 
 	// 17613
 	extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
-		// CodePoint:          tls.ExtensionALPS,
+		CodePoint:          tls.ExtensionALPS,
 		SupportedProtocols: profile.supportedProtocolsALPS,
 	}
 

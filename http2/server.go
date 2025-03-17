@@ -818,13 +818,18 @@ func (sc *serverConn) serve() {
 		sc.vlogf("http2: server connection from %v on %p", sc.conn.RemoteAddr(), sc.hs)
 	}
 
+	settings := writeSettings{
+		{SettingMaxFrameSize, sc.srv.maxReadFrameSize()},
+		{SettingMaxConcurrentStreams, sc.advMaxStreams},
+		{SettingMaxHeaderListSize, sc.maxHeaderListSize()},
+		{SettingInitialWindowSize, uint32(sc.srv.initialStreamRecvWindowSize())},
+	}
+
+	if !disableExtendedConnectProtocol {
+		settings = append(settings, Setting{SettingEnableConnectProtocol, 1})
+	}
 	sc.writeFrame(FrameWriteRequest{
-		write: writeSettings{
-			{SettingMaxFrameSize, sc.srv.maxReadFrameSize()},
-			{SettingMaxConcurrentStreams, sc.advMaxStreams},
-			{SettingMaxHeaderListSize, sc.maxHeaderListSize()},
-			{SettingInitialWindowSize, uint32(sc.srv.initialStreamRecvWindowSize())},
-		},
+		write: settings,
 	})
 	sc.unackedSettings++
 

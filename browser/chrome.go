@@ -63,6 +63,7 @@ var Chrome_134 = ClientProfile{
 						CandidatePayloadLens: []uint16{196, 32, 144}, // +16: 144, 239
 					},
 					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
@@ -236,7 +237,7 @@ var Chrome_133_PSK = ClientProfile{
 var Chrome_133 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "133",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -346,7 +347,7 @@ var Chrome_133 = ClientProfile{
 var Chrome_131 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "131",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -456,7 +457,7 @@ var Chrome_131 = ClientProfile{
 var Chrome_131_PSK = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "131",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -567,7 +568,7 @@ var Chrome_131_PSK = ClientProfile{
 var Chrome_117 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "117",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -670,7 +671,7 @@ var Chrome_117 = ClientProfile{
 var Chrome_124 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "124",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -775,7 +776,7 @@ var Chrome_124 = ClientProfile{
 var Chrome_120 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "120",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -901,7 +902,7 @@ var Chrome_112 = ClientProfile{
 }
 
 var Chrome_116_PSK = ClientProfile{
-	clientHelloId: tls.HelloChrome_112_PSK_Shuf,
+	clientHelloId: tls.HelloChrome_112_PSK,
 	settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:      65536,
 		http2.SettingEnablePush:           0,

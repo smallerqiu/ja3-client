@@ -342,6 +342,11 @@ func newRoundTripper(clientProfile browser.ClientProfile, transportOptions *Tran
 	var clientSessionCache tls.ClientSessionCache
 
 	withSessionResumption := supportsSessionResumption(clientProfile.GetClientHelloId())
+	var id = clientProfile.GetClientHelloId()
+
+	if id.RandomExtensionOrder {
+		withRandomTlsExtensionOrder = true
+	}
 
 	if withSessionResumption {
 		clientSessionCache = tls.NewLRUClientSessionCache(32)

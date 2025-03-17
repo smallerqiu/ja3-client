@@ -67,6 +67,7 @@ func (p *pipe) Read(d []byte) (n int, err error) {
 }
 
 var errClosedPipeWrite = errors.New("write on closed buffer")
+var errHttp2UninitializedPipeWrite = errors.New("write on uninitialized buffer")
 
 // Write copies bytes from p into the buffer and wakes a reader.
 // It is an error to write more data than the buffer can hold.
@@ -83,6 +84,9 @@ func (p *pipe) Write(d []byte) (n int, err error) {
 	if p.breakErr != nil {
 		p.unread += len(d)
 		return len(d), nil // discard when there is no reader
+	}
+	if p.b == nil {
+		return 0, errHttp2UninitializedPipeWrite
 	}
 	return p.b.Write(d)
 }

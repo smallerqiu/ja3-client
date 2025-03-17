@@ -90,6 +90,7 @@ var QH360_14_5 = ClientProfile{
 					}},
 
 					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 
