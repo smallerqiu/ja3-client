@@ -2,6 +2,7 @@ package ja3_client
 
 import (
 	"bytes"
+	"log"
 	"strings"
 
 	"github.com/smallerqiu/ja3-client/browser"
@@ -25,14 +26,7 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 		options = append(options, WithNotFollowRedirects())
 	}
 
-	// 解析 JA3 指纹
-	if b, ok := browser.MappedTLSClients[request.Impersonate]; ok {
-		options = append(options, WithClientProfile(b))
-		if request.RandomExtensionOrder {
-			options = append(options, WithRandomTLSExtensionOrder())
-		}
-
-	} else if request.JA3String != "" {
+	if request.JA3String != "" {
 		profile, err := FormatJa3(request.JA3String, request.Client, request.ClientVersion, false)
 		if err != nil {
 			return nil, nil, err
@@ -40,8 +34,18 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 
 		options = append(options, WithClientProfile(profile))
 	} else {
-		// default chrome 133
-		options = append(options, WithClientProfile(browser.Chrome_133))
+		imp := request.Impersonate
+		if _, ok := browser.MappedTLSClients[request.Impersonate]; !ok {
+			log.Printf("the input client %v dont't support", imp)
+			imp = "chrome_134"
+		}
+
+		b := browser.MappedTLSClients[imp]
+
+		options = append(options, WithClientProfile(b))
+		if request.RandomExtensionOrder {
+			options = append(options, WithRandomTLSExtensionOrder())
+		}
 	}
 
 	// 设置代理

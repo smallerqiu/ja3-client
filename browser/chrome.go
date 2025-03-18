@@ -35,25 +35,25 @@ var Chrome_134 = ClientProfile{
 				Extensions: []tls.TLSExtension{
 					&tls.UtlsGREASEExtension{},
 					&tls.SCTExtension{},
-					&tls.RenegotiationInfoExtension{ //65281 , renegotiation_info
+					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
-					&tls.StatusRequestExtension{}, //5 ,status_request
+					&tls.StatusRequestExtension{},
 					&tls.SessionTicketExtension{},
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51 ,key_share
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
 						{Group: tls.X25519MLKEM768},
 						{Group: tls.X25519},
-					}}, // 35  ,session_ticket
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43 ,supported_versions
+					}},
+					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.GREASE_PLACEHOLDER,
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 					}},
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11 ,ec_point_formats
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.GREASEEncryptedClientHelloExtension{ //65037 ,encrypted_client_hello
+					&tls.GREASEEncryptedClientHelloExtension{
 						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
 							{
 								KdfId:  dicttls.HKDF_SHA256,
@@ -62,17 +62,17 @@ var Chrome_134 = ClientProfile{
 						},
 						CandidatePayloadLens: []uint16{196, 32, 144}, // +16: 144, 239
 					},
-					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
-						CodePoint:          tls.ExtensionALPSOld,
+					&tls.ApplicationSettingsExtension{
+						CodePoint:          tls.ExtensionALPS,
 						SupportedProtocols: []string{"h2"},
 					},
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 						tls.PskModeDHE,
 					}},
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{ //27 ,compress_certificate
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 						tls.CertCompressionBrotli,
 					}},
-					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16 ,application_layer_protocol_negotiation
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
 					&tls.ExtendedMasterSecretExtension{},
 					&tls.SNIExtension{},
 					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10

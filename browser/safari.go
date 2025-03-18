@@ -3,7 +3,6 @@ package browser
 import (
 	"github.com/smallerqiu/ja3-client/http2"
 	tls "github.com/smallerqiu/utls"
-	"github.com/smallerqiu/utls/dicttls"
 )
 
 var Safari_15_6_1 = ClientProfile{
@@ -81,25 +80,25 @@ var Safari_18_1 = ClientProfile{
 					tls.CompressionNone,
 				},
 				Extensions: []tls.TLSExtension{
-					&tls.UtlsGREASEExtension{},           //2570 , GREASE
-					&tls.SNIExtension{},                  //0 , server_name
-					&tls.ExtendedMasterSecretExtension{}, //23 ,extended_master_secret
-					&tls.RenegotiationInfoExtension{ //65281 , renegotiation_info
+					&tls.UtlsGREASEExtension{},
+					&tls.SNIExtension{},
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
-					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10 ,supported_groups
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 						tls.GREASE_PLACEHOLDER,
 						tls.X25519,
 						tls.CurveP256, //23
 						tls.CurveP384, //24
 						tls.CurveP521, //25
 					}},
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11 ,ec_point_formats
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16 ,application_layer_protocol_negotiation
-					&tls.StatusRequestExtension{},                                 //5 ,status_request
-					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ //13 ,signature_algorithms
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+					&tls.StatusRequestExtension{},
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027
 						tls.PSSWithSHA256,          //2052
 						tls.PKCS1WithSHA256,        //1025
@@ -112,43 +111,26 @@ var Safari_18_1 = ClientProfile{
 						tls.PKCS1WithSHA512,        //1537
 						tls.PKCS1WithSHA1,          //513
 					}},
-					&tls.SCTExtension{}, //18 ,signed_certificate_timestamp
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51 ,key_share
+					&tls.SCTExtension{},
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
 						{Group: tls.X25519},
 					}},
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 						tls.PskModeDHE,
 					}},
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43 ,supported_versions
+					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.GREASE_PLACEHOLDER,
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 						tls.VersionTLS11,
 						tls.VersionTLS10,
 					}},
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{ //27 ,compress_certificate
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 						tls.CertCompressionZlib,
 					}},
-					&tls.UtlsGREASEExtension{}, //2570 , GREASE
-
-					&tls.SessionTicketExtension{}, // 35  ,session_ticket
-
-					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
-						CodePoint:          tls.ExtensionALPSOld,
-						SupportedProtocols: []string{"h2"},
-					},
-
-					&tls.GREASEEncryptedClientHelloExtension{ //65037 ,encrypted_client_hello
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
-						},
-						CandidatePayloadLens: []uint16{234, 32, 176}, // +16: 144, 239
-					},
-					&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}, // 21 padding
+					&tls.UtlsGREASEExtension{},
+					&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 				},
 			}, nil
 		},
@@ -470,25 +452,25 @@ var Safari_IOS_16_7 = ClientProfile{
 					tls.CompressionNone,
 				},
 				Extensions: []tls.TLSExtension{
-					&tls.UtlsGREASEExtension{},           //2570 , GREASE
-					&tls.SNIExtension{},                  //0 , server_name
-					&tls.ExtendedMasterSecretExtension{}, //23 ,extended_master_secret
-					&tls.RenegotiationInfoExtension{ //65281 , renegotiation_info
+					&tls.UtlsGREASEExtension{},
+					&tls.SNIExtension{},
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
-					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10 ,supported_groups
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 						tls.GREASE_PLACEHOLDER,
 						tls.X25519,
 						tls.CurveP256, //23
 						tls.CurveP384, //24
 						tls.CurveP521, //25
 					}},
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11 ,ec_point_formats
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16 ,application_layer_protocol_negotiation
-					&tls.StatusRequestExtension{},                                 //5 ,status_request
-					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ //13 ,signature_algorithms
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+					&tls.StatusRequestExtension{},
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027
 						tls.PSSWithSHA256,          //2052
 						tls.PKCS1WithSHA256,        //1025
@@ -501,26 +483,26 @@ var Safari_IOS_16_7 = ClientProfile{
 						tls.PKCS1WithSHA512,        //1537
 						tls.PKCS1WithSHA1,          //513
 					}},
-					&tls.SCTExtension{}, //18 ,signed_certificate_timestamp
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51 ,key_share
+					&tls.SCTExtension{},
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
 						{Group: tls.X25519},
 					}},
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 						tls.PskModeDHE,
 					}},
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43 ,supported_versions
+					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.GREASE_PLACEHOLDER,
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 						tls.VersionTLS11,
 						tls.VersionTLS10,
 					}},
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{ //27 ,compress_certificate
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 						tls.CertCompressionZlib,
 					}},
-					&tls.UtlsGREASEExtension{},                                       //2570 , GREASE
-					&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}, // 21 padding
+					&tls.UtlsGREASEExtension{},
+					&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 				},
 			}, nil
 		},

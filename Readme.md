@@ -14,6 +14,25 @@ Demonstrates good performance with 10 million concurrent requests. It is safe to
  - Custom header order
  - Custom client identifier (Chrome, Firefox, Opera, Safari, iOS, iPadOS, Android)
 
+# Supported browsers
+
+The following browsers can be impersonated.
+
+| Browser     | Version                                                                                                                                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chrome      | chrome_103, chrome_104, chrome_105, chrome_106, chrome_107, chrome_108, chrome_109,chrome_110, chrome_111, chrome_112, chrome_116, chrome_117, chrome_120, chrome_124, chrome_131, chrome_133, chrome_134 |
+| Firefox     | firefox_102, firefox_104, firefox_106, firefox_108, firefox_110, firefox_117, firefox_120, firefox_123, firefox_124, firefox_132, firefox_133, firefox_135 , firefox_136                                  |
+| Safari Mac  | safari_15_6_1, safari_16_0, safari_18_1                                                                                                                                                                   |
+| Safari IOS  | safari_ios_15_5, safari_ios_15_6, safari_ios_16_0  ,safari_ios_16_7    ,safari_ios_17_0          ,safari_ios_18_0                                                                                         |
+| Safari IPAD | safari_ipad_15_6                                                                                                                                                                                          |
+| Edge        | 133                                                                                                                                                                                                       |
+| Opera       | opera_89      ,opera_90,      opera_91     ,opera_117                                                                                                                                                     |
+| QQ          | qq_13_5                                                                                                                                                                                                       |
+| 360         | 360_14_5                                                                                                                                                                                                       |
+| UC          | uc_17_3                                                                                                                                                                                                       |
+| Xiaomi          | xiaomi_15_9                                                                                                                                                                                                       |
+| Sansung          | sansung_27_1                                                                                                                                                                                                       |
+
 
 # Dependencies
 ```

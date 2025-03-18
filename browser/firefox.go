@@ -6,7 +6,136 @@ import (
 	"github.com/smallerqiu/utls/dicttls"
 )
 
-// new
+var Firefox_136 = ClientProfile{
+	clientHelloId: tls.ClientHelloID{
+		Client:               "Firefox",
+		RandomExtensionOrder: false,
+		Version:              "136",
+		Seed:                 nil,
+		SpecFactory: func() (tls.ClientHelloSpec, error) {
+			return tls.ClientHelloSpec{
+				CipherSuites: []uint16{
+					tls.TLS_AES_128_GCM_SHA256,                        //4865
+					tls.TLS_CHACHA20_POLY1305_SHA256,                  //4867
+					tls.TLS_AES_256_GCM_SHA384,                        //4866
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,       //49195
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,         //49199
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, //52393
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,   //52392
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,       //49196
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,         //49200
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,          //49162
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,          //49161
+					tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,            //49171
+					tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,            //49172
+					tls.TLS_RSA_WITH_AES_128_GCM_SHA256,               //156
+					tls.TLS_RSA_WITH_AES_256_GCM_SHA384,               //157
+					tls.TLS_RSA_WITH_AES_128_CBC_SHA,                  //47
+					tls.TLS_RSA_WITH_AES_256_CBC_SHA,                  //53
+				},
+				CompressionMethods: []byte{
+					tls.CompressionNone,
+				},
+				Extensions: []tls.TLSExtension{
+					&tls.SNIExtension{},                  //0
+					&tls.ExtendedMasterSecretExtension{}, //23
+					&tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient}, //65281
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10
+						tls.X25519MLKEM768,
+						tls.X25519,
+						tls.CurveP256,
+						tls.CurveP384,
+						tls.CurveP521,
+						tls.FAKEFFDHE2048,
+						tls.FAKEFFDHE3072,
+					}},
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11
+						tls.PointFormatUncompressed,
+					}},
+					&tls.SessionTicketExtension{}, //35
+
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16
+					&tls.StatusRequestExtension{},                                 //5
+					&tls.DelegatedCredentialsExtension{ //34
+						SupportedSignatureAlgorithms: []tls.SignatureScheme{
+							tls.ECDSAWithP256AndSHA256,
+							tls.ECDSAWithP384AndSHA384,
+							tls.ECDSAWithP521AndSHA512,
+							tls.ECDSAWithSHA1,
+						},
+					},
+					&tls.SCTExtension{},
+
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51
+						{Group: tls.X25519MLKEM768},
+						{Group: tls.X25519},
+						{Group: tls.CurveP256},
+					}},
+					&tls.SupportedVersionsExtension{Versions: []uint16{ //43
+						tls.VersionTLS13,
+						tls.VersionTLS12,
+					}},
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+						tls.ECDSAWithP256AndSHA256,
+						tls.ECDSAWithP384AndSHA384,
+						tls.ECDSAWithP521AndSHA512,
+						tls.PSSWithSHA256,
+						tls.PSSWithSHA384,
+						tls.PSSWithSHA512,
+						tls.PKCS1WithSHA256,
+						tls.PKCS1WithSHA384,
+						tls.PKCS1WithSHA512,
+						tls.ECDSAWithSHA1,
+						tls.PKCS1WithSHA1,
+					}},
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
+						tls.PskModeDHE,
+					}},
+					&tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+						tls.CertCompressionZlib,
+						tls.CertCompressionBrotli,
+						tls.CertCompressionZstd,
+					},
+					},
+					&tls.GREASEEncryptedClientHelloExtension{
+						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+							{
+								KdfId:  dicttls.HKDF_SHA256,
+								AeadId: dicttls.AEAD_AES_128_GCM,
+							},
+						},
+						CandidatePayloadLens: []uint16{187, 32, 239}, // +16: 144, 239
+					},
+				}}, nil
+		},
+	},
+	settings: map[http2.SettingID]uint32{
+		http2.SettingHeaderTableSize:   65536,
+		http2.SettingEnablePush:        0,
+		http2.SettingInitialWindowSize: 131072,
+		http2.SettingMaxFrameSize:      16384,
+	},
+	settingsOrder: []http2.SettingID{
+		http2.SettingHeaderTableSize,
+		http2.SettingEnablePush,
+		http2.SettingInitialWindowSize,
+		http2.SettingMaxFrameSize,
+	},
+	pseudoHeaderOrder: []string{
+		":method",
+		":path",
+		":authority",
+		":scheme",
+	},
+	connectionFlow: 12517377,
+	headerPriority: &http2.PriorityParam{
+		StreamDep: 0,
+		Exclusive: false,
+		Weight:    43,
+	},
+}
+
 var Firefox_135 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
@@ -65,7 +194,7 @@ var Firefox_135 = ClientProfile{
 							tls.ECDSAWithSHA1,
 						},
 					},
-					&tls.SCTExtension{}, //18 ,signed_certificate_timestamp
+					&tls.SCTExtension{},
 
 					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51
 						{Group: tls.X25519MLKEM768},

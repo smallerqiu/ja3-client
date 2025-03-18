@@ -37,9 +37,9 @@ var Custom = ClientProfile{
 					tls.CompressionNone,
 				},
 				Extensions: []tls.TLSExtension{
-					&tls.SNIExtension{},           //0 , server_name
-					&tls.StatusRequestExtension{}, //5 ,status_request
-					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10 ,supported_groups
+					&tls.SNIExtension{},
+					&tls.StatusRequestExtension{},
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 						tls.X25519,        //29
 						tls.CurveP256,     //23
 						tls.CurveP384,     //24
@@ -51,14 +51,14 @@ var Custom = ClientProfile{
 						tls.FAKEFFDHE6144, //259
 						tls.FAKEFFDHE8192, //260
 					}},
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11 ,ec_point_formats
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16 ,application_layer_protocol_negotiation
-					&tls.StatusRequestV2Extension{},                               //17
-					&tls.ExtendedMasterSecretExtension{},                          //23 ,extended_master_secret
-					&tls.SessionTicketExtension{},                                 //35  ,session_ticket
-					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ //13 ,signature_algorithms
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+					&tls.StatusRequestV2Extension{}, //17
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.SessionTicketExtension{},
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027
 						tls.ECDSAWithP384AndSHA384, //1283
 						tls.ECDSAWithP521AndSHA512, //1539
@@ -81,11 +81,11 @@ var Custom = ClientProfile{
 						tls.PKCS1WithSHA1,          //513,
 						tls.DASWithSHA1,            //514,
 					}},
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43 ,supported_versions
+					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 					}},
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 						tls.PskModeDHE,
 					}},
 					&tls.SignatureAlgorithmsCertExtension{ //50
@@ -113,11 +113,11 @@ var Custom = ClientProfile{
 							tls.DASWithSHA1,            //514,
 						},
 					},
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51 ,key_share
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.X25519},
 						{Group: tls.CurveP256},
 					}},
-					&tls.RenegotiationInfoExtension{ //65281 , renegotiation_info
+					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
 				},

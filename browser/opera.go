@@ -39,36 +39,36 @@ var Opera_117 = ClientProfile{
 					tls.CompressionNone,
 				},
 				Extensions: []tls.TLSExtension{
-					&tls.UtlsGREASEExtension{}, //2570 , GREASE
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43 ,supported_versions
+					&tls.UtlsGREASEExtension{},
+					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.GREASE_PLACEHOLDER,
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 					}},
 
-					&tls.SNIExtension{}, //0 , server_name
-					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10 ,supported_groups
+					&tls.SNIExtension{},
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 						tls.GREASE_PLACEHOLDER,
 						tls.X25519MLKEM768,
 						tls.X25519,
 						tls.CurveP256, //23
 						tls.CurveP384, //24
 					}},
-					&tls.SCTExtension{},           //18 ,signed_certificate_timestamp
-					&tls.StatusRequestExtension{}, //5 ,status_request
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11 ,ec_point_formats
+					&tls.SCTExtension{},
+					&tls.StatusRequestExtension{},
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.ExtendedMasterSecretExtension{}, //23 ,extended_master_secret
-					&tls.SessionTicketExtension{},        // 35  ,session_ticket
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.SessionTicketExtension{},
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 						tls.PskModeDHE,
 					}},
-					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+					&tls.ApplicationSettingsExtension{
 						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
-					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ //13 ,signature_algorithms
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027
 						tls.PSSWithSHA256,          //2052
 						tls.PKCS1WithSHA256,        //1025
@@ -78,16 +78,16 @@ var Opera_117 = ClientProfile{
 						tls.PSSWithSHA512,          //2054
 						tls.PKCS1WithSHA512,        //1537
 					}},
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51 ,key_share
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
 						{Group: tls.X25519MLKEM768},
 						{Group: tls.X25519},
 					}},
-					&tls.RenegotiationInfoExtension{ //65281 , renegotiation_info
+					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
 
-					&tls.GREASEEncryptedClientHelloExtension{ //65037 ,encrypted_client_hello
+					&tls.GREASEEncryptedClientHelloExtension{
 						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
 							{
 								KdfId:  dicttls.HKDF_SHA256,
@@ -96,13 +96,13 @@ var Opera_117 = ClientProfile{
 						},
 						CandidatePayloadLens: []uint16{234, 32, 176}, // +16: 144, 239
 					},
-					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16 ,application_layer_protocol_negotiation
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
 
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{ //27 ,compress_certificate
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 						tls.CertCompressionBrotli,
 					}},
 
-					&tls.UtlsGREASEExtension{}, //2570 , GREASE
+					&tls.UtlsGREASEExtension{},
 				},
 			}, nil
 		},

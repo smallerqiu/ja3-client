@@ -30,64 +30,66 @@ var UC_17_3 = ClientProfile{
 					tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,            // 49172
 					tls.TLS_RSA_WITH_AES_128_GCM_SHA256,               //156
 					tls.TLS_RSA_WITH_AES_256_GCM_SHA384,               //157
+					tls.TLS_RSA_WITH_AES_128_CBC_SHA,                  //47
 					tls.TLS_RSA_WITH_AES_256_CBC_SHA,                  //53
 				},
 				CompressionMethods: []byte{
 					tls.CompressionNone,
 				},
 				Extensions: []tls.TLSExtension{
-					&tls.UtlsGREASEExtension{}, //2570 , GREASE
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{ //45  ,psk_key_exchange_modes
+					&tls.UtlsGREASEExtension{},
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 						tls.PskModeDHE,
 					}},
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51 ,key_share
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
 						{Group: tls.X25519},
 					}},
-					&tls.SCTExtension{}, //18 ,signed_certificate_timestamp
-					&tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}, //16 ,application_layer_protocol_negotiation
-					&tls.StatusRequestExtension{},                                 //5 ,status_request
-					&tls.SNIExtension{},                                           //0 , server_name
-					&tls.ExtendedMasterSecretExtension{},                          //23 ,extended_master_secret
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43 ,supported_versions
+					&tls.SCTExtension{},
+					&tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}},
+					&tls.StatusRequestExtension{},
+					&tls.SNIExtension{},
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.GREASE_PLACEHOLDER,
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 						tls.VersionTLS11,
 						tls.VersionTLS10,
 					}},
-					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10 ,supported_groups
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 						tls.GREASE_PLACEHOLDER,
 						tls.X25519,
 						tls.CurveP256, //23
 						tls.CurveP384, //24
 					}},
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{ //27 ,compress_certificate
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 						tls.CertCompressionBrotli,
 					}},
-					&tls.SessionTicketExtension{}, // 35  ,session_ticket
-					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ //13 ,signature_algorithms
-						tls.ECDSAWithP256AndSHA256, //1027
-						tls.PSSWithSHA256,          //2052
-						tls.PKCS1WithSHA256,        //1025
-						tls.ECDSAWithP384AndSHA384, //1283
-						tls.PSSWithSHA384,          //2053
-						tls.PKCS1WithSHA384,        //1281
-						tls.PSSWithSHA512,          //2054
-						tls.PKCS1WithSHA512,        //1537
-					}},
-					&tls.ApplicationSettingsExtension{ //17513 ,application_settings_old
+					&tls.SessionTicketExtension{},
+					&tls.SignatureAlgorithmsExtension{
+						SupportedSignatureAlgorithms: []tls.SignatureScheme{
+							tls.ECDSAWithP256AndSHA256, //1027
+							tls.PSSWithSHA256,          //2052
+							tls.PKCS1WithSHA256,        //1025
+							tls.ECDSAWithP384AndSHA384, //1283
+							tls.PSSWithSHA384,          //2053
+							tls.PKCS1WithSHA384,        //1281
+							tls.PSSWithSHA512,          //2054
+							tls.PKCS1WithSHA512,        //1537
+						}},
+					&tls.ApplicationSettingsExtension{
 						CodePoint:          tls.ExtensionALPSOld,
 						SupportedProtocols: []string{"h2"},
 					},
 
-					&tls.RenegotiationInfoExtension{ //65281 , renegotiation_info
+					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11 ,ec_point_formats
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.UtlsGREASEExtension{},                                       //2570 , GREASE
+					&tls.UtlsGREASEExtension{},
 					&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}, // 21
 				},
 			}, nil

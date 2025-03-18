@@ -5,7 +5,7 @@ import (
 	tls "github.com/smallerqiu/utls"
 )
 
-var DefaultClientProfile = Safari_16_0
+var DefaultClientProfile = Chrome_134
 
 var MappedTLSClients = map[string]ClientProfile{
 	"custom":                 Custom,
@@ -57,10 +57,12 @@ var MappedTLSClients = map[string]ClientProfile{
 	"firefox_132":            Firefox_132,
 	"firefox_133":            Firefox_133,
 	"firefox_135":            Firefox_135,
+	"firefox_136":            Firefox_136,
 	"opera_89":               Opera_89,
 	"opera_90":               Opera_90,
 	"opera_91":               Opera_91,
 	"opera_117":              Opera_117,
+	"edge_131":               Edge_131,
 	"edge_133":               Edge_133,
 	"zalando_android_mobile": ZalandoAndroidMobile,
 	"zalando_ios_mobile":     ZalandoIosMobile,
