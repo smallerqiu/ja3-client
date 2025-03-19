@@ -4,26 +4,60 @@ import (
 	"testing"
 )
 
-func TestClient(t *testing.T) {
+func TestChrome(t *testing.T) {
+	t.Log("testing chrome 134")
+	MatchTlsInfo(t, "chrome_134")
+
+	t.Log("testing chrome 133")
+	MatchTlsInfo(t, "chrome_133")
+
+	t.Log("testing chrome 131")
+	MatchTlsInfo(t, "chrome_131")
+
+	t.Log("testing chrome 124")
+	MatchTlsInfo(t, "chrome_124")
+
+	t.Log("testing chrome 120")
+	MatchTlsInfo(t, "chrome_120")
+
+	t.Log("testing chrome 119")
+	MatchTlsInfo(t, "chrome_119")
+
+	t.Log("testing chrome 117")
+	MatchTlsInfo(t, "chrome_117")
+
+	t.Log("testing chrome 116")
+	MatchTlsInfo(t, "chrome_116_PSK")
+
+	// Below 116 is too old.    It's meaningless.
+}
+
+func TestEdge(t *testing.T) {
+	t.Log("testing edge 134")
+	MatchTlsInfo(t, "edge_134")
+
+	t.Log("testing edge 133")
+	MatchTlsInfo(t, "edge_133")
+
+	t.Log("testing edge 131")
+	MatchTlsInfo(t, "edge_131")
+}
+
+func TestFirefox(t *testing.T) {
+	t.Log("testing firefox 135")
+	MatchTlsInfo(t, "firefox 135")
+}
+
+func TestSafari(t *testing.T) {
 	t.Log("testing safari_ios_16_7")
 	MatchTlsInfo(t, "safari_ios_16_7")
 
 	t.Log("testing safari_18_1")
 	MatchTlsInfo(t, "safari_18_1")
 
-	t.Log("testing edge_133")
-	MatchTlsInfo(t, "edge_133")
+}
 
-	t.Log("testing opera_117")
-	MatchTlsInfo(t, "opera_117")
-
-	t.Log("testing firefox_135")
-	MatchTlsInfo(t, "firefox_135")
-
-	t.Log("testing firefox_136")
-	MatchTlsInfo(t, "firefox_136")
-
-	// // for China
+func TestChina(t *testing.T) {
 
 	t.Log("testing qq 13_5")
 	MatchTlsInfo(t, "qq_13_5")
