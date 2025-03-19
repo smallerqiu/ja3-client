@@ -4,8 +4,8 @@ github.com/cloudflare/circl v1.5.0 h1:hxIWksrX6XN5a1L2TI/h53AGPhNHoUBo+TD1ms9+py
 github.com/cloudflare/circl v1.5.0/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
 github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IXrJmUc=
 github.com/klauspost/compress v1.17.11/go.mod h1:pMDklpSncoRMuLFrf1W9Ss9KT+0rH90U12bZKk7uwG0=
-github.com/smallerqiu/utls v1.1.0 h1:YndzZVirjk7nUoleP9ScQWCYIJCHL8UDglRVtESprM4=
-github.com/smallerqiu/utls v1.1.0/go.mod h1:d/yplvSlWq4JOmYzpYWdzJC6PBgv6GZ0wjjX9KCsCLo=
+github.com/smallerqiu/utls v1.1.1 h1:T9EBRBcjMXwCbQoBiVRZ+XFbfNpXb8wgdI3d0YBJbRY=
+github.com/smallerqiu/utls v1.1.1/go.mod h1:d/yplvSlWq4JOmYzpYWdzJC6PBgv6GZ0wjjX9KCsCLo=
 github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 h1:YqAladjX7xpA6BM04leXMWAEjS0mTZ5kUU9KRBriQJc=
 github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5/go.mod h1:2JjD2zLQYH5HO74y5+aE3remJQvl6q4Sn6aWA2wD1Ng=
 github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZqKjWU=
