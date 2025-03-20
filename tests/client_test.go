@@ -11,11 +11,35 @@ func TestChrome(t *testing.T) {
 	t.Log("testing chrome 133")
 	MatchTlsInfo(t, "chrome_133")
 
+	t.Log("testing chrome 132")
+	MatchTlsInfo(t, "chrome_132")
+
 	t.Log("testing chrome 131")
 	MatchTlsInfo(t, "chrome_131")
 
+	t.Log("testing chrome 130")
+	MatchTlsInfo(t, "chrome_130")
+
+	t.Log("testing chrome 129")
+	MatchTlsInfo(t, "chrome_129")
+
+	t.Log("testing chrome 128")
+	MatchTlsInfo(t, "chrome_128")
+
+	t.Log("testing chrome 127")
+	MatchTlsInfo(t, "chrome_127")
+
+	t.Log("testing chrome 126")
+	MatchTlsInfo(t, "chrome_126")
+
+	t.Log("testing chrome 125")
+	MatchTlsInfo(t, "chrome_125")
+
 	t.Log("testing chrome 124")
 	MatchTlsInfo(t, "chrome_124")
+
+	t.Log("testing chrome 122")
+	MatchTlsInfo(t, "chrome_122")
 
 	t.Log("testing chrome 120")
 	MatchTlsInfo(t, "chrome_120")
@@ -30,6 +54,11 @@ func TestChrome(t *testing.T) {
 	MatchTlsInfo(t, "chrome_116_PSK")
 
 	// Below 116 is too old.    It's meaningless.
+}
+
+func TestOpera(t *testing.T) {
+	t.Log("testing Opera 117")
+	MatchTlsInfo(t, "opera_117")
 }
 
 func TestEdge(t *testing.T) {
