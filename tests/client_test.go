@@ -38,6 +38,9 @@ func TestChrome(t *testing.T) {
 	t.Log("testing chrome 124")
 	MatchTlsInfo(t, "chrome_124")
 
+	t.Log("testing chrome 123")
+	MatchTlsInfo(t, "chrome_123")
+
 	t.Log("testing chrome 122")
 	MatchTlsInfo(t, "chrome_122")
 
