@@ -8,7 +8,6 @@ import "C"
 import (
 	"encoding/json"
 	"io"
-	"runtime"
 	"unsafe"
 
 	ja3 "github.com/smallerqiu/ja3-client"
@@ -36,6 +35,7 @@ func outPutError(err error) *C.char {
 //export request
 func request(requestParams *C.char) *C.char {
 	paramsStr := C.GoString(requestParams)
+	print(paramsStr)
 	params := ja3.Ja3Request{}
 	err := json.Unmarshal([]byte(paramsStr), &params)
 	if err != nil {
@@ -79,10 +79,7 @@ func request(requestParams *C.char) *C.char {
 	}
 
 	respStr := C.CString(string(respByte))
-	// defer C.free(unsafe.Pointer(respStr))
-	runtime.SetFinalizer(respStr, func(ptr *C.char) {
-		C.free(unsafe.Pointer(ptr))
-	})
+	defer C.free(unsafe.Pointer(respStr))
 	return respStr
 }
 func main() {}
