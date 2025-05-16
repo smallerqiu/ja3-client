@@ -6,6 +6,243 @@ import (
 	"github.com/smallerqiu/utls/dicttls"
 )
 
+var Chrome_136 = ClientProfile{
+	clientHelloId: tls.ClientHelloID{
+		Client:               "Chrome",
+		RandomExtensionOrder: true,
+		Version:              "136",
+		Seed:                 nil,
+		SpecFactory: func() (tls.ClientHelloSpec, error) {
+			return tls.ClientHelloSpec{
+				CipherSuites: []uint16{
+					tls.GREASE_PLACEHOLDER,
+					tls.TLS_AES_128_GCM_SHA256,
+					tls.TLS_AES_256_GCM_SHA384,
+					tls.TLS_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+					tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+					tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+				},
+				Extensions: []tls.TLSExtension{
+					&tls.UtlsGREASEExtension{},
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
+						tls.PskModeDHE,
+					}},
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+						tls.CertCompressionBrotli,
+					}},
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+						tls.CertCompressionBrotli,
+					}},
+					&tls.SCTExtension{},
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
+						{Group: tls.X25519MLKEM768},
+						{Group: tls.X25519},
+					}},
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+						tls.ECDSAWithP256AndSHA256, //1027
+						tls.PSSWithSHA256,          //2052
+						tls.PKCS1WithSHA256,        //1025
+						tls.ECDSAWithP384AndSHA384, //1283
+						tls.PSSWithSHA384,          //2053
+						tls.PKCS1WithSHA384,        //1281
+						tls.PSSWithSHA512,          //2054
+						tls.PKCS1WithSHA512,        //1537
+					}},
+					&tls.GREASEEncryptedClientHelloExtension{ //65037
+						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+							{
+								KdfId:  dicttls.HKDF_SHA256,
+								AeadId: dicttls.AEAD_AES_128_GCM,
+							},
+						},
+						CandidatePayloadLens: []uint16{144}, // +16: 144, 239
+					},
+					&tls.SupportedVersionsExtension{Versions: []uint16{
+						tls.GREASE_PLACEHOLDER,
+						tls.VersionTLS13,
+						tls.VersionTLS12,
+					}},
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10
+						tls.GREASE_PLACEHOLDER,
+						tls.X25519MLKEM768,
+						tls.X25519,
+						tls.CurveP256, //23
+						tls.CurveP384, //24
+					}},
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
+						tls.PointFormatUncompressed,
+					}},
+					&tls.SessionTicketExtension{},
+					&tls.RenegotiationInfoExtension{
+						Renegotiation: tls.RenegotiateOnceAsClient,
+					},
+					&tls.StatusRequestExtension{},
+					&tls.SNIExtension{},
+					&tls.ApplicationSettingsExtension{
+						CodePoint:          tls.ExtensionALPS,
+						SupportedProtocols: []string{"h2"},
+					},
+					&tls.UtlsGREASEExtension{},
+				},
+			}, nil
+		},
+	},
+	settings: map[http2.SettingID]uint32{
+		http2.SettingHeaderTableSize:   65536,
+		http2.SettingEnablePush:        0,
+		http2.SettingInitialWindowSize: 6291456,
+		http2.SettingMaxHeaderListSize: 262144,
+	},
+	settingsOrder: []http2.SettingID{
+		http2.SettingHeaderTableSize,
+		http2.SettingEnablePush,
+		http2.SettingInitialWindowSize,
+		http2.SettingMaxHeaderListSize,
+	},
+	pseudoHeaderOrder: []string{
+		":method",
+		":authority",
+		":scheme",
+		":path",
+	},
+	connectionFlow: 15663105,
+	headerPriority: &http2.PriorityParam{
+		StreamDep: 0,
+		Exclusive: true,
+		Weight:    0,
+	},
+}
+
+var Chrome_135 = ClientProfile{
+	clientHelloId: tls.ClientHelloID{
+		Client:               "Chrome",
+		RandomExtensionOrder: true,
+		Version:              "135",
+		Seed:                 nil,
+		SpecFactory: func() (tls.ClientHelloSpec, error) {
+			return tls.ClientHelloSpec{
+				CipherSuites: []uint16{
+					tls.GREASE_PLACEHOLDER,
+					tls.TLS_AES_128_GCM_SHA256,
+					tls.TLS_AES_256_GCM_SHA384,
+					tls.TLS_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+					tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+					tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+				},
+				Extensions: []tls.TLSExtension{
+					&tls.UtlsGREASEExtension{},
+					&tls.GREASEEncryptedClientHelloExtension{ //65037
+						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+							{
+								KdfId:  dicttls.HKDF_SHA256,
+								AeadId: dicttls.AEAD_AES_128_GCM,
+							},
+						},
+						CandidatePayloadLens: []uint16{144}, // +16: 144, 239
+					},
+					&tls.SessionTicketExtension{},
+					&tls.SupportedPointsExtension{SupportedPoints: []byte{
+						tls.PointFormatUncompressed,
+					}},
+					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+						{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
+						{Group: tls.X25519MLKEM768},
+						{Group: tls.X25519},
+					}},
+					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+						tls.CertCompressionBrotli,
+					}},
+					&tls.ApplicationSettingsExtension{
+						CodePoint:          tls.ExtensionALPS,
+						SupportedProtocols: []string{"h2"},
+					},
+					&tls.StatusRequestExtension{},
+					&tls.RenegotiationInfoExtension{
+						Renegotiation: tls.RenegotiateOnceAsClient,
+					},
+					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+					&tls.SCTExtension{},
+					&tls.SNIExtension{},
+					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+						tls.ECDSAWithP256AndSHA256, //1027
+						tls.PSSWithSHA256,          //2052
+						tls.PKCS1WithSHA256,        //1025
+						tls.ECDSAWithP384AndSHA384, //1283
+						tls.PSSWithSHA384,          //2053
+						tls.PKCS1WithSHA384,        //1281
+						tls.PSSWithSHA512,          //2054
+						tls.PKCS1WithSHA512,        //1537
+					}},
+					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10
+						tls.GREASE_PLACEHOLDER,
+						tls.X25519MLKEM768,
+						tls.X25519,
+						tls.CurveP256, //23
+						tls.CurveP384, //24
+					}},
+					&tls.SupportedVersionsExtension{Versions: []uint16{
+						tls.GREASE_PLACEHOLDER,
+						tls.VersionTLS13,
+						tls.VersionTLS12,
+					}},
+					&tls.ExtendedMasterSecretExtension{},
+					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
+						tls.PskModeDHE,
+					}},
+					&tls.UtlsGREASEExtension{},
+				},
+			}, nil
+		},
+	},
+	settings: map[http2.SettingID]uint32{
+		http2.SettingHeaderTableSize:   65536,
+		http2.SettingEnablePush:        0,
+		http2.SettingInitialWindowSize: 6291456,
+		http2.SettingMaxHeaderListSize: 262144,
+	},
+	settingsOrder: []http2.SettingID{
+		http2.SettingHeaderTableSize,
+		http2.SettingEnablePush,
+		http2.SettingInitialWindowSize,
+		http2.SettingMaxHeaderListSize,
+	},
+	pseudoHeaderOrder: []string{
+		":method",
+		":authority",
+		":scheme",
+		":path",
+	},
+	connectionFlow: 15663105,
+	headerPriority: &http2.PriorityParam{
+		StreamDep: 0,
+		Exclusive: true,
+		Weight:    0,
+	},
+}
+
 var Chrome_134 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",

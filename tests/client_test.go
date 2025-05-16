@@ -5,6 +5,13 @@ import (
 )
 
 func TestChrome(t *testing.T) {
+	// 163 not working, todo: fix it
+	// t.Log("testing chrome 136")
+	// MatchTlsInfo(t, "chrome_136")
+
+	t.Log("testing chrome 135")
+	MatchTlsInfo(t, "chrome_135")
+
 	t.Log("testing chrome 134")
 	MatchTlsInfo(t, "chrome_134")
 
