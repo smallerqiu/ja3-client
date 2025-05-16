@@ -244,18 +244,15 @@ func FormatJa3(ja3 string, browserType string, version string, randomExtensionOr
 			RandomExtensionOrder: randomExtensionOrder,
 			Version:              version,
 			Seed:                 nil,
-			SpecFactory: func() (tls.ClientHelloSpec, error) {
-				return tls.ClientHelloSpec{
-					TLSVersMin:         tlsMinVersion,
-					TLSVersMax:         tlsMaxVersion,
-					CipherSuites:       suites,
-					CompressionMethods: []byte{0},
-					Extensions:         exts,
-					GetSessionID:       sha256.Sum256,
-				}, nil
-
-			},
 		},
+			tls.ClientHelloSpec{
+				TLSVersMin:         tlsMinVersion,
+				TLSVersMax:         tlsMaxVersion,
+				CipherSuites:       suites,
+				CompressionMethods: []byte{0},
+				Extensions:         exts,
+				GetSessionID:       sha256.Sum256,
+			},
 			profile.settings,
 			profile.settingsOrder,
 			profile.pseudoHeaderOrder,

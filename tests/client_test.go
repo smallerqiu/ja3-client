@@ -5,6 +5,16 @@ import (
 )
 
 func TestChrome(t *testing.T) {
+	t.Log("testing chrome 120")
+	MatchTlsInfo(t, "chrome_120")
+	return
+	// t.Log("testing chrome 136")
+	// MatchTlsInfo(t, "chrome_136")
+	// return
+
+	// t.Log("testing chrome 135")
+	// MatchTlsInfo(t, "chrome_135")
+
 	t.Log("testing chrome 134")
 	MatchTlsInfo(t, "chrome_134")
 

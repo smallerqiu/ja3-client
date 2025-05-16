@@ -44,6 +44,8 @@ var MappedTLSClients = map[string]ClientProfile{
 	"chrome_132":             Chrome_133,
 	"chrome_133_PSK":         Chrome_133_PSK,
 	"chrome_134":             Chrome_134,
+	"chrome_135":             Chrome_135,
+	"chrome_136":             Chrome_136,
 	"safari_15_3":            Safari_15_3,
 	"safari_15_6_1":          Safari_15_6_1,
 	"safari_16_0":            Safari_16_0,
@@ -107,6 +109,7 @@ var MappedTLSClients = map[string]ClientProfile{
 
 type ClientProfile struct {
 	clientHelloId     tls.ClientHelloID
+	ClientHelloSpec   tls.ClientHelloSpec
 	headerPriority    *http2.PriorityParam
 	settings          map[http2.SettingID]uint32
 	priorities        []http2.Priority
@@ -115,9 +118,10 @@ type ClientProfile struct {
 	connectionFlow    uint32
 }
 
-func NewClientProfile(clientHelloId tls.ClientHelloID, settings map[http2.SettingID]uint32, settingsOrder []http2.SettingID, pseudoHeaderOrder []string, connectionFlow uint32, priorities []http2.Priority, headerPriority *http2.PriorityParam) ClientProfile {
+func NewClientProfile(clientHelloId tls.ClientHelloID, clientHelloSpec tls.ClientHelloSpec, settings map[http2.SettingID]uint32, settingsOrder []http2.SettingID, pseudoHeaderOrder []string, connectionFlow uint32, priorities []http2.Priority, headerPriority *http2.PriorityParam) ClientProfile {
 	return ClientProfile{
 		clientHelloId:     clientHelloId,
+		ClientHelloSpec:   clientHelloSpec,
 		settings:          settings,
 		settingsOrder:     settingsOrder,
 		pseudoHeaderOrder: pseudoHeaderOrder,
@@ -126,9 +130,10 @@ func NewClientProfile(clientHelloId tls.ClientHelloID, settings map[http2.Settin
 		headerPriority:    headerPriority,
 	}
 }
-func (c ClientProfile) GetClientHelloSpec() (tls.ClientHelloSpec, error) {
-	return c.clientHelloId.ToSpec()
-}
+
+// func (c ClientProfile) GetClientHelloSpec() (tls.ClientHelloSpec, error) {
+// 	return c.clientHelloId.ToSpec()
+// }
 
 func (c ClientProfile) GetClientHelloStr() string {
 	return c.clientHelloId.Str()
@@ -156,6 +161,10 @@ func (c ClientProfile) GetHeaderPriority() *http2.PriorityParam {
 
 func (c ClientProfile) GetClientHelloId() tls.ClientHelloID {
 	return c.clientHelloId
+}
+
+func (c ClientProfile) GetClientHelloSpec() tls.ClientHelloSpec {
+	return c.ClientHelloSpec
 }
 
 func (c ClientProfile) GetPriorities() []http2.Priority {

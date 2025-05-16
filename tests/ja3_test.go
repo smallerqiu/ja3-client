@@ -49,7 +49,7 @@ func TestJa3Key(t *testing.T) {
 func TestClient(t *testing.T) {
 	reqBody := &tls.Ja3Request{
 		Method: "GET",
-		URL:    "https://www.onlyfans.com",
+		URL:    "https://www.google.com",
 		Proxy:  "http://127.0.0.1:7890",
 		Headers: http.Header{
 			"sec-ch-ua":          {"\"Google Chrome\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\""},

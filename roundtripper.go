@@ -342,7 +342,7 @@ func newRoundTripper(clientProfile browser.ClientProfile, transportOptions *Tran
 	var clientSessionCache tls.ClientSessionCache
 	var id = clientProfile.GetClientHelloId()
 
-	withSessionResumption := supportsSessionResumption(id)
+	withSessionResumption := supportsSessionResumption(id, clientProfile.ClientHelloSpec)
 
 	if id.RandomExtensionOrder {
 		withRandomTlsExtensionOrder = true
@@ -385,15 +385,16 @@ func newRoundTripper(clientProfile browser.ClientProfile, transportOptions *Tran
 	return rt, nil
 }
 
-func supportsSessionResumption(id tls.ClientHelloID) bool {
+func supportsSessionResumption(id tls.ClientHelloID, clientSpec tls.ClientHelloSpec) bool {
 	spec, err := tls.UTLSIdToSpec(id)
 
 	if err != nil {
-		spec, err = id.ToSpec()
+		spec = clientSpec
+		// spec, err = id.ToSpec()
 
-		if err != nil {
-			return false
-		}
+		// if err != nil {
+		// 	return false
+		// }
 	}
 
 	for _, ext := range spec.Extensions {

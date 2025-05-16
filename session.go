@@ -35,9 +35,9 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 		options = append(options, WithClientProfile(profile))
 	} else {
 		imp := request.Impersonate
-		if _, ok := browser.MappedTLSClients[request.Impersonate]; !ok {
+		if _, ok := browser.MappedTLSClients[imp]; !ok {
 			log.Printf("the input client %v dont't support", imp)
-			imp = "chrome_134"
+			imp = "chrome_135"
 		}
 
 		b := browser.MappedTLSClients[imp]
