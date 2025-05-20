@@ -40,9 +40,6 @@ var Chrome_136 = ClientProfile{
 					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 						tls.CertCompressionBrotli,
 					}},
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
-						tls.CertCompressionBrotli,
-					}},
 					&tls.SCTExtension{},
 					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
 					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
