@@ -537,7 +537,7 @@ func MatchPeetInfo(t *testing.T, impersonate string) {
 
 	if tlsinfo.TLS.Ja3Hash != info["ja3_hash"] {
 		t.Logf("ja31: %v", tlsinfo.TLS.Ja3)
-		t.Logf("ja32: %v", info["ja3n_text"])
+		t.Logf("ja32: %v", info["ja3_text"])
 		t.Errorf("ja3n hash mismatch: %s != %s", tlsinfo.TLS.Ja3Hash, info["ja3n_hash"])
 	}
 	if tlsinfo.TLS.Ja4 != info["ja4"] {
