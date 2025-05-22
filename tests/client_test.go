@@ -5,13 +5,13 @@ import (
 )
 
 func TestChrome(t *testing.T) {
-	// 163 not working, todo: fix it
+
 	t.Log("testing chrome 136")
-	MatchPeetInfo(t, "chrome_136")
+	MatchTlsInfo(t, "chrome_136")
 
 	t.Log("testing chrome 135")
-	MatchPeetInfo(t, "chrome_135")
-	return
+	MatchTlsInfo(t, "chrome_135")
+
 	t.Log("testing chrome 134")
 	MatchTlsInfo(t, "chrome_134")
 
@@ -67,11 +67,17 @@ func TestChrome(t *testing.T) {
 }
 
 func TestOpera(t *testing.T) {
+	t.Log("testing Opera 119")
+	MatchTlsInfo(t, "opera_119")
+
 	t.Log("testing Opera 117")
 	MatchTlsInfo(t, "opera_117")
 }
 
 func TestEdge(t *testing.T) {
+	t.Log("testing edge 136")
+	MatchTlsInfo(t, "edge_136")
+
 	t.Log("testing edge 134")
 	MatchTlsInfo(t, "edge_134")
 
@@ -83,6 +89,12 @@ func TestEdge(t *testing.T) {
 }
 
 func TestFirefox(t *testing.T) {
+	t.Log("testing firefox 138")
+	MatchTlsInfo(t, "firefox_138")
+
+	// t.Log("testing firefox 137")
+	// MatchTlsInfo(t, "firefox_137")
+
 	t.Log("testing firefox 136")
 	MatchTlsInfo(t, "firefox_136")
 
@@ -115,6 +127,9 @@ func TestFirefox(t *testing.T) {
 
 func TestSafari(t *testing.T) {
 	// mac
+	t.Log("testing Safari_18_4")
+	MatchTlsInfo(t, "safari_18_4")
+
 	t.Log("testing Safari_18_1")
 	MatchTlsInfo(t, "safari_18_1")
 
