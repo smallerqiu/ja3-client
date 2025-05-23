@@ -123,7 +123,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 	var dialer proxy.ContextDialer
 	dialer = newDirectDialer(config.timeout, config.localAddr, config.dialer)
 
-	if config.proxyUrl != "" && config.proxyDialerFactory != nil {
+	if config.proxyUrl != "" && config.proxyDialerFactory == nil {
 		proxyDialer, err := newConnectDialer(config.proxyUrl, config.timeout, config.localAddr, config.dialer, config.connectHeaders, logger)
 		if err != nil {
 			return nil, nil, browser.ClientProfile{}, err
