@@ -11,13 +11,13 @@ import (
 
 // 创建定制 TLS 会话
 func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
-	timeOut := request.Timeout
-	if timeOut == 0 {
-		timeOut = 30
+	timeout := request.Timeout
+	if timeout == 0 {
+		timeout = 30
 	}
 	jar := NewCookieJar()
 	options := []HttpClientOption{
-		WithTimeoutSeconds(timeOut),
+		WithTimeoutSeconds(timeout),
 		WithForceHttp1(request.ForceHTTP1),
 		WithCookieJar(jar),
 	}
