@@ -3,7 +3,6 @@ package browser
 import (
 	"github.com/smallerqiu/ja3-client/http2"
 	tls "github.com/smallerqiu/utls"
-	"github.com/smallerqiu/utls/dicttls"
 )
 
 var Chrome_136 = ClientProfile{
@@ -57,15 +56,7 @@ var Chrome_136 = ClientProfile{
 						tls.PSSWithSHA512,          //2054
 						tls.PKCS1WithSHA512,        //1537
 					}},
-					&tls.GREASEEncryptedClientHelloExtension{ //65037
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
-						},
-						CandidatePayloadLens: []uint16{144}, // +16: 144, 239
-					},
+					tls.BoringGREASEECH(),
 					&tls.SupportedVersionsExtension{Versions: []uint16{
 						tls.GREASE_PLACEHOLDER,
 						tls.VersionTLS13,
@@ -151,15 +142,7 @@ var Chrome_135 = ClientProfile{
 				},
 				Extensions: []tls.TLSExtension{
 					&tls.UtlsGREASEExtension{},
-					&tls.GREASEEncryptedClientHelloExtension{ //65037
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
-						},
-						CandidatePayloadLens: []uint16{144}, // +16: 144, 239
-					},
+					tls.BoringGREASEECH(),
 					&tls.SessionTicketExtension{},
 					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
@@ -287,15 +270,7 @@ var Chrome_134 = ClientProfile{
 					&tls.SupportedPointsExtension{SupportedPoints: []byte{
 						tls.PointFormatUncompressed,
 					}},
-					&tls.GREASEEncryptedClientHelloExtension{
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
-						},
-						CandidatePayloadLens: []uint16{196, 32, 144}, // +16: 144, 239
-					},
+					tls.BoringGREASEECH(),
 					&tls.ApplicationSettingsExtension{
 						CodePoint:          tls.ExtensionALPS,
 						SupportedProtocols: []string{"h2"},
@@ -729,16 +704,9 @@ var Chrome_130 = ClientProfile{
 							tls.PKCS1WithSHA384,
 							tls.PSSWithSHA512,
 							tls.PKCS1WithSHA512,
-						}},
-					&tls.GREASEEncryptedClientHelloExtension{
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
 						},
-						CandidatePayloadLens: []uint16{234, 32, 240}, // +16: 144, 239
 					},
+					tls.BoringGREASEECH(),
 					&tls.RenegotiationInfoExtension{
 						Renegotiation: tls.RenegotiateOnceAsClient,
 					},
@@ -984,15 +952,7 @@ var Chrome_126 = ClientProfile{
 						tls.VersionTLS13,
 						tls.VersionTLS12,
 					}},
-					&tls.GREASEEncryptedClientHelloExtension{
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
-						},
-						CandidatePayloadLens: []uint16{90, 32, 208}, // +16: 144, 239
-					},
+					tls.BoringGREASEECH(),
 					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256,
 						tls.PSSWithSHA256,
@@ -1093,16 +1053,7 @@ var Chrome_125 = ClientProfile{
 						tls.PSSWithSHA512,
 						tls.PKCS1WithSHA512,
 					}},
-
-					&tls.GREASEEncryptedClientHelloExtension{
-						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-							{
-								KdfId:  dicttls.HKDF_SHA256,
-								AeadId: dicttls.AEAD_AES_128_GCM,
-							},
-						},
-						CandidatePayloadLens: []uint16{90, 32, 208}, // +16: 144, 239
-					},
+					tls.BoringGREASEECH(),
 					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 						{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
 						{Group: tls.X25519Kyber768Draft00},
