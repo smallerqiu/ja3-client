@@ -105,7 +105,7 @@ var Firefox_136 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{239}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{192, 128, 223}, // +16: 144, 239
 					},
 				}}, nil
 		},
@@ -235,7 +235,7 @@ var Firefox_135 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{239}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{192, 128, 223}, // +16: 144, 239
 					},
 				}}, nil
 		},
@@ -368,7 +368,7 @@ var Firefox_133 = ClientProfile{
 								AeadId: dicttls.AEAD_CHACHA20_POLY1305,
 							},
 						},
-						CandidatePayloadLens: []uint16{144}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{192, 128, 223}, // +16: 144, 239
 					},
 				},
 			}, nil
@@ -497,7 +497,7 @@ var Firefox_132 = ClientProfile{
 								AeadId: dicttls.AEAD_CHACHA20_POLY1305,
 							},
 						},
-						CandidatePayloadLens: []uint16{144}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{192, 128, 223}, // +16: 144, 239
 					},
 				},
 			}, nil
@@ -616,7 +616,7 @@ var Firefox_129 = ClientProfile{
 								AeadId: dicttls.AEAD_CHACHA20_POLY1305,
 							},
 						},
-						CandidatePayloadLens: []uint16{229}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{192, 128, 223}, // +16: 144, 239
 					},
 				},
 			}, nil
@@ -768,7 +768,7 @@ var Firefox_124 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{81}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{192, 128, 223}, // +16: 144, 239
 					},
 				}}, nil
 		},

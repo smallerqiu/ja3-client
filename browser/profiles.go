@@ -5,7 +5,7 @@ import (
 	tls "github.com/smallerqiu/utls"
 )
 
-var DefaultClientProfile = Chrome_134
+var DefaultClientProfile = Chrome_136
 
 var MappedTLSClients = map[string]ClientProfile{
 	"custom":                 Custom,
@@ -46,13 +46,16 @@ var MappedTLSClients = map[string]ClientProfile{
 	"chrome_134":             Chrome_134,
 	"chrome_135":             Chrome_135,
 	"chrome_136":             Chrome_136,
+	"chrome_137":             Chrome_136,
 	"safari_15_3":            Safari_15_3,
 	"safari_15_6_1":          Safari_15_6_1,
 	"safari_16_0":            Safari_16_0,
+	"safari_17_0":            Safari_17_5,
 	"safari_17_5":            Safari_17_5,
 	"safari_18_0":            Safari_18_0,
 	"safari_18_1":            Safari_18_1,
 	"safari_18_4":            Safari_18_4,
+	"safari_18_5":            Safari_18_4,
 	"safari_ipad_15_6":       Safari_Ipad_15_6,
 	"safari_ios_15_5":        Safari_IOS_15_5,
 	"safari_ios_15_6":        Safari_IOS_15_6,
@@ -77,6 +80,7 @@ var MappedTLSClients = map[string]ClientProfile{
 	"firefox_136":            Firefox_136,
 	"firefox_137":            Firefox_136,
 	"firefox_138":            Firefox_136,
+	"firefox_139":            Firefox_136,
 	"opera_89":               Opera_89,
 	"opera_90":               Opera_90,
 	"opera_91":               Opera_91,
@@ -86,6 +90,7 @@ var MappedTLSClients = map[string]ClientProfile{
 	"edge_133":               Edge_133,
 	"edge_134":               Edge_134,
 	"edge_136":               Edge_136,
+	"edge_137":               Edge_136,
 	"zalando_android_mobile": ZalandoAndroidMobile,
 	"zalando_ios_mobile":     ZalandoIosMobile,
 	"nike_ios_mobile":        NikeIosMobile,
