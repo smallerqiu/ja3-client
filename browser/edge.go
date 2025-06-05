@@ -9,7 +9,7 @@ import (
 var Edge_136 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Edge",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "136",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -68,7 +68,7 @@ var Edge_136 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{224, 32, 240}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{128, 160, 192}, // +16: 144, 176, 208
 					},
 					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
 					&tls.SupportedPointsExtension{SupportedPoints: []byte{
@@ -136,7 +136,7 @@ var Edge_136 = ClientProfile{
 var Edge_134 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Edge",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "134",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -195,7 +195,7 @@ var Edge_134 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{78, 32, 176}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{128, 160, 192}, // +16: 144, 176, 208
 					},
 					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027
@@ -259,7 +259,7 @@ var Edge_134 = ClientProfile{
 var Edge_133 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Edge",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "133",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -318,7 +318,7 @@ var Edge_133 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{78, 32, 176}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{128, 160, 192}, // +16: 144, 176, 208
 					},
 					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027
@@ -382,7 +382,7 @@ var Edge_133 = ClientProfile{
 var Edge_131 = ClientProfile{
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Edge",
-		RandomExtensionOrder: false,
+		RandomExtensionOrder: true,
 		Version:              "131",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -441,7 +441,7 @@ var Edge_131 = ClientProfile{
 								AeadId: dicttls.AEAD_AES_128_GCM,
 							},
 						},
-						CandidatePayloadLens: []uint16{78, 32, 176}, // +16: 144, 239
+						CandidatePayloadLens: []uint16{128, 160, 192}, // +16: 144, 176, 208
 					},
 					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 						tls.ECDSAWithP256AndSHA256, //1027

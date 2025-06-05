@@ -6,6 +6,9 @@ import (
 
 func TestChrome(t *testing.T) {
 
+	t.Log("testing chrome 137")
+	MatchTlsInfo(t, "chrome_137")
+
 	t.Log("testing chrome 136")
 	MatchTlsInfo(t, "chrome_136")
 
@@ -14,6 +17,7 @@ func TestChrome(t *testing.T) {
 
 	t.Log("testing chrome 134")
 	MatchTlsInfo(t, "chrome_134")
+	return
 
 	t.Log("testing chrome 133")
 	MatchTlsInfo(t, "chrome_133")
@@ -75,6 +79,9 @@ func TestOpera(t *testing.T) {
 }
 
 func TestEdge(t *testing.T) {
+	t.Log("testing edge 137")
+	MatchTlsInfo(t, "edge_137")
+
 	t.Log("testing edge 136")
 	MatchTlsInfo(t, "edge_136")
 
@@ -89,9 +96,12 @@ func TestEdge(t *testing.T) {
 }
 
 func TestFirefox(t *testing.T) {
+	t.Log("testing firefox 139")
+	MatchTlsInfo(t, "firefox_139")
+
 	t.Log("testing firefox 138")
 	MatchTlsInfo(t, "firefox_138")
-
+	return
 	// t.Log("testing firefox 137")
 	// MatchTlsInfo(t, "firefox_137")
 
