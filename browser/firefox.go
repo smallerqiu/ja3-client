@@ -40,23 +40,28 @@ var Firefox_136 = ClientProfile{
 					&tls.SNIExtension{},                  //0
 					&tls.ExtendedMasterSecretExtension{}, //23
 					&tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient}, //65281
-					&tls.SupportedCurvesExtension{Curves: []tls.CurveID{ //10
-						tls.X25519MLKEM768,
-						tls.X25519,
-						tls.CurveP256,
-						tls.CurveP384,
-						tls.CurveP521,
-						tls.FAKEFFDHE2048,
-						tls.FAKEFFDHE3072,
-					}},
-					&tls.SupportedPointsExtension{SupportedPoints: []byte{ //11
-						tls.PointFormatUncompressed,
-					}},
+					&tls.SupportedCurvesExtension{
+						Curves: []tls.CurveID{ //10
+							tls.X25519MLKEM768,
+							tls.X25519,
+							tls.CurveP256,
+							tls.CurveP384,
+							tls.CurveP521,
+							tls.FAKEFFDHE2048,
+							tls.FAKEFFDHE3072,
+						},
+					},
+					&tls.SupportedPointsExtension{
+						SupportedPoints: []byte{ //11
+							tls.PointFormatUncompressed,
+						},
+					},
 					&tls.SessionTicketExtension{}, //35
 
 					&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}, //16
 					&tls.StatusRequestExtension{},                                 //5
-					&tls.DelegatedCredentialsExtension{ //34
+					&tls.DelegatedCredentialsExtension{
+						//34
 						SupportedSignatureAlgorithms: []tls.SignatureScheme{
 							tls.ECDSAWithP256AndSHA256,
 							tls.ECDSAWithP384AndSHA384,
@@ -66,37 +71,46 @@ var Firefox_136 = ClientProfile{
 					},
 					&tls.SCTExtension{},
 
-					&tls.KeyShareExtension{KeyShares: []tls.KeyShare{ //51
-						{Group: tls.X25519MLKEM768},
-						{Group: tls.X25519},
-						{Group: tls.CurveP256},
-					}},
-					&tls.SupportedVersionsExtension{Versions: []uint16{ //43
-						tls.VersionTLS13,
-						tls.VersionTLS12,
-					}},
-					&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
-						tls.ECDSAWithP256AndSHA256,
-						tls.ECDSAWithP384AndSHA384,
-						tls.ECDSAWithP521AndSHA512,
-						tls.PSSWithSHA256,
-						tls.PSSWithSHA384,
-						tls.PSSWithSHA512,
-						tls.PKCS1WithSHA256,
-						tls.PKCS1WithSHA384,
-						tls.PKCS1WithSHA512,
-						tls.ECDSAWithSHA1,
-						tls.PKCS1WithSHA1,
-					}},
-					&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
-						tls.PskModeDHE,
-					}},
-					&tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
-					&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
-						tls.CertCompressionZlib,
-						tls.CertCompressionBrotli,
-						tls.CertCompressionZstd,
+					&tls.KeyShareExtension{
+						KeyShares: []tls.KeyShare{ //51
+							{Group: tls.X25519MLKEM768},
+							{Group: tls.X25519},
+							{Group: tls.CurveP256},
+						},
 					},
+					&tls.SupportedVersionsExtension{
+						Versions: []uint16{ //43
+							tls.VersionTLS13,
+							tls.VersionTLS12,
+						},
+					},
+					&tls.SignatureAlgorithmsExtension{
+						SupportedSignatureAlgorithms: []tls.SignatureScheme{
+							tls.ECDSAWithP256AndSHA256,
+							tls.ECDSAWithP384AndSHA384,
+							tls.ECDSAWithP521AndSHA512,
+							tls.PSSWithSHA256,
+							tls.PSSWithSHA384,
+							tls.PSSWithSHA512,
+							tls.PKCS1WithSHA256,
+							tls.PKCS1WithSHA384,
+							tls.PKCS1WithSHA512,
+							tls.ECDSAWithSHA1,
+							tls.PKCS1WithSHA1,
+						},
+					},
+					&tls.PSKKeyExchangeModesExtension{
+						Modes: []uint8{
+							tls.PskModeDHE,
+						},
+					},
+					&tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
+					&tls.UtlsCompressCertExtension{
+						Algorithms: []tls.CertCompressionAlgo{
+							tls.CertCompressionZlib,
+							tls.CertCompressionBrotli,
+							tls.CertCompressionZstd,
+						},
 					},
 					&tls.GREASEEncryptedClientHelloExtension{
 						CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
@@ -107,7 +121,8 @@ var Firefox_136 = ClientProfile{
 						},
 						CandidatePayloadLens: []uint16{239}, // +16: 144, 239
 					},
-				}}, nil
+				},
+			}, nil
 		},
 	},
 	settings: map[http2.SettingID]uint32{

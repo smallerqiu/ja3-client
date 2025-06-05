@@ -2,6 +2,28 @@ package ja3_client
 
 import "github.com/smallerqiu/ja3-client/http2"
 
+type ClientData struct {
+	cipherSuites            []string
+	curves                  []string
+	signatureHashed         []string
+	http2Setting            string
+	http2WindowUpdate       int
+	http2StreamWight        int
+	http2StreamExclusive    int
+	http2PseudoHeaderOrder  string
+	compressed              bool
+	tlsExtensionOrder       []string
+	tlsDelegatedCredentials []string
+	tlsRecordSizeLimit      int
+	tlsKeySharesLimit       int
+	tlsVersion              string
+	tlsGrease               bool
+	certCompression         []string
+	client                  string
+	version                 string
+	randomExtensionOrder    bool
+}
+
 type ProfileData struct {
 	connectionFlow                          uint32
 	settingsOrder                           []http2.SettingID
@@ -18,6 +40,7 @@ type ProfileData struct {
 	headerPriority                          *http2.PriorityParam
 	certCompressionAlgo                     string
 	echCandidateCipherSuites                []CandidateCipherSuites
+	tlsVersion                              string
 }
 
 type Ja3Request struct {

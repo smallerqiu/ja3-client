@@ -32,6 +32,96 @@ type CandidateCipherSuites struct {
 	AeadId string
 }
 
+func buildClientHelloSpec(config ClientData) (profile *browser.ClientProfile, err error) {
+	var clientHelloSpec tls.ClientHelloSpec
+	// ciphers
+	var ciphers = []uint16{}
+	for _, cipher := range allToLower(config.cipherSuites) {
+		cipherId, ok := CipherSuites[cipher]
+		if ok {
+			ciphers = append(ciphers, cipherId)
+		} else {
+			return profile, fmt.Errorf("cipher not found: %s", cipher)
+		}
+	}
+	clientHelloSpec.CipherSuites = ciphers
+	if config.compressed {
+		clientHelloSpec.CompressionMethods = []byte{tls.CompressionNone}
+	}
+	//setting
+	var settings = map[http2.SettingID]uint32{}
+	var settingsOrder []http2.SettingID
+	if config.http2Setting != "" {
+		for _, s := range strings.Split(config.http2Setting, ";") {
+			s := strings.Split(s, ":")
+			if len(s) != 2 {
+				return profile, fmt.Errorf("invalid http2 setting: %s", s)
+			}
+			id, ok := H2SettingsOrder[s[0]]
+			if !ok {
+				return profile, fmt.Errorf("invalid http2 setting: %s", s[0])
+			}
+			idStr := s[1]
+			idUint, err := strconv.ParseUint(idStr, 10, 32)
+			if err != nil {
+				return profile, fmt.Errorf("failed to parse extension ID: %v", err)
+			}
+			settings = map[http2.SettingID]uint32{
+				id: uint32(idUint),
+			}
+			settingsOrder = append(settingsOrder, id)
+		}
+	}
+
+	extMap := getExtensionBaseMap()
+
+	// ext
+	var exts []tls.TLSExtension
+	if len(config.tlsExtensionOrder) == 0 {
+		return profile, fmt.Errorf("tlsExtensionOrder is empty")
+	}
+
+	for _, e := range config.tlsExtensionOrder {
+		eId, err := strconv.ParseUint(e, 10, 16)
+		if err != nil {
+			return profile, err
+		}
+		te, ok := extMap[uint16(eId)]
+		if !ok {
+			return profile, fmt.Errorf("don't suport this ext: %s ", e)
+		}
+
+		exts = append(exts, te)
+	}
+
+	clientHelloSpec.Extensions = exts
+	clientHelloSpec.GetSessionID = sha256.Sum256
+
+	clientHelloId := tls.ClientHelloID{
+		Client:               config.client,
+		RandomExtensionOrder: config.randomExtensionOrder,
+		Version:              config.version,
+		Seed:                 nil,
+		SpecFactory: func() (tls.ClientHelloSpec, error) {
+			return clientHelloSpec, nil
+		},
+	}
+
+	return ClientProfile{
+		clientHelloId:     clientHelloId,
+		settings:          settings,
+		settingsOrder:     settingsOrder,
+		pseudoHeaderOrder: pseudoHeaderOrder,
+		connectionFlow:    connectionFlow,
+		priorities:        priorities,
+		headerPriority:    headerPriority,
+	}, nil
+}
+
+func getExtensionExtraMap(extMap map[uint16]tls.TLSExtension) {
+
+}
+
 func FormatJa3(ja3 string, browserType string, version string, randomExtensionOrder bool) (pfile browser.ClientProfile, err error) {
 	extMap := getExtensionBaseMap()
 	ja3StringParts := strings.Split(ja3, ",")
