@@ -32,9 +32,15 @@ type CandidateCipherSuites struct {
 	AeadId string
 }
 
-func buildClientHelloSpec(config ClientData) (profile *browser.ClientProfile, err error) {
+func buildClientHelloSpec(config ClientData) (profile browser.ClientProfile, err error) {
+	// 771
+	// 4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53
+	// 23-27-5-45-13-11-18-17613-16-65281-43-51-65037-35-0-10
+	// 4588-29-23-24
+	// 0
+
 	var clientHelloSpec tls.ClientHelloSpec
-	// ciphers
+	// ciphers part 1
 	var ciphers = []uint16{}
 	for _, cipher := range allToLower(config.cipherSuites) {
 		cipherId, ok := CipherSuites[cipher]
@@ -48,7 +54,7 @@ func buildClientHelloSpec(config ClientData) (profile *browser.ClientProfile, er
 	if config.compressed {
 		clientHelloSpec.CompressionMethods = []byte{tls.CompressionNone}
 	}
-	//setting
+	// setting
 	var settings = map[http2.SettingID]uint32{}
 	var settingsOrder []http2.SettingID
 	if config.http2Setting != "" {
@@ -75,7 +81,7 @@ func buildClientHelloSpec(config ClientData) (profile *browser.ClientProfile, er
 
 	extMap := getExtensionBaseMap()
 
-	// ext
+	// ext part 2
 	var exts []tls.TLSExtension
 	if len(config.tlsExtensionOrder) == 0 {
 		return profile, fmt.Errorf("tlsExtensionOrder is empty")
@@ -94,6 +100,18 @@ func buildClientHelloSpec(config ClientData) (profile *browser.ClientProfile, er
 		exts = append(exts, te)
 	}
 
+	// Curves part 3
+	var targetCurves []tls.CurveID
+
+	for _, c := range config.curves {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return profile, err
+		}
+		targetCurves = append(targetCurves, tls.CurveID(cid))
+	}
+	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
+
 	clientHelloSpec.Extensions = exts
 	clientHelloSpec.GetSessionID = sha256.Sum256
 
@@ -107,7 +125,7 @@ func buildClientHelloSpec(config ClientData) (profile *browser.ClientProfile, er
 		},
 	}
 
-	return ClientProfile{
+	return browser.ClientProfile{
 		clientHelloId:     clientHelloId,
 		settings:          settings,
 		settingsOrder:     settingsOrder,
