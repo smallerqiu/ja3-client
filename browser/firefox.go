@@ -2,12 +2,13 @@ package browser
 
 import (
 	"github.com/smallerqiu/ja3-client/http2"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 	"github.com/smallerqiu/utls/dicttls"
 )
 
-var Firefox_136 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_136 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "136",
@@ -125,34 +126,34 @@ var Firefox_136 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    43,
 	},
 }
 
-var Firefox_135 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_135 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "135",
@@ -255,34 +256,34 @@ var Firefox_135 = ClientProfile{
 				}}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    43,
 	},
 }
 
-var Firefox_133 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_133 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "133",
@@ -389,29 +390,29 @@ var Firefox_133 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
+	ConnectionFlow: 12517377,
 }
 
-var Firefox_132 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_132 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "132",
@@ -518,29 +519,29 @@ var Firefox_132 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
+	ConnectionFlow: 12517377,
 }
 
-var Firefox_129 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_129 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "129",
@@ -637,7 +638,7 @@ var Firefox_129 = ClientProfile{
 			}, nil
 		},
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -669,33 +670,33 @@ var Firefox_129 = ClientProfile{
 			Weight:    240,
 		}},
 	},
-	headerPriority: &http2.PriorityParam{
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    42,
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
+	ConnectionFlow: 12517377,
 }
 
 // new
-var Firefox_124 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_124 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "124",
@@ -788,24 +789,24 @@ var Firefox_124 = ClientProfile{
 				}}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12451840,
-	priorities: []http2.Priority{
+	ConnectionFlow: 12451840,
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -837,15 +838,15 @@ var Firefox_124 = ClientProfile{
 			Weight:    241,
 		}},
 	},
-	headerPriority: &http2.PriorityParam{
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    42,
 	},
 }
 
-var Firefox_123 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_123 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "123",
@@ -930,24 +931,24 @@ var Firefox_123 = ClientProfile{
 				}}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	priorities: []http2.Priority{
+	ConnectionFlow: 12517377,
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -979,15 +980,15 @@ var Firefox_123 = ClientProfile{
 			Weight:    240,
 		}},
 	},
-	headerPriority: &http2.PriorityParam{
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
 }
 
-var Firefox_120 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_120 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "120",
@@ -1068,29 +1069,29 @@ var Firefox_120 = ClientProfile{
 				}}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1124,8 +1125,8 @@ var Firefox_120 = ClientProfile{
 	},
 }
 
-var Firefox_117 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Firefox_117 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Firefox",
 		RandomExtensionOrder: false,
 		Version:              "117",
@@ -1210,29 +1211,29 @@ var Firefox_117 = ClientProfile{
 				}}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1266,31 +1267,31 @@ var Firefox_117 = ClientProfile{
 	},
 }
 
-var Firefox_110 = ClientProfile{
-	clientHelloId: tls.HelloFirefox_110,
-	settings: map[http2.SettingID]uint32{
+var Firefox_110 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloFirefox_110,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1324,31 +1325,31 @@ var Firefox_110 = ClientProfile{
 	},
 }
 
-var Firefox_108 = ClientProfile{
-	clientHelloId: tls.HelloFirefox_108,
-	settings: map[http2.SettingID]uint32{
+var Firefox_108 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloFirefox_108,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1382,31 +1383,31 @@ var Firefox_108 = ClientProfile{
 	},
 }
 
-var Firefox_106 = ClientProfile{
-	clientHelloId: tls.HelloFirefox_106,
-	settings: map[http2.SettingID]uint32{
+var Firefox_106 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloFirefox_106,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1440,31 +1441,31 @@ var Firefox_106 = ClientProfile{
 	},
 }
 
-var Firefox_105 = ClientProfile{
-	clientHelloId: tls.HelloFirefox_105,
-	settings: map[http2.SettingID]uint32{
+var Firefox_105 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloFirefox_105,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1498,31 +1499,31 @@ var Firefox_105 = ClientProfile{
 	},
 }
 
-var Firefox_104 = ClientProfile{
-	clientHelloId: tls.HelloFirefox_104,
-	settings: map[http2.SettingID]uint32{
+var Firefox_104 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloFirefox_104,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,
@@ -1556,31 +1557,31 @@ var Firefox_104 = ClientProfile{
 	},
 }
 
-var Firefox_102 = ClientProfile{
-	clientHelloId: tls.HelloFirefox_102,
-	settings: map[http2.SettingID]uint32{
+var Firefox_102 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloFirefox_102,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingInitialWindowSize: 131072,
 		http2.SettingMaxFrameSize:      16384,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxFrameSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":path",
 		":authority",
 		":scheme",
 	},
-	connectionFlow: 12517377,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 12517377,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 13,
 		Exclusive: false,
 		Weight:    41,
 	},
-	priorities: []http2.Priority{
+	Priorities: []http2.Priority{
 		{StreamID: 3, PriorityParam: http2.PriorityParam{
 			StreamDep: 0,
 			Exclusive: false,

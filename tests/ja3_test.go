@@ -7,12 +7,13 @@ import (
 
 	tls "github.com/smallerqiu/ja3-client"
 	"github.com/smallerqiu/ja3-client/http"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
 func TestJa3Key(t *testing.T) {
 	// var peetApi = "https://tls.peet.ws/api/all"
 	// var tlsApi = "https://tls.browserleaks.com/json"
-	reqBody := &tls.Ja3Request{
+	reqBody := &ja3.Ja3Request{
 		Method:        "GET",
 		URL:           "https://tls.peet.ws/api/all",
 		Proxy:         "http://127.0.0.1:7890",
@@ -21,7 +22,6 @@ func TestJa3Key(t *testing.T) {
 		Client:        "Firefox",
 		ClientVersion: "135",
 	}
-	// 创建 TLS 会话
 	var client, request, err = tls.CreateSession(reqBody)
 
 	if err != nil {
@@ -49,7 +49,7 @@ func TestJa3Key(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	reqBody := &tls.Ja3Request{
+	reqBody := &ja3.Ja3Request{
 		Method: "GET",
 		URL:    "https://www.onlyfans.com",
 		Proxy:  "http://127.0.0.1:7890",
@@ -71,7 +71,6 @@ func TestClient(t *testing.T) {
 		},
 		Impersonate: "chrome_134",
 	}
-	// 创建 TLS 会话
 	var client, request, err = tls.CreateSession(reqBody)
 
 	if err != nil {

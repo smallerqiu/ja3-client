@@ -2,12 +2,13 @@ package browser
 
 import (
 	"github.com/smallerqiu/ja3-client/http2"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 	"github.com/smallerqiu/utls/dicttls"
 )
 
-var QQ_13_5 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var QQ_13_5 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "QQ",
 		RandomExtensionOrder: false,
 		Version:              "13.5",
@@ -107,26 +108,26 @@ var QQ_13_5 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 6291456,
 		http2.SettingMaxHeaderListSize: 262144,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 15663105,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 15663105,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    0,

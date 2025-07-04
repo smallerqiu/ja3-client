@@ -2,12 +2,13 @@ package browser
 
 import (
 	"github.com/smallerqiu/ja3-client/http2"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 )
 
-var Custom = ClientProfile{
+var Custom = ja3.ClientProfile{
 	// 对标chrome 108.0
-	clientHelloId: tls.ClientHelloID{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Custom",
 		RandomExtensionOrder: false,
 		Version:              "14.5",
@@ -124,22 +125,22 @@ var Custom = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 4194304,
 		http2.SettingMaxHeaderListSize: 10485760,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 1073741824,
-	headerPriority: &http2.PriorityParam{},
+	ConnectionFlow: 1073741824,
+	HeaderPriority: &http2.PriorityParam{},
 }

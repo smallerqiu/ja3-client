@@ -1,4 +1,4 @@
-package ja3_client
+package ja3
 
 import (
 	"crypto/sha256"
@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/smallerqiu/ja3-client/browser"
 	"github.com/smallerqiu/ja3-client/http2"
 	tls "github.com/smallerqiu/utls"
 )
@@ -27,120 +26,7 @@ var (
 	QH360    = "360"
 )
 
-type CandidateCipherSuites struct {
-	KdfId  string
-	AeadId string
-}
-
-func buildClientHelloSpec(config ClientData) (profile browser.ClientProfile, err error) {
-	// 771
-	// 4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53
-	// 23-27-5-45-13-11-18-17613-16-65281-43-51-65037-35-0-10
-	// 4588-29-23-24
-	// 0
-
-	var clientHelloSpec tls.ClientHelloSpec
-	// ciphers part 1
-	var ciphers = []uint16{}
-	for _, cipher := range allToLower(config.cipherSuites) {
-		cipherId, ok := CipherSuites[cipher]
-		if ok {
-			ciphers = append(ciphers, cipherId)
-		} else {
-			return profile, fmt.Errorf("cipher not found: %s", cipher)
-		}
-	}
-	clientHelloSpec.CipherSuites = ciphers
-	if config.compressed {
-		clientHelloSpec.CompressionMethods = []byte{tls.CompressionNone}
-	}
-	// setting
-	var settings = map[http2.SettingID]uint32{}
-	var settingsOrder []http2.SettingID
-	if config.http2Setting != "" {
-		for _, s := range strings.Split(config.http2Setting, ";") {
-			s := strings.Split(s, ":")
-			if len(s) != 2 {
-				return profile, fmt.Errorf("invalid http2 setting: %s", s)
-			}
-			id, ok := H2SettingsOrder[s[0]]
-			if !ok {
-				return profile, fmt.Errorf("invalid http2 setting: %s", s[0])
-			}
-			idStr := s[1]
-			idUint, err := strconv.ParseUint(idStr, 10, 32)
-			if err != nil {
-				return profile, fmt.Errorf("failed to parse extension ID: %v", err)
-			}
-			settings = map[http2.SettingID]uint32{
-				id: uint32(idUint),
-			}
-			settingsOrder = append(settingsOrder, id)
-		}
-	}
-
-	extMap := getExtensionBaseMap()
-
-	// ext part 2
-	var exts []tls.TLSExtension
-	if len(config.tlsExtensionOrder) == 0 {
-		return profile, fmt.Errorf("tlsExtensionOrder is empty")
-	}
-
-	for _, e := range config.tlsExtensionOrder {
-		eId, err := strconv.ParseUint(e, 10, 16)
-		if err != nil {
-			return profile, err
-		}
-		te, ok := extMap[uint16(eId)]
-		if !ok {
-			return profile, fmt.Errorf("don't suport this ext: %s ", e)
-		}
-
-		exts = append(exts, te)
-	}
-
-	// Curves part 3
-	var targetCurves []tls.CurveID
-
-	for _, c := range config.curves {
-		cid, err := strconv.ParseUint(c, 10, 16)
-		if err != nil {
-			return profile, err
-		}
-		targetCurves = append(targetCurves, tls.CurveID(cid))
-	}
-	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
-
-	clientHelloSpec.Extensions = exts
-	clientHelloSpec.GetSessionID = sha256.Sum256
-
-	clientHelloId := tls.ClientHelloID{
-		Client:               config.client,
-		RandomExtensionOrder: config.randomExtensionOrder,
-		Version:              config.version,
-		Seed:                 nil,
-		SpecFactory: func() (tls.ClientHelloSpec, error) {
-			return clientHelloSpec, nil
-		},
-	}
-
-	return browser.ClientProfile{
-		clientHelloId:     clientHelloId,
-		settings:          settings,
-		settingsOrder:     settingsOrder,
-		pseudoHeaderOrder: pseudoHeaderOrder,
-		connectionFlow:    connectionFlow,
-		priorities:        priorities,
-		headerPriority:    headerPriority,
-	}, nil
-}
-
-func getExtensionExtraMap(extMap map[uint16]tls.TLSExtension) {
-
-}
-
-func FormatJa3(ja3 string, browserType string, version string, randomExtensionOrder bool) (pfile browser.ClientProfile, err error) {
+func FormatJa3(ja3 string, browserType string, version string, randomExtensionOrder bool) (pfile ClientProfile, err error) {
 	extMap := getExtensionBaseMap()
 	ja3StringParts := strings.Split(ja3, ",")
 	if len(ja3StringParts) < 4 {
@@ -287,12 +173,12 @@ func FormatJa3(ja3 string, browserType string, version string, randomExtensionOr
 		} else {
 			kdfId, err := strconv.ParseUint(echCandidateCipherSuites.KdfId, 16, 16)
 			if err != nil {
-				return browser.ClientProfile{}, fmt.Errorf("%s is not a valid KdfId", echCandidateCipherSuites.KdfId)
+				return ClientProfile{}, fmt.Errorf("%s is not a valid KdfId", echCandidateCipherSuites.KdfId)
 			}
 
 			aeadId, err := strconv.ParseUint(echCandidateCipherSuites.AeadId, 16, 16)
 			if err != nil {
-				return browser.ClientProfile{}, fmt.Errorf("%s is not a valid aeadId", echCandidateCipherSuites.AeadId)
+				return ClientProfile{}, fmt.Errorf("%s is not a valid aeadId", echCandidateCipherSuites.AeadId)
 			}
 
 			mappedHpkeSymmetricCipherSuites = append(mappedHpkeSymmetricCipherSuites, tls.HPKESymmetricCipherSuite{
@@ -338,16 +224,16 @@ func FormatJa3(ja3 string, browserType string, version string, randomExtensionOr
 	for _, e := range extensions {
 		eId, err := strconv.ParseUint(e, 10, 16)
 		if err != nil {
-			return browser.ClientProfile{}, err
+			return ClientProfile{}, err
 		}
 		te, ok := extMap[uint16(eId)]
 		if !ok {
-			return browser.ClientProfile{}, fmt.Errorf("don't suport this ext: %s ", e)
+			return ClientProfile{}, fmt.Errorf("don't support this ext: %s ", e)
 		}
 
 		exts = append(exts, te)
 	}
-	return browser.NewClientProfile(tls.ClientHelloID{
+	return NewClientProfile(tls.ClientHelloID{
 			Client:               browserType,
 			RandomExtensionOrder: randomExtensionOrder,
 			Version:              version,
@@ -410,10 +296,11 @@ func createTlsVersion(ver uint16) (tlsMaxVersion uint16, tlsMinVersion uint16, t
 	}
 	return
 }
+
 func getExtensionBaseMap() map[uint16]tls.TLSExtension {
 	return map[uint16]tls.TLSExtension{
 		// This extension needs to be instantiated every time and not be reused if it occurs multiple times in the same ja3
-		//tls.GREASE_PLACEHOLDER:     &tls.UtlsGREASEExtension{},
+		// tls.GREASE_PLACEHOLDER: &tls.UtlsGREASEExtension{},
 
 		// 0
 		tls.ExtensionServerName: &tls.SNIExtension{},

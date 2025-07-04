@@ -2,12 +2,13 @@ package browser
 
 import (
 	"github.com/smallerqiu/ja3-client/http2"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 	"github.com/smallerqiu/utls/dicttls"
 )
 
-var Opera_119 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Opera_119 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Opera",
 		RandomExtensionOrder: false,
 		Version:              "119",
@@ -107,26 +108,26 @@ var Opera_119 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 6291456,
 		http2.SettingMaxHeaderListSize: 262144,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 15663105,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 15663105,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: true,
 		Weight:    0,
@@ -134,8 +135,8 @@ var Opera_119 = ClientProfile{
 }
 
 // new 2025.2.22
-var Opera_117 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Opera_117 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Opera",
 		RandomExtensionOrder: false,
 		Version:              "117",
@@ -234,97 +235,97 @@ var Opera_117 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:   65536,
 		http2.SettingEnablePush:        0,
 		http2.SettingInitialWindowSize: 6291456,
 		http2.SettingMaxHeaderListSize: 262144,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 15663105,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 15663105,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: true,
 		Weight:    0,
 	},
 }
 
-var Opera_90 = ClientProfile{
-	clientHelloId: tls.HelloOpera_90,
-	settings: map[http2.SettingID]uint32{
+var Opera_90 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloOpera_90,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:      65536,
 		http2.SettingMaxConcurrentStreams: 1000,
 		http2.SettingInitialWindowSize:    6291456,
 		http2.SettingMaxHeaderListSize:    262144,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingMaxConcurrentStreams,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 15663105,
+	ConnectionFlow: 15663105,
 }
 
-var Opera_91 = ClientProfile{
-	clientHelloId: tls.HelloOpera_91,
-	settings: map[http2.SettingID]uint32{
+var Opera_91 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloOpera_91,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:      65536,
 		http2.SettingMaxConcurrentStreams: 1000,
 		http2.SettingInitialWindowSize:    6291456,
 		http2.SettingMaxHeaderListSize:    262144,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingMaxConcurrentStreams,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 15663105,
+	ConnectionFlow: 15663105,
 }
 
-var Opera_89 = ClientProfile{
-	clientHelloId: tls.HelloOpera_89,
-	settings: map[http2.SettingID]uint32{
+var Opera_89 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloOpera_89,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingHeaderTableSize:      65536,
 		http2.SettingMaxConcurrentStreams: 1000,
 		http2.SettingInitialWindowSize:    6291456,
 		http2.SettingMaxHeaderListSize:    262144,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingHeaderTableSize,
 		http2.SettingMaxConcurrentStreams,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxHeaderListSize,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":authority",
 		":scheme",
 		":path",
 	},
-	connectionFlow: 15663105,
+	ConnectionFlow: 15663105,
 }

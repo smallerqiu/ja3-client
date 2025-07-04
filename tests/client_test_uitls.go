@@ -8,9 +8,9 @@ import (
 
 	tls "github.com/smallerqiu/ja3-client"
 	"github.com/smallerqiu/ja3-client/http"
+	"github.com/smallerqiu/ja3-client/ja3"
 )
 
-// 不稳定
 var tlsApi = "https://tls.browserleaks.com/json"
 
 type TlsInfo struct {
@@ -505,7 +505,7 @@ var TlsInfoMap = map[string]map[string]string{
 }
 
 func gettlsContent(t *testing.T, api string, impersonate string) (data []byte, ex error) {
-	reqBody := &tls.Ja3Request{
+	reqBody := &ja3.Ja3Request{
 		Method: "GET",
 		URL:    tlsApi,
 		// Proxy:                "http://127.0.0.1:7890",

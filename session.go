@@ -5,12 +5,12 @@ import (
 	"log"
 	"strings"
 
-	"github.com/smallerqiu/ja3-client/browser"
 	"github.com/smallerqiu/ja3-client/http"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
 // 创建定制 TLS 会话
-func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
+func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 	timeout := request.Timeout
 	if timeout == 0 {
 		timeout = 30
@@ -27,7 +27,7 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 	}
 
 	if request.JA3String != "" {
-		profile, err := FormatJa3(request.JA3String, request.Client, request.ClientVersion, false)
+		profile, err := ja3.FormatJa3(request.JA3String, request.Client, request.ClientVersion, false)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -35,12 +35,12 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 		options = append(options, WithClientProfile(profile))
 	} else {
 		imp := request.Impersonate
-		if _, ok := browser.MappedTLSClients[request.Impersonate]; !ok {
+		if _, ok := MappedTLSClients[request.Impersonate]; !ok {
 			log.Printf("the input client %v dont't support, so use default chrome 137", imp)
 			imp = "chrome_137"
 		}
 
-		b := browser.MappedTLSClients[imp]
+		b := MappedTLSClients[imp]
 
 		options = append(options, WithClientProfile(b))
 		if request.RandomExtensionOrder {

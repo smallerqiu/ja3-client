@@ -132,7 +132,6 @@ func TestFirefox(t *testing.T) {
 	t.Log("testing firefox 117")
 	MatchTlsInfo(t, "firefox_117")
 
-	// 117 之前的版本太老了
 }
 
 func TestSafari(t *testing.T) {

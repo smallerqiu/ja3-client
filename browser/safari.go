@@ -2,30 +2,31 @@ package browser
 
 import (
 	"github.com/smallerqiu/ja3-client/http2"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 )
 
-var Safari_15_6_1 = ClientProfile{
-	clientHelloId: tls.HelloSafari_15_6_1,
-	settings: map[http2.SettingID]uint32{
+var Safari_15_6_1 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloSafari_15_6_1,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    4194304,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_15_3 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_15_3 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Safari",
 		RandomExtensionOrder: false,
 		Version:              "15.3",
@@ -119,44 +120,44 @@ var Safari_15_3 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    4194304,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_16_0 = ClientProfile{
-	clientHelloId: tls.HelloSafari_16_0,
-	settings: map[http2.SettingID]uint32{
+var Safari_16_0 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloSafari_16_0,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    4194304,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_17_5 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_17_5 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Safari",
 		RandomExtensionOrder: false,
 		Version:              "17.5",
@@ -247,32 +248,32 @@ var Safari_17_5 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:           0,
 		http2.SettingInitialWindowSize:    4194304,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 10485760,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    255,
 	},
 }
 
-var Safari_18_0 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_18_0 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Safari",
 		RandomExtensionOrder: false,
 		Version:              "18.0",
@@ -362,36 +363,36 @@ var Safari_18_0 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:            0,
 		http2.SettingMaxConcurrentStreams:  100,
 		http2.SettingInitialWindowSize:     2097152,
 		http2.SettingEnableConnectProtocol: 1,
 		http2.SettingNoRFC7540Priorities:   1,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingMaxConcurrentStreams,
 		http2.SettingInitialWindowSize,
 		http2.SettingEnableConnectProtocol,
 		http2.SettingNoRFC7540Priorities,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":authority",
 		":path",
 	},
-	connectionFlow: 10420225,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 10420225,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    0,
 	},
 }
 
-var Safari_18_1 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_18_1 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Safari",
 		RandomExtensionOrder: false,
 		Version:              "18.1",
@@ -482,32 +483,32 @@ var Safari_18_1 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:           0,
 		http2.SettingInitialWindowSize:    4194304,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 10485760,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    255,
 	},
 }
 
-var Safari_18_4 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_18_4 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Safari",
 		RandomExtensionOrder: false,
 		Version:              "18.4",
@@ -597,53 +598,53 @@ var Safari_18_4 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:           0,
 		http2.SettingMaxConcurrentStreams: 100,
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingNoRFC7540Priorities:  1,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingMaxConcurrentStreams,
 		http2.SettingInitialWindowSize,
 		http2.SettingNoRFC7540Priorities,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":authority",
 		":path",
 	},
-	connectionFlow: 10420225,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 10420225,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    0,
 	},
 }
 
-var Safari_Ipad_15_6 = ClientProfile{
-	clientHelloId: tls.HelloIPad_15_6,
-	settings: map[http2.SettingID]uint32{
+var Safari_Ipad_15_6 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloIPad_15_6,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_IOS_17_0 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_IOS_17_0 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "iOS",
 		RandomExtensionOrder: false,
 		Version:              "17.0",
@@ -730,27 +731,27 @@ var Safari_IOS_17_0 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:           0,
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_IOS_18_0 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_IOS_18_0 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "iOS",
 		RandomExtensionOrder: false,
 		Version:              "18.0",
@@ -836,50 +837,50 @@ var Safari_IOS_18_0 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingEnablePush:           0,
 		http2.SettingMaxConcurrentStreams: 100,
 		http2.SettingInitialWindowSize:    2097152,
 		0x8:                               1,
 		0x9:                               1,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingEnablePush,
 		http2.SettingMaxConcurrentStreams,
 		http2.SettingInitialWindowSize,
 		0x8,
 		0x9,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":authority",
 		":path",
 	},
-	connectionFlow: 10420225,
+	ConnectionFlow: 10420225,
 }
 
-var Safari_IOS_16_0 = ClientProfile{
-	clientHelloId: tls.HelloIOS_16_0,
-	settings: map[http2.SettingID]uint32{
+var Safari_IOS_16_0 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloIOS_16_0,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_IOS_16_7 = ClientProfile{
-	clientHelloId: tls.ClientHelloID{
+var Safari_IOS_16_7 = ja3.ClientProfile{
+	ClientHelloId: tls.ClientHelloID{
 		Client:               "Safari",
 		RandomExtensionOrder: false,
 		Version:              "16.7",
@@ -970,62 +971,62 @@ var Safari_IOS_16_7 = ClientProfile{
 			}, nil
 		},
 	},
-	settings: map[http2.SettingID]uint32{
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
-	headerPriority: &http2.PriorityParam{
+	ConnectionFlow: 10485760,
+	HeaderPriority: &http2.PriorityParam{
 		StreamDep: 0,
 		Exclusive: false,
 		Weight:    255,
 	},
 }
 
-var Safari_IOS_15_5 = ClientProfile{
-	clientHelloId: tls.HelloIOS_15_5,
-	settings: map[http2.SettingID]uint32{
+var Safari_IOS_15_5 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloIOS_15_5,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }
 
-var Safari_IOS_15_6 = ClientProfile{
-	clientHelloId: tls.HelloIOS_15_6,
-	settings: map[http2.SettingID]uint32{
+var Safari_IOS_15_6 = ja3.ClientProfile{
+	ClientHelloId: tls.HelloIOS_15_6,
+	Settings: map[http2.SettingID]uint32{
 		http2.SettingInitialWindowSize:    2097152,
 		http2.SettingMaxConcurrentStreams: 100,
 	},
-	settingsOrder: []http2.SettingID{
+	SettingsOrder: []http2.SettingID{
 		http2.SettingInitialWindowSize,
 		http2.SettingMaxConcurrentStreams,
 	},
-	pseudoHeaderOrder: []string{
+	PseudoHeaderOrder: []string{
 		":method",
 		":scheme",
 		":path",
 		":authority",
 	},
-	connectionFlow: 10485760,
+	ConnectionFlow: 10485760,
 }

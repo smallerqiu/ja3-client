@@ -5,10 +5,11 @@ import (
 	"log"
 
 	tls "github.com/smallerqiu/ja3-client"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
 func TestJa3Key() {
-	reqBody := &tls.Ja3Request{
+	reqBody := &ja3.Ja3Request{
 		Method:        "GET",
 		URL:           "https://www.google.com",
 		Proxy:         "http://127.0.0.1:7890",

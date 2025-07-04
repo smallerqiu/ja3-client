@@ -4,12 +4,13 @@ import (
 	"math"
 
 	"github.com/smallerqiu/ja3-client/http2"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 )
 
 var MMSIos2 = getMMSClientProfile2()
 
-func getMMSClientProfile2() ClientProfile {
+func getMMSClientProfile2() ja3.ClientProfile {
 	clientHelloId := tls.ClientHelloID{
 		Client:  "MMSIos",
 		Version: "2",
@@ -102,12 +103,12 @@ func getMMSClientProfile2() ClientProfile {
 		":authority",
 	}
 
-	return NewClientProfile(clientHelloId, settings, settingsOrder, pseudoHeaderOrder, 15663105, nil, nil)
+	return ja3.NewClientProfile(clientHelloId, settings, settingsOrder, pseudoHeaderOrder, 15663105, nil, nil)
 }
 
 var MMSIos3 = getMMSClientProfile3()
 
-func getMMSClientProfile3() ClientProfile {
+func getMMSClientProfile3() ja3.ClientProfile {
 	clientHelloId := tls.ClientHelloID{
 		Client:  "MMSIos",
 		Version: "3",
@@ -209,5 +210,5 @@ func getMMSClientProfile3() ClientProfile {
 		":authority",
 	}
 
-	return NewClientProfile(clientHelloId, settings, settingsOrder, pseudoHeaderOrder, 15663105, nil, nil)
+	return ja3.NewClientProfile(clientHelloId, settings, settingsOrder, pseudoHeaderOrder, 15663105, nil, nil)
 }

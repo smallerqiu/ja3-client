@@ -7,11 +7,11 @@ import (
 	"io"
 
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/smallerqiu/ja3-client/browser"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
+	"github.com/smallerqiu/ja3-client/util"
 
 	http "github.com/smallerqiu/ja3-client/http"
 	"golang.org/x/net/proxy"
@@ -56,7 +56,7 @@ var DefaultTimeoutSeconds = 30
 
 var DefaultOptions = []HttpClientOption{
 	WithTimeoutSeconds(DefaultTimeoutSeconds),
-	WithClientProfile(browser.DefaultClientProfile),
+	WithClientProfile(DefaultClientProfile),
 	WithRandomTLSExtensionOrder(),
 	WithNotFollowRedirects(),
 }
@@ -75,7 +75,7 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		customRedirectFunc: nil,
 		defaultHeaders:     make(http.Header),
 		connectHeaders:     make(http.Header),
-		clientProfile:      browser.DefaultClientProfile,
+		clientProfile:      DefaultClientProfile,
 		timeout:            time.Duration(DefaultTimeoutSeconds) * time.Second,
 	}
 
@@ -119,14 +119,14 @@ func validateConfig(_ *httpClientConfig) error {
 	return nil
 }
 
-func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, BandwidthTracker, browser.ClientProfile, error) {
+func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, BandwidthTracker, ja3.ClientProfile, error) {
 	var dialer proxy.ContextDialer
 	dialer = newDirectDialer(config.timeout, config.localAddr, config.dialer)
 
 	if config.proxyUrl != "" && config.proxyDialerFactory == nil {
 		proxyDialer, err := newConnectDialer(config.proxyUrl, config.timeout, config.localAddr, config.dialer, config.connectHeaders, logger)
 		if err != nil {
-			return nil, nil, browser.ClientProfile{}, err
+			return nil, nil, ja3.ClientProfile{}, err
 		}
 
 		dialer = proxyDialer
@@ -135,7 +135,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 	if config.proxyDialerFactory != nil {
 		proxyDialer, err := config.proxyDialerFactory(config.proxyUrl, config.timeout, config.localAddr, config.connectHeaders, logger)
 		if err != nil {
-			return nil, nil, browser.ClientProfile{}, err
+			return nil, nil, ja3.ClientProfile{}, err
 		}
 
 		dialer = proxyDialer
@@ -337,7 +337,7 @@ func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
 		req.Header = c.config.defaultHeaders.Clone()
 	}
 
-	req.Header[http.HeaderOrderKey] = allToLower(req.Header[http.HeaderOrderKey])
+	req.Header[http.HeaderOrderKey] = util.AllToLower(req.Header[http.HeaderOrderKey])
 	c.headerLck.Unlock()
 
 	if c.config.debug {
@@ -431,14 +431,4 @@ func (c *httpClient) Post(url, contentType string, body io.Reader) (resp *http.R
 	req.Header.Set("Content-Type", contentType)
 
 	return c.Do(req)
-}
-
-func allToLower(list []string) []string {
-	lower := make([]string, len(list))
-
-	for i, elem := range list {
-		lower[i] = strings.ToLower(elem)
-	}
-
-	return lower
 }

@@ -1,4 +1,4 @@
-package ja3_client
+package ja3
 
 import (
 	"github.com/smallerqiu/ja3-client/http2"
@@ -135,6 +135,12 @@ var curves = map[string]tls.CurveID{
 	"X25519Kyber512D": tls.X25519Kyber512Draft00,
 	"X25519Kyber768":  tls.X25519Kyber768Draft00,
 	"X25519MLKEM768":  tls.X25519MLKEM768,
+}
+var pseudoHeader = map[string]string{
+	"m": ":method",
+	"a": ":authority",
+	"s": ":scheme",
+	"p": ":path",
 }
 
 var certCompression = map[string]tls.CertCompressionAlgo{

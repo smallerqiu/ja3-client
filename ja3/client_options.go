@@ -1,4 +1,4 @@
-package ja3_client
+package ja3
 
 import (
 	"crypto/x509"
@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/smallerqiu/ja3-client/http"
-	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	"golang.org/x/net/proxy"
 )
 
@@ -36,7 +35,7 @@ type TransportOptions struct {
 }
 
 type BadPinHandlerFunc func(req *http.Request)
-type ProxyDialerFactory func(proxyUrlStr string, timeout time.Duration, localAddr *net.TCPAddr, connectHeaders http.Header, logger Logger) (proxy.ContextDialer, error)
+type ProxyDialerFactory func(proxyUrlStr string, timeout time.Duration, localAddr *net.TCPAddr, connectHeaders http.Header) (proxy.ContextDialer, error)
 
 type httpClientConfig struct {
 	cookieJar          http.CookieJar
@@ -53,7 +52,7 @@ type httpClientConfig struct {
 
 	proxyUrl                    string
 	serverNameOverwrite         string
-	clientProfile               ja3.ClientProfile
+	clientProfile               ClientProfile
 	timeout                     time.Duration
 	catchPanics                 bool
 	debug                       bool
@@ -230,7 +229,7 @@ func WithForceHttp1(forceHttp1 bool) HttpClientOption {
 }
 
 // WithClientProfile configures a TLS client to use the specified client profile.
-func WithClientProfile(clientProfile ja3.ClientProfile) HttpClientOption {
+func WithClientProfile(clientProfile ClientProfile) HttpClientOption {
 	return func(config *httpClientConfig) {
 		config.clientProfile = clientProfile
 	}

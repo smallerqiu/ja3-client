@@ -5,6 +5,7 @@ import (
 	"log"
 
 	tls "github.com/smallerqiu/ja3-client"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
 /*
@@ -14,7 +15,7 @@ Impersonate list of client :
 "uc_17_3"
 "360_14_5"
 "xiaomi_15_9"
-"sansung_27_1"
+"samsung_27_1"
 "chrome_103"
 "chrome_104"
 "chrome_105"
@@ -88,7 +89,7 @@ Impersonate list of client :
 */
 
 func TestImpersonate() {
-	reqBody := &tls.Ja3Request{
+	reqBody := &ja3.Ja3Request{
 		Method:               "GET",
 		URL:                  "https://www.google.com",
 		Proxy:                "http://127.0.0.1:7890",
