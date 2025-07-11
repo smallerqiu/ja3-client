@@ -14,8 +14,10 @@ type ClientData struct {
 	Http2Setting            string
 	Http2WindowUpdate       uint32
 	Http2StreamWight        int
+	Http2StreamDep          int
 	Http2StreamExclusive    int
 	Http2PseudoHeaderOrder  string
+	Http2Priorities         string
 	Compressed              bool
 	TlsExtensionOrder       string
 	TlsDelegatedCredentials string
@@ -29,6 +31,7 @@ type ClientData struct {
 	CertCompression         string
 	Client                  string
 	Version                 string
+	TlsPadding              bool
 	RandomExtensionOrder    bool
 }
 

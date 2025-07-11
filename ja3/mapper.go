@@ -135,6 +135,8 @@ var curves = map[string]tls.CurveID{
 	"X25519Kyber512D": tls.X25519Kyber512Draft00,
 	"X25519Kyber768":  tls.X25519Kyber768Draft00,
 	"X25519MLKEM768":  tls.X25519MLKEM768,
+	"FAKEFFDHE2048":   tls.FAKEFFDHE2048,
+	"FAKEFFDHE3072":   tls.FAKEFFDHE3072,
 }
 var pseudoHeader = map[string]string{
 	"m": ":method",

@@ -79,9 +79,7 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 			if err != nil {
 				return profile, fmt.Errorf("failed to parse extension ID: %v", err)
 			}
-			settings = map[http2.SettingID]uint32{
-				id: uint32(idUint),
-			}
+			settings[id] = uint32(idUint)
 			settingsOrder = append(settingsOrder, id)
 		}
 	}
@@ -102,6 +100,10 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 			},
 			CandidatePayloadLens: []uint16{128, 160, 192, 224},
 		}
+	}
+	// 21 padding
+	if config.TlsPadding {
+		extMap[tls.ExtensionPadding] = &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}
 	}
 
 	// 34 for firefox
@@ -136,6 +138,14 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 	// 43 tls version
 	var tlsExtensionVersion = tls.SupportedVersionsExtension{}
 	switch config.TlsVersion {
+	case "1.3":
+		clientHelloSpec.TLSVersMax = tls.VersionTLS13
+		clientHelloSpec.TLSVersMin = tls.VersionTLS12
+		tlsExtensionVersion.Versions = []uint16{
+			tls.GREASE_PLACEHOLDER,
+			tls.VersionTLS13,
+			tls.VersionTLS12,
+		}
 	case "1.2":
 		clientHelloSpec.TLSVersMax = tls.VersionTLS12
 		clientHelloSpec.TLSVersMin = tls.VersionTLS11
@@ -310,10 +320,46 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 		}
 		pseudoHeaderOrder = append(pseudoHeaderOrder, (pseudo))
 	}
+	StreamDep := 0
+	if config.Http2StreamDep > 0 {
+		StreamDep = config.Http2StreamDep
+	}
 	headerPriority := &http2.PriorityParam{
-		StreamDep: 0,
-		Exclusive: false,
-		Weight:    255,
+		StreamDep: uint32(StreamDep),
+		Exclusive: config.Http2StreamExclusive == 1,
+		Weight:    uint8(config.Http2StreamWight),
+	}
+	priorities := []http2.Priority{}
+	if config.Http2Priorities != "" {
+		for _, p := range strings.Split(config.Http2Priorities, ",") {
+			pParts := strings.Split(p, ":")
+			if len(pParts) != 4 {
+				return profile, fmt.Errorf("don't support this http2Priorities: %s ", p)
+			}
+			sid, err := strconv.ParseUint(pParts[0], 10, 32)
+			if err != nil {
+				return profile, err
+			}
+			priority := http2.Priority{}
+			priority.StreamID = uint32(sid)
+
+			dep, err := strconv.ParseUint(pParts[1], 10, 32)
+			if err != nil {
+				return profile, err
+			}
+
+			weight, err := strconv.ParseUint(pParts[3], 10, 8)
+			if err != nil {
+				return profile, err
+			}
+
+			priority.PriorityParam = http2.PriorityParam{
+				StreamDep: uint32(dep),
+				Exclusive: pParts[2] == "1",
+				Weight:    uint8(weight),
+			}
+			priorities = append(priorities, priority)
+		}
 	}
 	return ClientProfile{
 		ClientHelloId:     clientHelloId,
@@ -321,7 +367,7 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 		SettingsOrder:     settingsOrder,
 		PseudoHeaderOrder: pseudoHeaderOrder,
 		ConnectionFlow:    config.Http2WindowUpdate,
-		// priorities:        priorities,
-		HeaderPriority: headerPriority,
+		Priorities:        priorities,
+		HeaderPriority:    headerPriority,
 	}, nil
 }

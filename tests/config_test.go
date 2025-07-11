@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -8,26 +9,21 @@ import (
 
 	ja3client "github.com/smallerqiu/ja3-client"
 	"github.com/smallerqiu/ja3-client/http"
-	ja3 "github.com/smallerqiu/ja3-client/ja3"
+	"github.com/smallerqiu/ja3-client/ja3"
 )
 
 func TestConfig(t *testing.T) {
-	chrome_136 := ja3.ClientData{
-		CipherSuites:         "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA",
-		Curves:               "X25519MLKEM768:X25519:P256:P384",
-		Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
-		Http2WindowUpdate:    15663105,
-		Http2StreamWight:     256,
-		Http2StreamExclusive: 1,
-		Compressed:           true,
-		CertCompression:      "brotli",
-		TlsVersion:           "1.2",
-		TlsGrease:            true,
-		ALPS:                 true,
-		Ech:                  true,
-		RandomExtensionOrder: true,
-	}
-	clientProfile, err := ja3.BuildClientHelloSpec(chrome_136)
+	impersonate := "firefox_120"
+	clientProfile, err := ja3.BuildClientHelloSpec(ja3.Firefox_120)
+
+	// c136 := browser.Chrome_136
+
+	// m, _ := clientProfile.ClientHelloId.SpecFactory()
+	// n, _ := c136.ClientHelloId.SpecFactory()
+
+	// print(clientProfile.ClientHelloId.Version)
+	// print(c136.ClientHelloId.Version)
+	// print(m.TLSVersMin, n.TLSVersMin)
 	if err != nil {
 		fmt.Printf("profile %s", err)
 		return
@@ -36,8 +32,9 @@ func TestConfig(t *testing.T) {
 		ja3client.WithForceHttp1(false),
 		ja3client.WithNotFollowRedirects(),
 		ja3client.WithClientProfile(clientProfile),
+		// ja3client.WithClientProfile(c136),
 		ja3client.WithTimeoutSeconds(10),
-		ja3client.WithProxyUrl("http://127.0.0.1:7890"),
+		// ja3client.WithProxyUrl("http://127.0.0.1:7890"),
 	}
 
 	client, err := ja3client.NewHttpClient(ja3client.NewNoopLogger(), options...)
@@ -46,7 +43,7 @@ func TestConfig(t *testing.T) {
 		fmt.Printf("client %s", err)
 		return
 	}
-	var tlsApi = "https://baidu.com"
+	var tlsApi = "https://tls.browserleaks.com/json"
 
 	req, err := http.NewRequest("GET", tlsApi, nil)
 	Headers := http.Header{
@@ -86,5 +83,28 @@ func TestConfig(t *testing.T) {
 		return
 	}
 
-	print(bytes)
+	// print(string(bytes))
+
+	tlsinfo := TlsInfo{}
+	if err := json.Unmarshal(bytes, &tlsinfo); err != nil {
+		t.Error(err)
+	}
+
+	info := TlsInfoMap[impersonate]
+
+	// just match the ja3n_hash , ja4 , akamai_hash
+
+	if tlsinfo.Ja3nHash != info["ja3n_hash"] {
+		t.Logf("cur: %v", tlsinfo.Ja3Text)
+		t.Logf("tar: %v", info["ja3n_text"])
+		t.Errorf("ja3n hash mismatch: %s != %s", tlsinfo.Ja3nHash, info["ja3n_hash"])
+	}
+	if tlsinfo.Ja4 != info["ja4"] {
+		t.Errorf("ja4 mismatch,cur: %s != %s", tlsinfo.Ja4, info["ja4"])
+	}
+	if tlsinfo.AkamaiHash != info["akamai_hash"] {
+		t.Logf("akamai_text: %v", tlsinfo.AkamaiText)
+		t.Errorf("akamai hash mismatch cur: %s != %s", tlsinfo.AkamaiHash, info["akamai_hash"])
+	}
+
 }
