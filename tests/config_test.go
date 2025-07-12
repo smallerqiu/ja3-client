@@ -13,17 +13,18 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	impersonate := "firefox_120"
-	clientProfile, err := ja3.BuildClientHelloSpec(ja3.Firefox_120)
+	impersonate := "xiaomi_15_9"
+	clientProfile, err := ja3.BuildClientHelloSpec(ja3.Xiaomi_15_9)
 
-	// c136 := browser.Chrome_136
+	// test := browser.UC_17_3
 
 	// m, _ := clientProfile.ClientHelloId.SpecFactory()
-	// n, _ := c136.ClientHelloId.SpecFactory()
+	// n, _ := test.ClientHelloId.SpecFactory()
 
 	// print(clientProfile.ClientHelloId.Version)
 	// print(c136.ClientHelloId.Version)
 	// print(m.TLSVersMin, n.TLSVersMin)
+	fmt.Printf("\n\n\n\n")
 	if err != nil {
 		fmt.Printf("profile %s", err)
 		return
@@ -93,6 +94,8 @@ func TestConfig(t *testing.T) {
 	info := TlsInfoMap[impersonate]
 
 	// just match the ja3n_hash , ja4 , akamai_hash
+	fmt.Printf("ok cur: %v \n", tlsinfo.Ja3Text)
+	fmt.Printf("ok tar: %v \n", info["ja3n_text"])
 
 	if tlsinfo.Ja3nHash != info["ja3n_hash"] {
 		t.Logf("cur: %v", tlsinfo.Ja3Text)

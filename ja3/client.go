@@ -28,6 +28,7 @@ type ClientData struct {
 	Ech                     bool
 	ALPS                    bool
 	ALPSO                   bool
+	ALPSS                   bool
 	CertCompression         string
 	Client                  string
 	Version                 string

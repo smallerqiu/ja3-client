@@ -138,6 +138,15 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 	// 43 tls version
 	var tlsExtensionVersion = tls.SupportedVersionsExtension{}
 	switch config.TlsVersion {
+	case "any":
+		clientHelloSpec.TLSVersMax = tls.VersionTLS13
+		clientHelloSpec.TLSVersMin = tls.VersionTLS10
+		tlsExtensionVersion.Versions = []uint16{
+			tls.VersionTLS13,
+			tls.VersionTLS12,
+			tls.VersionTLS11,
+			tls.VersionTLS10,
+		}
 	case "1.3":
 		clientHelloSpec.TLSVersMax = tls.VersionTLS13
 		clientHelloSpec.TLSVersMin = tls.VersionTLS12
@@ -240,6 +249,9 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 			CodePoint:          tls.ExtensionALPS,
 			SupportedProtocols: []string{"h2"},
 		}
+	}
+	if config.ALPSS {
+		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}
 	}
 
 	// 13 signature algorithms
