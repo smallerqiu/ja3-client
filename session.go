@@ -2,14 +2,12 @@ package ja3_client
 
 import (
 	"bytes"
-	"log"
 	"strings"
 
 	"github.com/smallerqiu/ja3-client/http"
 	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
-// 创建定制 TLS 会话
 func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 	timeout := request.Timeout
 	if timeout == 0 {
@@ -34,21 +32,18 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 
 		options = append(options, WithClientProfile(profile))
 	} else {
-		imp := request.Impersonate
-		if _, ok := MappedTLSClients[request.Impersonate]; !ok {
-			log.Printf("the input client %v dont't support, so use default chrome 137", imp)
-			imp = "chrome_137"
+		impersonate := request.Impersonate
+
+		profile, err := ja3.BuildClientHelloSpec(impersonate)
+		if err != nil {
+			return nil, nil, err
 		}
-
-		b := MappedTLSClients[imp]
-
-		options = append(options, WithClientProfile(b))
+		options = append(options, WithClientProfile(profile))
 		if request.RandomExtensionOrder {
 			options = append(options, WithRandomTLSExtensionOrder())
 		}
 	}
 
-	// 设置代理
 	if request.Proxy != "" {
 		options = append(options, WithProxyUrl(request.Proxy))
 	}
@@ -65,7 +60,6 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 		return nil, nil, err
 	}
 
-	// 设置请求头
 	if request.Headers != nil {
 		if req.Header == nil {
 			req.Header = make(map[string][]string)

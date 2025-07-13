@@ -31,6 +31,7 @@ type ClientData struct {
 	ALPSS                   bool
 	CertCompression         string
 	Client                  string
+	NoTlsSessionTicket      bool
 	Version                 string
 	TlsPadding              bool
 	RandomExtensionOrder    bool
@@ -52,5 +53,4 @@ type ProfileData struct {
 	headerPriority                          *http2.PriorityParam
 	certCompressionAlgo                     string
 	echCandidateCipherSuites                []CandidateCipherSuites
-	tlsVersion                              string
 }

@@ -1,0 +1,48 @@
+package ja3
+
+var DefaultClientProfile = Chrome_136
+
+var MappedTLSClients = map[string]ClientData{
+	// "custom":         browser.Custom,
+	"chrome_137_ios":     Chrome_137_ios,
+	"chrome_136":         Chrome_136,
+	"chrome_133":         Chrome_133, //132
+	"chrome_132":         Chrome_132,
+	"chrome_131_android": Chrome_131_android,
+	"chrome_99_android":  Chrome_99_android,
+	"chrome_131":         Chrome_131,
+	"chrome_124":         Chrome_124,
+	"chrome_120":         Chrome_120, //120
+	"chrome_119":         Chrome_119,
+	"chrome_117":         Chrome_117,
+	"edge_101":           Edge_101,
+	"edge_131":           Edge_131,
+	"edge_136":           Edge_136,
+	"firefox_135":        Firefox_135,
+	"firefox_132":        Firefox_132,
+	"firefox_123":        Firefox_123,
+	"firefox_120":        Firefox_120,
+	"firefox_117":        Firefox_117,
+	"opera_120":          Opera_120,
+	"opera_119":          Opera_119, //117
+	"opera_117":          Opera_117,
+	"safari_15_3":        Safari_15_3,
+	"safari_15_5":        Safari_15_5,
+	"safari_17_0":        Safari_17_0,
+	"safari_18_0":        Safari_18_0,
+	"safari_18_1":        Safari_18_1,
+	"safari_18_5":        Safari_18_5,
+	"safari_26_0":        Safari_26_0,
+	"safari_ios_17_0":    Safari_ios_17_0,
+	"safari_ios_18_0":    Safari_ios_18_0,
+	"safari_ios_18_4":    Safari_ios_18_4,
+	"safari_ios_26_0":    Safari_ios_26_0,
+	"tor_14_5":           Tor_14_5,
+	"brave_1_8":          Brave_1_8,
+	"qq_19_4":            QQ_19_4, //todo
+	"qh360_16_0":         QH360_16_0,
+	"qh360_5_5_ios":      QH360_5_5_ios,
+	"uc_17_9":            UC_17_9,
+	"samsung_27_1":       Samsung_27_1,
+	"xiaomi_15_9":        Xiaomi_15_9,
+}

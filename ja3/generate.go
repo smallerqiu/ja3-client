@@ -2,7 +2,9 @@ package ja3
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -34,12 +36,183 @@ func getExtBaseMap() map[uint16]tls.TLSExtension {
 		},
 	}
 }
-func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) {
-	// 771
-	// 4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53
-	// 23-27-5-45-13-11-18-17613-16-65281-43-51-65037-35-0-10
-	// 4588-29-23-24
-	// 0
+
+func getExtExtraMap() map[uint16]tls.TLSExtension {
+	return map[uint16]tls.TLSExtension{
+		// This extension needs to be instantiated every time and not be reused if it occurs multiple times in the same ja3
+		// tls.GREASE_PLACEHOLDER: &tls.UtlsGREASEExtension{},
+		// 0
+		// tls.ExtensionServerName: &tls.SNIExtension{},
+		//5
+		// tls.ExtensionStatusRequest: &tls.StatusRequestExtension{},
+		// These are applied later
+		// tls.ExtensionSupportedCurves: &tls.SupportedCurvesExtension{...}
+		// tls.ExtensionSupportedPoints: &tls.SupportedPointsExtension{...}
+		// tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{...}
+		// tls.ExtensionCompressCertificate:  &tls.UtlsCompressCertExtension{...},
+		// tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{...}
+		// tls.ExtensionKeyShare:     &tls.KeyShareExtension{...},
+		// tls.ExtensionDelegatedCredentials: &tls.DelegatedCredentialsExtension{},
+		// tls.ExtensionALPN: &tls.ALPNExtension{},
+		// tls.ExtensionALPS:         &tls.ApplicationSettingsExtension{},
+		// 17
+		tls.ExtensionStatusRequestV2: &tls.GenericExtension{Id: 17}, //status_request_v2
+		// 18
+		// tls.ExtensionSCT: &tls.SCTExtension{},
+		// 21
+		tls.ExtensionPadding: &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
+		// 22
+		tls.ExtensionEncryptThenMac: &tls.GenericExtension{Id: 22}, //status_request_v2
+		// 23
+		// tls.ExtensionExtendedMasterSecret: &tls.ExtendedMasterSecretExtension{},
+		// 24
+		tls.ExtensionFakeTokenBinding: &tls.FakeTokenBindingExtension{},
+		// 28
+		tls.ExtensionRecordSizeLimit: &tls.FakeRecordSizeLimitExtension{},
+		// 35
+		// tls.ExtensionSessionTicket: &tls.SessionTicketExtension{},
+		// 41
+		tls.ExtensionPreSharedKey: &tls.UtlsPreSharedKeyExtension{},
+		// 42
+		tls.ExtensionEarlyData: &tls.GenericExtension{Id: tls.ExtensionEarlyData},
+		// 44
+		tls.ExtensionCookie: &tls.CookieExtension{},
+		// 45
+		// tls.ExtensionPSKModes: &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
+		// 49
+		tls.ExtensionPostHandShakeAuth: &tls.GenericExtension{Id: 49},
+		// 57
+		tls.ExtensionQUICTransportParameters: &tls.QUICTransportParametersExtension{},
+		// 13172
+		tls.ExtensionNextProtoNeg: &tls.NPNExtension{},
+		// 17513
+		tls.ExtensionALPS: &tls.ApplicationSettingsExtension{
+			CodePoint:          tls.ExtensionALPSOld,
+			SupportedProtocols: []string{"h2"},
+		},
+		// 27
+		tls.ExtensionCompressCertificate: &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+			tls.CertCompressionZlib, tls.CertCompressionBrotli, tls.CertCompressionZstd,
+		}},
+		//43
+		tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{
+			Versions: []uint16{tls.VersionTLS13, tls.VersionTLS12},
+		},
+		//13 , important....
+		tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+			tls.ECDSAWithP256AndSHA256,
+			tls.PSSWithSHA256,
+			tls.PKCS1WithSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.PSSWithSHA384,
+			tls.PKCS1WithSHA384,
+			tls.PSSWithSHA512,
+			tls.PKCS1WithSHA512,
+		}},
+		tls.ExtensionECH: tls.BoringGREASEECH(), //ech
+		//51
+		tls.ExtensionKeyShare: &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+			{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
+			{Group: tls.CurveP256},
+			{Group: tls.CurveP384},
+			{Group: tls.CurveP521},
+		}},
+		// 65281
+		// tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
+		// 30032
+		tls.ExtensionChannelId: &tls.GenericExtension{Id: 0x7550, Data: []byte{0}}, //FIXME
+	}
+}
+
+func buildHttp2Spec(akamai_text string) (profile ClientProfile, err error) {
+	akamaiMap := strings.Split(akamai_text, "|")
+	if len(akamaiMap) < 4 {
+		return profile, errors.New("ja3 format error")
+	}
+	var settings = map[http2.SettingID]uint32{}
+	var settingsOrder []http2.SettingID
+	for _, s := range strings.Split(akamaiMap[0], ";") {
+		s := strings.Split(s, ":")
+		if len(s) != 2 {
+			return profile, fmt.Errorf("invalid http2 setting: %s", s)
+		}
+		id, ok := H2SettingsOrder[s[0]]
+		if !ok {
+			return profile, fmt.Errorf("invalid http2 setting order: %s", s[0])
+		}
+		idStr := s[1]
+		idUint, err := strconv.ParseUint(idStr, 10, 32)
+		if err != nil {
+			return profile, fmt.Errorf("failed to parse extension ID: %v", err)
+		}
+		settings[id] = uint32(idUint)
+		settingsOrder = append(settingsOrder, id)
+	}
+	profile.Settings = settings
+	profile.SettingsOrder = settingsOrder
+	flow, err := strconv.ParseUint(akamaiMap[1], 10, 32)
+	if err != nil {
+		return profile, fmt.Errorf("failed to parse connection flow: %v", err)
+	}
+	profile.ConnectionFlow = uint32(flow)
+
+	prioritiesMap := akamaiMap[2]
+	if prioritiesMap != "0" {
+		priorities := []http2.Priority{}
+		for _, p := range strings.Split(prioritiesMap, ",") {
+			pParts := strings.Split(p, ":")
+			if len(pParts) != 4 {
+				return profile, fmt.Errorf("don't support this http2Priorities: %s ", p)
+			}
+			sid, err := strconv.ParseUint(pParts[0], 10, 32)
+			if err != nil {
+				return profile, err
+			}
+			priority := http2.Priority{}
+			priority.StreamID = uint32(sid)
+
+			dep, err := strconv.ParseUint(pParts[1], 10, 32)
+			if err != nil {
+				return profile, err
+			}
+
+			weight, err := strconv.ParseUint(pParts[3], 10, 8)
+			if err != nil {
+				return profile, err
+			}
+
+			priority.PriorityParam = http2.PriorityParam{
+				StreamDep: uint32(dep),
+				Exclusive: pParts[2] == "1",
+				Weight:    uint8(weight),
+			}
+			priorities = append(priorities, priority)
+		}
+		profile.Priorities = priorities
+	}
+	pseudoHeaderOrder := []string{}
+	pseudoMap := strings.Split(akamaiMap[3], ",")
+	if len(pseudoMap) != 4 {
+		return profile, fmt.Errorf("don't support this pseudo: %s ", pseudoMap)
+	}
+	for _, pseudo := range pseudoMap {
+		pseudo, exist := pseudoHeader[pseudo]
+		if !exist {
+			return profile, fmt.Errorf("don't support this pseudoHeader: %s ", pseudo)
+		}
+		pseudoHeaderOrder = append(pseudoHeaderOrder, (pseudo))
+	}
+	profile.PseudoHeaderOrder = pseudoHeaderOrder
+
+	return profile, nil
+}
+
+func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error) {
+	config, ok := MappedTLSClients[impersonate]
+	if !ok {
+		log.Printf("the input client %v dont't support, so use default chrome 138", impersonate)
+		config = DefaultClientProfile
+	}
 
 	var clientHelloSpec tls.ClientHelloSpec
 	// ciphers part 1
@@ -61,30 +234,12 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 	if config.Compressed {
 		clientHelloSpec.CompressionMethods = []byte{tls.CompressionNone}
 	}
-	// setting
-	var settings = map[http2.SettingID]uint32{}
-	var settingsOrder []http2.SettingID
-	if config.Http2Setting != "" {
-		for _, s := range strings.Split(config.Http2Setting, ";") {
-			s := strings.Split(s, ":")
-			if len(s) != 2 {
-				return profile, fmt.Errorf("invalid http2 setting: %s", s)
-			}
-			id, ok := H2SettingsOrder[s[0]]
-			if !ok {
-				return profile, fmt.Errorf("invalid http2 setting: %s", s[0])
-			}
-			idStr := s[1]
-			idUint, err := strconv.ParseUint(idStr, 10, 32)
-			if err != nil {
-				return profile, fmt.Errorf("failed to parse extension ID: %v", err)
-			}
-			settings[id] = uint32(idUint)
-			settingsOrder = append(settingsOrder, id)
-		}
-	}
 
 	extMap := getExtBaseMap()
+	// for safari
+	if config.NoTlsSessionTicket {
+		delete(extMap, tls.ExtensionSessionTicket)
+	}
 	// 65037 ech
 	if config.Ech {
 		extMap[tls.ExtensionECH] = &tls.GREASEEncryptedClientHelloExtension{
@@ -318,20 +473,26 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 			return clientHelloSpec, nil
 		},
 	}
-
-	ph := "masp"
-	pseudoHeaderOrder := []string{}
+	akamaiMap := []string{}
+	akamaiMap = append(akamaiMap, config.Http2Setting)
+	akamaiMap = append(akamaiMap, strconv.FormatUint(uint64(config.Http2WindowUpdate), 10))
+	if config.Http2Priorities != "" {
+		akamaiMap = append(akamaiMap, config.Http2Priorities)
+	} else {
+		akamaiMap = append(akamaiMap, "0")
+	}
+	pseudo := "masp"
 	if config.Http2PseudoHeaderOrder != "" {
-		ph = config.Http2PseudoHeaderOrder
+		pseudo = config.Http2PseudoHeaderOrder
 	}
-	phMap := strings.Split(ph, "")
-	for _, ph := range phMap {
-		pseudo, exist := pseudoHeader[ph]
-		if !exist {
-			return profile, fmt.Errorf("don't support this pseudoHeader: %s ", ph)
-		}
-		pseudoHeaderOrder = append(pseudoHeaderOrder, (pseudo))
+	pseudoMap := strings.Join(strings.Split(pseudo, ""), ",")
+	akamaiMap = append(akamaiMap, pseudoMap)
+
+	http2Config, err := buildHttp2Spec(strings.Join(akamaiMap, "|"))
+	if err != nil {
+		return profile, err
 	}
+
 	StreamDep := 0
 	if config.Http2StreamDep > 0 {
 		StreamDep = config.Http2StreamDep
@@ -341,45 +502,116 @@ func BuildClientHelloSpec(config ClientData) (profile ClientProfile, err error) 
 		Exclusive: config.Http2StreamExclusive == 1,
 		Weight:    uint8(config.Http2StreamWight),
 	}
-	priorities := []http2.Priority{}
-	if config.Http2Priorities != "" {
-		for _, p := range strings.Split(config.Http2Priorities, ",") {
-			pParts := strings.Split(p, ":")
-			if len(pParts) != 4 {
-				return profile, fmt.Errorf("don't support this http2Priorities: %s ", p)
-			}
-			sid, err := strconv.ParseUint(pParts[0], 10, 32)
-			if err != nil {
-				return profile, err
-			}
-			priority := http2.Priority{}
-			priority.StreamID = uint32(sid)
 
-			dep, err := strconv.ParseUint(pParts[1], 10, 32)
-			if err != nil {
-				return profile, err
-			}
-
-			weight, err := strconv.ParseUint(pParts[3], 10, 8)
-			if err != nil {
-				return profile, err
-			}
-
-			priority.PriorityParam = http2.PriorityParam{
-				StreamDep: uint32(dep),
-				Exclusive: pParts[2] == "1",
-				Weight:    uint8(weight),
-			}
-			priorities = append(priorities, priority)
-		}
-	}
 	return ClientProfile{
 		ClientHelloId:     clientHelloId,
-		Settings:          settings,
-		SettingsOrder:     settingsOrder,
-		PseudoHeaderOrder: pseudoHeaderOrder,
+		Settings:          http2Config.Settings,
+		SettingsOrder:     http2Config.SettingsOrder,
+		PseudoHeaderOrder: http2Config.PseudoHeaderOrder,
 		ConnectionFlow:    config.Http2WindowUpdate,
-		Priorities:        priorities,
+		Priorities:        http2Config.Priorities,
 		HeaderPriority:    headerPriority,
+	}, nil
+}
+
+// ja3key as the tls finger , akamai_text as the http2 finger
+func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile ClientProfile, err error) {
+	ja3StringParts := strings.Split(ja3key, ",")
+	if len(ja3StringParts) < 4 {
+		return profile, errors.New("ja3 format error")
+	}
+	extMap := getExtBaseMap()
+
+	var clientHelloSpec tls.ClientHelloSpec
+	// tls version part 0
+
+	// password part 1
+	ciphers := strings.Split(ja3StringParts[1], "-")
+	var cipherSuite []uint16
+	for _, c := range ciphers {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return profile, err
+		}
+		cipherSuite = append(cipherSuite, uint16(cid))
+	}
+	clientHelloSpec.CipherSuites = cipherSuite
+
+	// curves part 3
+	mapCurves := strings.Split(ja3StringParts[3], "-")
+	if len(curves) == 1 && mapCurves[0] == "" {
+		mapCurves = []string{}
+	}
+	var targetCurves []tls.CurveID
+	for _, c := range mapCurves {
+		cid, err := strconv.ParseUint(c, 10, 16)
+		if err != nil {
+			return profile, err
+		}
+		targetCurves = append(targetCurves, tls.CurveID(cid))
+	}
+	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
+
+	// part 4
+	var targetPointFormats []byte
+	pid, err := strconv.ParseUint("0", 10, 8)
+	if err != nil {
+		return profile, err
+	}
+	targetPointFormats = append(targetPointFormats, byte(pid))
+	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
+
+	// end
+	var exts []tls.TLSExtension
+
+	extExtraMap := getExtExtraMap()
+	for pid, ext := range extExtraMap {
+		extMap[pid] = ext
+	}
+
+	// part 2
+	extensions := strings.Split(ja3StringParts[2], "-")
+	for _, e := range extensions {
+		eId, err := strconv.ParseUint(e, 10, 16)
+		if err != nil {
+			return ClientProfile{}, err
+		}
+		te, ok := extMap[uint16(eId)]
+		if !ok {
+			return ClientProfile{}, fmt.Errorf("don't support this ext: %s ", e)
+		}
+
+		exts = append(exts, te)
+	}
+	// default grease opened.
+	exts = append([]tls.TLSExtension{&tls.UtlsGREASEExtension{}}, exts...)
+	exts = append(exts, &tls.UtlsGREASEExtension{})
+
+	clientHelloSpec.Extensions = exts
+	clientHelloSpec.GetSessionID = sha256.Sum256
+	// latest part 0
+	clientHelloId := tls.ClientHelloID{
+		Client:               "Custom",
+		RandomExtensionOrder: true,
+		Version:              "",
+		Seed:                 nil,
+		SpecFactory: func() (tls.ClientHelloSpec, error) {
+			return clientHelloSpec, nil
+		},
+	}
+
+	http2Config, err := buildHttp2Spec(akamai_text)
+	if err != nil {
+		return profile, err
+	}
+
+	return ClientProfile{
+		ClientHelloId:     clientHelloId,
+		Settings:          http2Config.Settings,
+		SettingsOrder:     http2Config.SettingsOrder,
+		PseudoHeaderOrder: http2Config.PseudoHeaderOrder,
+		ConnectionFlow:    http2Config.ConnectionFlow,
+		Priorities:        http2Config.Priorities,
+		HeaderPriority:    http2Config.HeaderPriority,
 	}, nil
 }

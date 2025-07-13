@@ -13,10 +13,18 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	impersonate := "xiaomi_15_9"
-	clientProfile, err := ja3.BuildClientHelloSpec(ja3.Xiaomi_15_9)
+	// impersonate := "samsung_27_1"
+	// clientProfile, err := ja3.BuildClientHelloSpec(impersonate)
 
-	// test := browser.UC_17_3
+	// chrome138
+	impersonate := "chrome_136"
+	akamai_text := "1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p"
+	ja3_text := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,17613-27-5-16-11-18-45-65281-43-0-13-23-65037-51-10-35,4588-29-23-24,0"
+	clientProfile, err := ja3.BuildClientHelloSpecFromJa3Key(ja3_text, akamai_text)
+
+	// clientProfile, err := ja3.BuildClientHelloSpec(ja3.QH360_5_5_ios)
+
+	// test := browser.Safari_18_1
 
 	// m, _ := clientProfile.ClientHelloId.SpecFactory()
 	// n, _ := test.ClientHelloId.SpecFactory()
@@ -94,20 +102,29 @@ func TestConfig(t *testing.T) {
 	info := TlsInfoMap[impersonate]
 
 	// just match the ja3n_hash , ja4 , akamai_hash
-	fmt.Printf("ok cur: %v \n", tlsinfo.Ja3Text)
-	fmt.Printf("ok tar: %v \n", info["ja3n_text"])
 
+	if !clientProfile.ClientHelloId.RandomExtensionOrder {
+		if tlsinfo.Ja3Text != info["ja3_text"] {
+			fmt.Printf("cur ja3: %v \n", tlsinfo.Ja3Text)
+			fmt.Printf("tar ja3: %v \n", info["ja3_text"])
+			t.Errorf("ja3 mismatch")
+		}
+	}
 	if tlsinfo.Ja3nHash != info["ja3n_hash"] {
-		t.Logf("cur: %v", tlsinfo.Ja3Text)
-		t.Logf("tar: %v", info["ja3n_text"])
-		t.Errorf("ja3n hash mismatch: %s != %s", tlsinfo.Ja3nHash, info["ja3n_hash"])
+		fmt.Printf("cur ja3: %v \n", tlsinfo.Ja3Text)
+		fmt.Printf("tar ja3: %v \n", info["ja3_text"])
+		t.Errorf("ja3 hash mismatch")
 	}
 	if tlsinfo.Ja4 != info["ja4"] {
-		t.Errorf("ja4 mismatch,cur: %s != %s", tlsinfo.Ja4, info["ja4"])
+		fmt.Printf("cur ja4: %v \n", tlsinfo.Ja4)
+		fmt.Printf("tar ja4: %v \n", info["ja4"])
+		t.Errorf("ja4 mismatch")
 	}
 	if tlsinfo.AkamaiHash != info["akamai_hash"] {
-		t.Logf("akamai_text: %v", tlsinfo.AkamaiText)
-		t.Errorf("akamai hash mismatch cur: %s != %s", tlsinfo.AkamaiHash, info["akamai_hash"])
+		// fmt.Printf("cur ja4: %v \n", tlsinfo.Ja4)
+		// fmt.Printf("tar ja4: %v \n", info["ja4"])
+		fmt.Printf("cur akamai_text: %v \n", tlsinfo.AkamaiText)
+		t.Errorf("akamai mismatch")
 	}
 
 }
