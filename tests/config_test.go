@@ -13,11 +13,11 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	// impersonate := "samsung_27_1"
-	// clientProfile, err := ja3.BuildClientHelloSpec(impersonate)
+	impersonate := "chrome_136"
+	test, err := ja3.BuildClientHelloSpec(impersonate)
 
 	// chrome138
-	impersonate := "chrome_136"
+	// impersonate := "chrome_136"
 	akamai_text := "1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p"
 	ja3_text := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,17613-27-5-16-11-18-45-65281-43-0-13-23-65037-51-10-35,4588-29-23-24,0"
 	clientProfile, err := ja3.BuildClientHelloSpecFromJa3Key(ja3_text, akamai_text)
@@ -26,12 +26,12 @@ func TestConfig(t *testing.T) {
 
 	// test := browser.Safari_18_1
 
-	// m, _ := clientProfile.ClientHelloId.SpecFactory()
-	// n, _ := test.ClientHelloId.SpecFactory()
+	m, _ := clientProfile.ClientHelloId.SpecFactory()
+	n, _ := test.ClientHelloId.SpecFactory()
 
-	// print(clientProfile.ClientHelloId.Version)
+	print(clientProfile.ClientHelloId.Version)
 	// print(c136.ClientHelloId.Version)
-	// print(m.TLSVersMin, n.TLSVersMin)
+	print(m.TLSVersMin, n.TLSVersMin)
 	fmt.Printf("\n\n\n\n")
 	if err != nil {
 		fmt.Printf("profile %s", err)
@@ -41,7 +41,6 @@ func TestConfig(t *testing.T) {
 		ja3client.WithForceHttp1(false),
 		ja3client.WithNotFollowRedirects(),
 		ja3client.WithClientProfile(clientProfile),
-		// ja3client.WithClientProfile(c136),
 		ja3client.WithTimeoutSeconds(10),
 		// ja3client.WithProxyUrl("http://127.0.0.1:7890"),
 	}

@@ -54,6 +54,7 @@ type httpClientConfig struct {
 	proxyUrl                    string
 	serverNameOverwrite         string
 	clientProfile               ja3.ClientProfile
+	impersonate                 string
 	timeout                     time.Duration
 	catchPanics                 bool
 	debug                       bool
@@ -233,6 +234,12 @@ func WithForceHttp1(forceHttp1 bool) HttpClientOption {
 func WithClientProfile(clientProfile ja3.ClientProfile) HttpClientOption {
 	return func(config *httpClientConfig) {
 		config.clientProfile = clientProfile
+	}
+}
+
+func WithImpersonate(impersonate string) HttpClientOption {
+	return func(config *httpClientConfig) {
+		config.impersonate = impersonate
 	}
 }
 

@@ -1,7 +1,5 @@
 package ja3
 
-var DefaultClientProfile = Chrome_136
-
 var MappedTLSClients = map[string]ClientData{
 	// "custom":         browser.Custom,
 	"chrome_137_ios":     Chrome_137_ios,

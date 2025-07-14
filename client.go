@@ -56,7 +56,7 @@ var DefaultTimeoutSeconds = 30
 
 var DefaultOptions = []HttpClientOption{
 	WithTimeoutSeconds(DefaultTimeoutSeconds),
-	WithClientProfile(DefaultClientProfile),
+	// WithClientProfile(ja3.DefaultClientProfile),
 	WithRandomTLSExtensionOrder(),
 	WithNotFollowRedirects(),
 }
@@ -75,8 +75,8 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		customRedirectFunc: nil,
 		defaultHeaders:     make(http.Header),
 		connectHeaders:     make(http.Header),
-		clientProfile:      DefaultClientProfile,
-		timeout:            time.Duration(DefaultTimeoutSeconds) * time.Second,
+		// clientProfile:      ja3.DefaultClientProfile,
+		timeout: time.Duration(DefaultTimeoutSeconds) * time.Second,
 	}
 
 	for _, opt := range options {
@@ -92,7 +92,7 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		return nil, err
 	}
 
-	config.clientProfile = clientProfile
+	config.clientProfile = *clientProfile
 
 	if config.debug {
 		if logger == nil {
@@ -119,14 +119,14 @@ func validateConfig(_ *httpClientConfig) error {
 	return nil
 }
 
-func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, BandwidthTracker, ja3.ClientProfile, error) {
+func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, BandwidthTracker, *ja3.ClientProfile, error) {
 	var dialer proxy.ContextDialer
 	dialer = newDirectDialer(config.timeout, config.localAddr, config.dialer)
 
 	if config.proxyUrl != "" && config.proxyDialerFactory == nil {
 		proxyDialer, err := newConnectDialer(config.proxyUrl, config.timeout, config.localAddr, config.dialer, config.connectHeaders, logger)
 		if err != nil {
-			return nil, nil, ja3.ClientProfile{}, err
+			return nil, nil, nil, err
 		}
 
 		dialer = proxyDialer
@@ -135,7 +135,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 	if config.proxyDialerFactory != nil {
 		proxyDialer, err := config.proxyDialerFactory(config.proxyUrl, config.timeout, config.localAddr, config.connectHeaders, logger)
 		if err != nil {
-			return nil, nil, ja3.ClientProfile{}, err
+			return nil, nil, nil, err
 		}
 
 		dialer = proxyDialer
@@ -163,7 +163,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 
 	transport, err := newRoundTripper(clientProfile, config.transportOptions, config.serverNameOverwrite, config.insecureSkipVerify, config.withRandomTlsExtensionOrder, config.forceHttp1, config.certificatePins, config.badPinHandler, config.disableIPV6, config.disableIPV4, bandwidthTracker, dialer)
 	if err != nil {
-		return nil, nil, clientProfile, err
+		return nil, nil, nil, err
 	}
 
 	client := &http.Client{
@@ -176,7 +176,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 		client.Jar = config.cookieJar
 	}
 
-	return client, bandwidthTracker, clientProfile, nil
+	return client, bandwidthTracker, &clientProfile, nil
 }
 
 // CloseIdleConnections closes all idle connections of the underlying http client.

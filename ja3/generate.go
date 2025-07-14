@@ -55,6 +55,20 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 		// tls.ExtensionDelegatedCredentials: &tls.DelegatedCredentialsExtension{},
 		// tls.ExtensionALPN: &tls.ALPNExtension{},
 		// tls.ExtensionALPS:         &tls.ApplicationSettingsExtension{},
+		//13 , important....
+		tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+			tls.ECDSAWithP256AndSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.ECDSAWithP521AndSHA512,
+			tls.PSSWithSHA256,
+			tls.PSSWithSHA384,
+			tls.PSSWithSHA512,
+			tls.PKCS1WithSHA256,
+			tls.PKCS1WithSHA384,
+			tls.PKCS1WithSHA512,
+			tls.ECDSAWithSHA1,
+			tls.PKCS1WithSHA1,
+		}},
 		// 17
 		tls.ExtensionStatusRequestV2: &tls.GenericExtension{Id: 17}, //status_request_v2
 		// 18
@@ -67,56 +81,71 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 		// tls.ExtensionExtendedMasterSecret: &tls.ExtendedMasterSecretExtension{},
 		// 24
 		tls.ExtensionFakeTokenBinding: &tls.FakeTokenBindingExtension{},
+		// 27
+		tls.ExtensionCompressCertificate: &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+			tls.CertCompressionZlib, tls.CertCompressionBrotli, tls.CertCompressionZstd,
+		}},
 		// 28
-		tls.ExtensionRecordSizeLimit: &tls.FakeRecordSizeLimitExtension{},
+		tls.ExtensionRecordSizeLimit: &tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
+		// 34
+		tls.ExtensionDelegatedCredentials: &tls.DelegatedCredentialsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+			tls.ECDSAWithP256AndSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.ECDSAWithP521AndSHA512,
+			tls.ECDSAWithSHA1,
+		}},
 		// 35
 		// tls.ExtensionSessionTicket: &tls.SessionTicketExtension{},
 		// 41
 		tls.ExtensionPreSharedKey: &tls.UtlsPreSharedKeyExtension{},
 		// 42
 		tls.ExtensionEarlyData: &tls.GenericExtension{Id: tls.ExtensionEarlyData},
+		//43
+		tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{
+			Versions: []uint16{tls.GREASE_PLACEHOLDER, tls.VersionTLS13, tls.VersionTLS12},
+		},
 		// 44
 		tls.ExtensionCookie: &tls.CookieExtension{},
 		// 45
 		// tls.ExtensionPSKModes: &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
 		// 49
 		tls.ExtensionPostHandShakeAuth: &tls.GenericExtension{Id: 49},
+		// 50
+		tls.ExtensionSignatureAlgorithmsCert: &tls.SignatureAlgorithmsCertExtension{
+			SupportedSignatureAlgorithms: []tls.SignatureScheme{
+				tls.ECDSAWithP256AndSHA256,
+				tls.ECDSAWithP384AndSHA384,
+				tls.ECDSAWithP521AndSHA512,
+				tls.PSSWithSHA256,
+				tls.PSSWithSHA384,
+				tls.PSSWithSHA512,
+				tls.PKCS1WithSHA256,
+				tls.PKCS1WithSHA384,
+				tls.SignatureScheme(0x0806),
+				tls.SignatureScheme(0x0601),
+			},
+		},
+		//51
+		tls.ExtensionKeyShare: &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+			{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
+			{Group: tls.X25519},
+			{Group: tls.CurveP384}, // known bug missing correct extensions for handshake
+		}},
 		// 57
 		tls.ExtensionQUICTransportParameters: &tls.QUICTransportParametersExtension{},
 		// 13172
 		tls.ExtensionNextProtoNeg: &tls.NPNExtension{},
 		// 17513
-		tls.ExtensionALPS: &tls.ApplicationSettingsExtension{
+		tls.ExtensionALPSOld: &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPSOld,
 			SupportedProtocols: []string{"h2"},
 		},
-		// 27
-		tls.ExtensionCompressCertificate: &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
-			tls.CertCompressionZlib, tls.CertCompressionBrotli, tls.CertCompressionZstd,
-		}},
-		//43
-		tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{
-			Versions: []uint16{tls.VersionTLS13, tls.VersionTLS12},
+		tls.ExtensionALPS: &tls.ApplicationSettingsExtension{
+			CodePoint:          tls.ExtensionALPS,
+			SupportedProtocols: []string{"h2"},
 		},
-		//13 , important....
-		tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
-			tls.ECDSAWithP256AndSHA256,
-			tls.PSSWithSHA256,
-			tls.PKCS1WithSHA256,
-			tls.ECDSAWithP384AndSHA384,
-			tls.PSSWithSHA384,
-			tls.PKCS1WithSHA384,
-			tls.PSSWithSHA512,
-			tls.PKCS1WithSHA512,
-		}},
+		//65037
 		tls.ExtensionECH: tls.BoringGREASEECH(), //ech
-		//51
-		tls.ExtensionKeyShare: &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
-			{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
-			{Group: tls.CurveP256},
-			{Group: tls.CurveP384},
-			{Group: tls.CurveP521},
-		}},
 		// 65281
 		// tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
 		// 30032
@@ -211,7 +240,7 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 	config, ok := MappedTLSClients[impersonate]
 	if !ok {
 		log.Printf("the input client %v dont't support, so use default chrome 138", impersonate)
-		config = DefaultClientProfile
+		config = Chrome_136
 	}
 
 	var clientHelloSpec tls.ClientHelloSpec
@@ -528,6 +557,8 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 	// password part 1
 	ciphers := strings.Split(ja3StringParts[1], "-")
 	var cipherSuite []uint16
+	// default Grease
+	cipherSuite = append(cipherSuite, uint16(tls.GREASE_PLACEHOLDER))
 	for _, c := range ciphers {
 		cid, err := strconv.ParseUint(c, 10, 16)
 		if err != nil {
@@ -550,6 +581,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		}
 		targetCurves = append(targetCurves, tls.CurveID(cid))
 	}
+	// 10
 	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
 
 	// part 4
@@ -559,6 +591,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		return profile, err
 	}
 	targetPointFormats = append(targetPointFormats, byte(pid))
+	// 11
 	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
 
 	// end
@@ -589,6 +622,8 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 
 	clientHelloSpec.Extensions = exts
 	clientHelloSpec.GetSessionID = sha256.Sum256
+	clientHelloSpec.TLSVersMax = tls.VersionTLS13
+	clientHelloSpec.TLSVersMin = tls.VersionTLS12
 	// latest part 0
 	clientHelloId := tls.ClientHelloID{
 		Client:               "Custom",
