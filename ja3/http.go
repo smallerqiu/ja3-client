@@ -6,7 +6,8 @@ type Ja3Request struct {
 	Headers              map[string][]string
 	Proxy                string
 	Impersonate          string
-	JA3String            string
+	Ja3                  string
+	Akamai               string
 	Client               string
 	ClientVersion        string
 	ForceHTTP1           bool

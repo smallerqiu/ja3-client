@@ -39,23 +39,7 @@ func getExtBaseMap() map[uint16]tls.TLSExtension {
 
 func getExtExtraMap() map[uint16]tls.TLSExtension {
 	return map[uint16]tls.TLSExtension{
-		// This extension needs to be instantiated every time and not be reused if it occurs multiple times in the same ja3
-		// tls.GREASE_PLACEHOLDER: &tls.UtlsGREASEExtension{},
-		// 0
-		// tls.ExtensionServerName: &tls.SNIExtension{},
-		//5
-		// tls.ExtensionStatusRequest: &tls.StatusRequestExtension{},
-		// These are applied later
-		// tls.ExtensionSupportedCurves: &tls.SupportedCurvesExtension{...}
-		// tls.ExtensionSupportedPoints: &tls.SupportedPointsExtension{...}
-		// tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{...}
-		// tls.ExtensionCompressCertificate:  &tls.UtlsCompressCertExtension{...},
-		// tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{...}
-		// tls.ExtensionKeyShare:     &tls.KeyShareExtension{...},
-		// tls.ExtensionDelegatedCredentials: &tls.DelegatedCredentialsExtension{},
-		// tls.ExtensionALPN: &tls.ALPNExtension{},
-		// tls.ExtensionALPS:         &tls.ApplicationSettingsExtension{},
-		//13 , important....
+		// 13 , important....
 		tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 			tls.ECDSAWithP256AndSHA256,
 			tls.ECDSAWithP384AndSHA384,
@@ -71,19 +55,15 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 		}},
 		// 17
 		tls.ExtensionStatusRequestV2: &tls.GenericExtension{Id: 17}, //status_request_v2
-		// 18
-		// tls.ExtensionSCT: &tls.SCTExtension{},
 		// 21
 		tls.ExtensionPadding: &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 		// 22
 		tls.ExtensionEncryptThenMac: &tls.GenericExtension{Id: 22}, //status_request_v2
-		// 23
-		// tls.ExtensionExtendedMasterSecret: &tls.ExtendedMasterSecretExtension{},
 		// 24
 		tls.ExtensionFakeTokenBinding: &tls.FakeTokenBindingExtension{},
 		// 27
 		tls.ExtensionCompressCertificate: &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
-			tls.CertCompressionZlib, tls.CertCompressionBrotli, tls.CertCompressionZstd,
+			tls.CertCompressionBrotli,
 		}},
 		// 28
 		tls.ExtensionRecordSizeLimit: &tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
@@ -94,8 +74,6 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 			tls.ECDSAWithP521AndSHA512,
 			tls.ECDSAWithSHA1,
 		}},
-		// 35
-		// tls.ExtensionSessionTicket: &tls.SessionTicketExtension{},
 		// 41
 		tls.ExtensionPreSharedKey: &tls.UtlsPreSharedKeyExtension{},
 		// 42
@@ -106,8 +84,6 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 		},
 		// 44
 		tls.ExtensionCookie: &tls.CookieExtension{},
-		// 45
-		// tls.ExtensionPSKModes: &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
 		// 49
 		tls.ExtensionPostHandShakeAuth: &tls.GenericExtension{Id: 49},
 		// 50
@@ -125,12 +101,6 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 				tls.SignatureScheme(0x0601),
 			},
 		},
-		//51
-		tls.ExtensionKeyShare: &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
-			{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
-			{Group: tls.X25519},
-			{Group: tls.CurveP384}, // known bug missing correct extensions for handshake
-		}},
 		// 57
 		tls.ExtensionQUICTransportParameters: &tls.QUICTransportParametersExtension{},
 		// 13172
@@ -144,7 +114,7 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 			CodePoint:          tls.ExtensionALPS,
 			SupportedProtocols: []string{"h2"},
 		},
-		//65037
+		// 65037
 		tls.ExtensionECH: tls.BoringGREASEECH(), //ech
 		// 65281
 		// tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
@@ -384,18 +354,11 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 	}
 	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: keyShareCurves}
 
-	// 11 end of parts , default "0"
-	var targetPointFormats []byte
-	pid, err := strconv.ParseUint("0", 10, 8)
-	if err != nil {
-		return profile, err
-	}
-	targetPointFormats = append(targetPointFormats, byte(pid))
-	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
-
 	// 10 Curves part 3
 	var targetCurves []tls.CurveID
-
+	if config.TlsGrease {
+		targetCurves = append(targetCurves, tls.CurveID(tls.GREASE_PLACEHOLDER))
+	}
 	for _, c := range curvesParts {
 		cid, ok := curves[c]
 		if !ok {
@@ -410,19 +373,21 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
 
 	// 27 CertCompression
-	var certCompressionAlgo []tls.CertCompressionAlgo
-	for _, e := range strings.Split(config.CertCompression, ",") {
-		cert, ok := certCompression[e]
-		if !ok {
-			return profile, fmt.Errorf("don't support this certCompression: %s ", e)
+	if config.CertCompression != "" {
+		var certCompressionAlgo []tls.CertCompressionAlgo
+		for _, e := range strings.Split(config.CertCompression, ",") {
+			cert, ok := certCompression[e]
+			if !ok {
+				return profile, fmt.Errorf("don't support this certCompression: %s ", e)
+			}
+			certCompressionAlgo = append(certCompressionAlgo, cert)
 		}
-		certCompressionAlgo = append(certCompressionAlgo, cert)
+		extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: certCompressionAlgo}
 	}
-	extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: certCompressionAlgo}
 
 	// 17513 alps
 	if config.ALPSO {
-		extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
+		extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPSOld,
 			SupportedProtocols: []string{"h2"},
 		}
@@ -435,6 +400,7 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 		}
 	}
 	if config.ALPSS {
+		// cause ja4 like t13xxh1 ,should be t13xxh2
 		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}
 	}
 
@@ -462,6 +428,15 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 		return profile, fmt.Errorf("no supportedSignatureAlgorithm")
 	}
 	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: mapSignatureAlgorithms}
+
+	// 11 end of parts , default "0"
+	var targetPointFormats []byte
+	pid, err := strconv.ParseUint("0", 10, 8)
+	if err != nil {
+		return profile, err
+	}
+	targetPointFormats = append(targetPointFormats, byte(pid))
+	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
 
 	// the end of extMap
 	//
@@ -533,6 +508,7 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 	}
 
 	return ClientProfile{
+		UserAgent:         config.UserAgent,
 		ClientHelloId:     clientHelloId,
 		Settings:          http2Config.Settings,
 		SettingsOrder:     http2Config.SettingsOrder,
@@ -544,6 +520,8 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 }
 
 // ja3key as the tls finger , akamai_text as the http2 finger
+// In theory, it’s not possible to reverse-infer solely from the JA3 key,
+// because the information is not complete — it can only be roughly reconstructed.
 func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile ClientProfile, err error) {
 	ja3StringParts := strings.Split(ja3key, ",")
 	if len(ja3StringParts) < 4 {
@@ -567,6 +545,14 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		cipherSuite = append(cipherSuite, uint16(cid))
 	}
 	clientHelloSpec.CipherSuites = cipherSuite
+	clientHelloSpec.CompressionMethods = []byte{tls.CompressionNone}
+
+	// !!! 13 This part cannot be reversed, so strictly speaking, it is not accurate and can only be roughly inferred.
+	// The direct impact is that the ja4 value cannot approximate that of a real browser.
+	// However, it can still bypass Cloudflare. That's the best i can do.
+	// so, all i can say wocao.
+	// var signature = []tls.SignatureScheme{}
+	// extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: signature}
 
 	// curves part 3
 	mapCurves := strings.Split(ja3StringParts[3], "-")
@@ -574,15 +560,24 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		mapCurves = []string{}
 	}
 	var targetCurves []tls.CurveID
+	var keyShareCurves = []tls.KeyShare{}
+	keyShareCurves = append(keyShareCurves, tls.KeyShare{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}})
+	limit := 0
 	for _, c := range mapCurves {
 		cid, err := strconv.ParseUint(c, 10, 16)
 		if err != nil {
 			return profile, err
 		}
+		if limit < 2 {
+			keyShareCurves = append(keyShareCurves, tls.KeyShare{Group: tls.CurveID(cid)})
+			limit = limit + 1
+		}
 		targetCurves = append(targetCurves, tls.CurveID(cid))
 	}
 	// 10
 	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
+	//51
+	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: keyShareCurves}
 
 	// part 4
 	var targetPointFormats []byte
@@ -635,12 +630,17 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		},
 	}
 
+	if akamai_text == "" {
+		akamai_text = "1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p"
+	}
+
 	http2Config, err := buildHttp2Spec(akamai_text)
 	if err != nil {
 		return profile, err
 	}
 
 	return ClientProfile{
+		UserAgent:         DefaultClientProfile.UserAgent,
 		ClientHelloId:     clientHelloId,
 		Settings:          http2Config.Settings,
 		SettingsOrder:     http2Config.SettingsOrder,

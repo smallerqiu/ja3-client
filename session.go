@@ -23,14 +23,15 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 	if !request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}
-
-	if request.JA3String != "" {
-		profile, err := ja3.FormatJa3(request.JA3String, request.Client, request.ClientVersion, false)
+	userAgent := ""
+	if request.Ja3 != "" {
+		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		options = append(options, WithClientProfile(profile))
+		userAgent = profile.GetUserAgent()
 	} else {
 		impersonate := request.Impersonate
 
@@ -38,6 +39,7 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 		if err != nil {
 			return nil, nil, err
 		}
+		userAgent = profile.GetUserAgent()
 		options = append(options, WithClientProfile(profile))
 		if request.RandomExtensionOrder {
 			options = append(options, WithRandomTLSExtensionOrder())
@@ -59,6 +61,7 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	req.Header.Set("user-agent", userAgent)
 
 	if request.Headers != nil {
 		if req.Header == nil {

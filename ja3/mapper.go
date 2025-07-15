@@ -52,17 +52,19 @@ var H2SettingsMap = map[string]http2.SettingID{
 	"UNKNOWN_SETTING_7":      0x7,
 	"UNKNOWN_SETTING_8":      0x8,
 	"UNKNOWN_SETTING_9":      0x9,
+	"UNKNOWN_SETTING_43706":  0xAAAA,
 }
 var H2SettingsOrder = map[string]http2.SettingID{
-	"1": http2.SettingHeaderTableSize,
-	"2": http2.SettingEnablePush,
-	"3": http2.SettingMaxConcurrentStreams,
-	"4": http2.SettingInitialWindowSize,
-	"5": http2.SettingMaxFrameSize,
-	"6": http2.SettingMaxHeaderListSize,
-	"7": 0x7,
-	"8": 0x8,
-	"9": 0x9,
+	"1":     http2.SettingHeaderTableSize,
+	"2":     http2.SettingEnablePush,
+	"3":     http2.SettingMaxConcurrentStreams,
+	"4":     http2.SettingInitialWindowSize,
+	"5":     http2.SettingMaxFrameSize,
+	"6":     http2.SettingMaxHeaderListSize,
+	"7":     0x7,
+	"8":     0x8,
+	"9":     0x9,
+	"43706": 0xAAAA,
 }
 
 var tlsVersions = map[string]uint16{

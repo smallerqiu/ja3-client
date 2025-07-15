@@ -13,6 +13,7 @@ type ClientProfile struct {
 	PseudoHeaderOrder []string
 	SettingsOrder     []http2.SettingID
 	ConnectionFlow    uint32
+	UserAgent         string
 }
 
 func NewClientProfile(clientHelloId tls.ClientHelloID, settings map[http2.SettingID]uint32, settingsOrder []http2.SettingID, pseudoHeaderOrder []string, connectionFlow uint32, priorities []http2.Priority, headerPriority *http2.PriorityParam) ClientProfile {
@@ -60,4 +61,7 @@ func (c ClientProfile) GetClientHelloId() tls.ClientHelloID {
 
 func (c ClientProfile) GetPriorities() []http2.Priority {
 	return c.Priorities
+}
+func (c ClientProfile) GetUserAgent() string {
+	return c.UserAgent
 }
