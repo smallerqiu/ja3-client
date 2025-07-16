@@ -35,25 +35,30 @@ func TestClients(t *testing.T) {
 	client, err := tls.CreateSession(&ja3.Ja3Request{
 		Impersonate: "chrome_136",
 	})
-	// defer client.CloseIdleConnections()
 
 	if err != nil {
-		log.Printf("Error response: %v", err)
+		log.Printf("Client Error response: %v", err)
+		return
 	}
 
-	var res1, err1 = client.Get("https://api.ipify.org")
+	defer client.CloseIdleConnections()
+
+	var res1, err1 = client.Get("https://www.chuchur.com")
 	if err1 != nil {
-		log.Printf("Error response: %v", err)
+		log.Printf("Error res1: %v", err)
+		return
 	}
 	defer res1.Body.Close()
-	log.Printf("%v \n\n", res1.StatusCode)
+	log.Printf("result1: %v \n\n", res1.StatusCode)
+
 	// todo:
 	// var res2, err2 = client.Get("https://tls.browserleaks.com/json")
 	// if err2 != nil {
-	// 	log.Printf("Error response: %v", err)
+	// 	log.Printf("Error res2: %v", err)
+	// 	return
 	// }
 	// defer res2.Body.Close()
-	// log.Printf("%v \n\n", res2.StatusCode)
+	// log.Printf("result2: %v \n\n", res2.StatusCode)
 }
 
 func TestJa3Key(t *testing.T) {

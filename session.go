@@ -73,11 +73,11 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 
 func DoRequest(request *ja3.Ja3Request) (*http.Response, error) {
 	client, err := CreateSession(request)
-	defer client.CloseIdleConnections()
-
 	if err != nil {
 		return nil, err
 	}
+	defer client.CloseIdleConnections()
+
 	req, err := http.NewRequest(request.Method, request.URL, bytes.NewReader(request.Body))
 	if err != nil {
 		return nil, err
