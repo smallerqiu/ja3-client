@@ -2,15 +2,13 @@ package ja3_client
 
 import (
 	"bytes"
-	"log"
 	"strings"
 
-	"github.com/smallerqiu/ja3-client/browser"
 	"github.com/smallerqiu/ja3-client/http"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
-// 创建定制 TLS 会话
-func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
+func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 	timeout := request.Timeout
 	if timeout == 0 {
 		timeout = 30
@@ -25,30 +23,29 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 	if !request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}
-
-	if request.JA3String != "" {
-		profile, err := FormatJa3(request.JA3String, request.Client, request.ClientVersion, false)
+	userAgent := ""
+	if request.Ja3 != "" {
+		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		options = append(options, WithClientProfile(profile))
+		userAgent = profile.GetUserAgent()
 	} else {
-		imp := request.Impersonate
-		if _, ok := browser.MappedTLSClients[request.Impersonate]; !ok {
-			log.Printf("the input client %v dont't support, so use default chrome 137", imp)
-			imp = "chrome_137"
+		impersonate := request.Impersonate
+
+		profile, err := ja3.BuildClientHelloSpec(impersonate)
+		if err != nil {
+			return nil, nil, err
 		}
-
-		b := browser.MappedTLSClients[imp]
-
-		options = append(options, WithClientProfile(b))
+		userAgent = profile.GetUserAgent()
+		options = append(options, WithClientProfile(profile))
 		if request.RandomExtensionOrder {
 			options = append(options, WithRandomTLSExtensionOrder())
 		}
 	}
 
-	// 设置代理
 	if request.Proxy != "" {
 		options = append(options, WithProxyUrl(request.Proxy))
 	}
@@ -64,8 +61,8 @@ func CreateSession(request *Ja3Request) (HttpClient, *http.Request, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	req.Header.Set("user-agent", userAgent)
 
-	// 设置请求头
 	if request.Headers != nil {
 		if req.Header == nil {
 			req.Header = make(map[string][]string)
