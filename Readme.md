@@ -95,13 +95,13 @@ import (
 
 func main() {
 	reqBody := &tls.Ja3Request{
-		Method:        				"GET",
-		URL:           				"https://www.google.com",
-		// Proxy:         				"http://127.0.0.1:7890", // optional
-		// Headers:       				make(map[string][]string), // optional , your custom headers
-		Ja3:     			 				"771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
-		// Akamai: 			 				"1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p" // Optional if you want to use akamai to keep http2 fingerprint more accurate.
-		// RandomExtensionOrder: true, // Optional , if is true, the extension order will be randomized
+		Method:	"GET",
+		URL:	"https://www.google.com",
+		// Proxy:		"http://127.0.0.1:7890", // optional
+		// Headers:	make(map[string][]string), // optional , your custom headers
+		Ja3:	"771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+		// Akamai:	"1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p" // Optional if you want to use akamai to keep http2 fingerprint more accurate.
+		// RandomExtensionOrder:	true, // Optional , if is true, the extension order will be randomized
 	}
 	
 	var client, request, err = tls.CreateSession(reqBody)
