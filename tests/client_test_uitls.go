@@ -682,28 +682,8 @@ func gettlsContent(t *testing.T, api string, impersonate string) (data []byte, e
 		Impersonate:          impersonate,
 		RandomExtensionOrder: true,
 	}
-	var client, request, err = tls.CreateSession(reqBody)
 
-	if err != nil {
-		t.Errorf("Client Error: %v", err)
-		return nil, err
-	}
-
-	// request.Header = http.Header{
-	// 	"accept":          {"*/*"},
-	// 	"accept-encoding": {"gzip"},
-	// 	"accept-language": {"de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"},
-	// 	// "user-agent":      {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) chrome/100.0.4896.75 safari/537.36"},
-	// 	http.HeaderOrderKey: {
-	// 		"accept",
-	// 		"accept-encoding",
-	// 		"accept-language",
-	// 		"user-agent",
-	// 	},
-	// }
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
+	response, err := tls.DoRequest(reqBody)
 
 	if err != nil {
 		log.Printf("Error response: %v", err)

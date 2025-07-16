@@ -1,6 +1,10 @@
 package ja3
 
-var DefaultClientProfile = Chrome_136
+var DefaultImpersonate = "chrome_136"
+
+var DefaultClient = Chrome_136
+
+var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate)
 
 func c(current, target ClientData) ClientData {
 	n := target

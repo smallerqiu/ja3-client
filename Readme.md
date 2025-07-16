@@ -45,6 +45,41 @@ $ go get github.com/smallerqiu/ja3-client
 
 # Usage
 
+## Basic Usage
+default impersonate chrome 136 , but you can set you customized ja3 string or others browser and version
+
+```go
+package main
+
+import (
+	"io"
+	"log"
+
+	tls "github.com/smallerqiu/ja3-client"
+)
+
+func main() {
+
+	response, err := tls.Get("https://tls.browserleaks.com/json",nil)
+
+	if err != nil {
+		log.Printf("Error response: %v", err)
+	}
+
+	defer response.Body.Close()
+
+	bytes, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		log.Printf("Error response: %v", err)
+	}
+
+	log.Printf("Response: %s", string(bytes))
+
+	log.Printf("%v,%s: %s", response.StatusCode)
+}
+```
+
 ## Custom ja3 string
 use custom ja3 string do http request .
 If you're going to use a customized JA3 , you'd better know the browser type.  Or you can just use the Custom Client
@@ -60,11 +95,13 @@ import (
 
 func main() {
 	reqBody := &tls.Ja3Request{
-		Method:        "GET",
-		URL:           "https://www.google.com",
-		Proxy:         "http://127.0.0.1:7890",
-		Headers:       make(map[string][]string),
-		Ja3:     "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+		Method:        				"GET",
+		URL:           				"https://www.google.com",
+		// Proxy:         				"http://127.0.0.1:7890", // optional
+		// Headers:       				make(map[string][]string), // optional , your custom headers
+		Ja3:     			 				"771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+		// Akamai: 			 				"1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p" // Optional if you want to use akamai to keep http2 fingerprint more accurate.
+		// RandomExtensionOrder: true, // Optional , if is true, the extension order will be randomized
 	}
 	
 	var client, request, err = tls.CreateSession(reqBody)
@@ -110,10 +147,10 @@ func main() {
 	reqBody := &tls.Ja3Request{
 		Method:               "GET",
 		URL:                  "https://tls.browserleaks.com/json",
-		Proxy:                "http://127.0.0.1:7890",
-		Headers:              make(map[string][]string),
+		// Proxy:                "http://127.0.0.1:7890", // optional
+		// Headers:              make(map[string][]string), //optional
 		Impersonate:          "chrome_136",
-		RandomExtensionOrder: true,
+		// RandomExtensionOrder: true, //optional , if is true, the order of extensions will be randomized
 	}
 	
 	var client, request, err = tls.CreateSession(reqBody)

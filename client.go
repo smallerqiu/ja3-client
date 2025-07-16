@@ -56,7 +56,7 @@ var DefaultTimeoutSeconds = 30
 
 var DefaultOptions = []HttpClientOption{
 	WithTimeoutSeconds(DefaultTimeoutSeconds),
-	// WithClientProfile(ja3.DefaultClientProfile),
+	WithClientProfile(ja3.DefaultClientProfile),
 	WithRandomTLSExtensionOrder(),
 	WithNotFollowRedirects(),
 }
@@ -75,8 +75,8 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		customRedirectFunc: nil,
 		defaultHeaders:     make(http.Header),
 		connectHeaders:     make(http.Header),
-		// clientProfile:      ja3.DefaultClientProfile,
-		timeout: time.Duration(DefaultTimeoutSeconds) * time.Second,
+		clientProfile:      ja3.DefaultClientProfile,
+		timeout:            time.Duration(DefaultTimeoutSeconds) * time.Second,
 	}
 
 	for _, opt := range options {

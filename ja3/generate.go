@@ -622,7 +622,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 	// latest part 0
 	clientHelloId := tls.ClientHelloID{
 		Client:               "Custom",
-		RandomExtensionOrder: true,
+		RandomExtensionOrder: false,
 		Version:              "",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
@@ -640,7 +640,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 	}
 
 	return ClientProfile{
-		UserAgent:         DefaultClientProfile.UserAgent,
+		UserAgent:         DefaultClient.UserAgent,
 		ClientHelloId:     clientHelloId,
 		Settings:          http2Config.Settings,
 		SettingsOrder:     http2Config.SettingsOrder,

@@ -8,7 +8,7 @@ import (
 	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
-func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
+func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 	timeout := request.Timeout
 	if timeout == 0 {
 		timeout = 30
@@ -23,21 +23,21 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 	if !request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}
-	userAgent := ""
+	userAgent := ja3.Chrome_136.UserAgent
+
 	if request.Ja3 != "" {
 		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		options = append(options, WithClientProfile(profile))
 		userAgent = profile.GetUserAgent()
-	} else {
-		impersonate := request.Impersonate
+	} else if request.Impersonate != "" {
 
-		profile, err := ja3.BuildClientHelloSpec(impersonate)
+		profile, err := ja3.BuildClientHelloSpec(request.Impersonate)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		userAgent = profile.GetUserAgent()
 		options = append(options, WithClientProfile(profile))
@@ -50,28 +50,65 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, *http.Request, error) {
 		options = append(options, WithProxyUrl(request.Proxy))
 	}
 
+	var header = http.Header{}
+	header.Set("user-agent", userAgent)
+
+	if request.Headers != nil {
+		for k, v := range request.Headers {
+			header.Set(k, strings.Join(v, ", "))
+		}
+		header.Set("accept-encoding", "identity")
+	}
+
+	options = append(options, WithDefaultHeaders(header))
+
 	client, err := NewHttpClient(NewNoopLogger(), options...)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	req, err := http.NewRequest(request.Method, request.URL, bytes.NewReader(request.Body))
+	return client, nil
+}
+
+func DoRequest(request *ja3.Ja3Request) (*http.Response, error) {
+	client, err := CreateSession(request)
+	defer client.CloseIdleConnections()
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	req.Header.Set("user-agent", userAgent)
-
-	if request.Headers != nil {
-		if req.Header == nil {
-			req.Header = make(map[string][]string)
-		}
-		for k, v := range request.Headers {
-			req.Header.Set(k, strings.Join(v, ", "))
-		}
-		req.Header.Set("accept-encoding", "identity")
+	req, err := http.NewRequest(request.Method, request.URL, bytes.NewReader(request.Body))
+	if err != nil {
+		return nil, err
 	}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return res, err
+}
 
-	return client, req, nil
+func buildRequest(method string, url string, headers http.Header, body []byte) (req *ja3.Ja3Request) {
+	return &ja3.Ja3Request{
+		Method:      method,
+		URL:         url,
+		Headers:     headers,
+		Body:        body,
+		Impersonate: ja3.DefaultImpersonate,
+	}
+}
+
+func Get(url string, headers http.Header) (*http.Response, error) {
+	return DoRequest(buildRequest(http.MethodGet, url, headers, nil))
+}
+func Post(url string, body []byte, headers http.Header) (*http.Response, error) {
+	return DoRequest(buildRequest(http.MethodPost, url, headers, body))
+}
+func Put(url string, body []byte, headers http.Header) (*http.Response, error) {
+	return DoRequest(buildRequest(http.MethodPut, url, headers, body))
+}
+
+func Delete(url string, headers http.Header) (*http.Response, error) {
+	return DoRequest(buildRequest(http.MethodDelete, url, headers, nil))
 }

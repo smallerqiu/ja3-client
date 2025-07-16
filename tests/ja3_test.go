@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"testing"
@@ -10,26 +11,8 @@ import (
 	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
-func TestJa3Key(t *testing.T) {
-	// var peetApi = "https://tls.peet.ws/api/all"
-	// var tlsApi = "https://tls.browserleaks.com/json"
-	reqBody := &ja3.Ja3Request{
-		Method:        "GET",
-		URL:           "https://tls.peet.ws/api/all",
-		Proxy:         "http://127.0.0.1:7890",
-		Headers:       make(map[string][]string),
-		Ja3:           "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
-		Client:        "Firefox",
-		ClientVersion: "135",
-	}
-	var client, request, err = tls.CreateSession(reqBody)
-
-	if err != nil {
-		log.Printf("Client Error: %v", err)
-	}
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
+func TestSimple(t *testing.T) {
+	response, err := tls.Get("https://tls.browserleaks.com/json", nil)
 
 	if err != nil {
 		log.Printf("Error response: %v", err)
@@ -45,13 +28,77 @@ func TestJa3Key(t *testing.T) {
 
 	log.Printf("Response: %s", string(bytes))
 
-	log.Printf("%v,%s: %s", response.StatusCode, reqBody.Method, reqBody.URL)
+	log.Printf("%v", response.StatusCode)
+}
+
+func TestClients(t *testing.T) {
+	client, err := tls.CreateSession(&ja3.Ja3Request{
+		Impersonate: "chrome_136",
+	})
+	// defer client.CloseIdleConnections()
+
+	if err != nil {
+		log.Printf("Error response: %v", err)
+	}
+
+	var res1, err1 = client.Get("https://api.ipify.org")
+	if err1 != nil {
+		log.Printf("Error response: %v", err)
+	}
+	defer res1.Body.Close()
+	log.Printf("%v \n\n", res1.StatusCode)
+	// todo:
+	// var res2, err2 = client.Get("https://tls.browserleaks.com/json")
+	// if err2 != nil {
+	// 	log.Printf("Error response: %v", err)
+	// }
+	// defer res2.Body.Close()
+	// log.Printf("%v \n\n", res2.StatusCode)
+}
+
+func TestJa3Key(t *testing.T) {
+	// var peetApi = "https://tls.peet.ws/api/all"
+	var api = "https://tls.browserleaks.com/json"
+	var ja3key = "771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,10-65281-65037-23-34-16-28-27-5-43-11-13-0-51,4588-29-23-24-25-256-257,0"
+	reqBody := &ja3.Ja3Request{
+		Method: "GET",
+		URL:    api,
+		// Proxy:         "http://127.0.0.1:7890",
+		Headers:       make(map[string][]string),
+		Ja3:           ja3key,
+		Client:        "Firefox",
+		ClientVersion: "135",
+	}
+	var response, err = tls.DoRequest(reqBody)
+
+	if err != nil {
+		log.Printf("Error response: %v", err)
+	}
+
+	defer response.Body.Close()
+
+	bytes, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		log.Printf("Error response: %v", err)
+	}
+
+	// log.Printf("Response: %s", string(bytes))
+	info := &TlsInfo{}
+	if err := json.Unmarshal(bytes, info); err != nil {
+		log.Printf("Error response: %v", err)
+	}
+	log.Printf("cur:%v \n", ja3key)
+	log.Printf("tar:%v \n\n", info.Ja3Text)
+
+	// log.Printf("%v,%s: %s", response.StatusCode, reqBody.Method, reqBody.URL)
+
 }
 
 func TestClient(t *testing.T) {
 	reqBody := &ja3.Ja3Request{
 		Method: "GET",
-		URL:    "https://www.onlyfans.com",
+		URL:    "https://www.chuchur.com",
 		Proxy:  "http://127.0.0.1:7890",
 		Headers: http.Header{
 			"sec-ch-ua":          {"\"Google Chrome\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\""},
@@ -71,17 +118,10 @@ func TestClient(t *testing.T) {
 		},
 		Impersonate: "chrome_134",
 	}
-	var client, request, err = tls.CreateSession(reqBody)
+	var response, err = tls.DoRequest(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)
-	}
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
-
-	if err != nil {
-		log.Printf("Error response: %v", err)
 	}
 
 	defer response.Body.Close()

@@ -19,14 +19,7 @@ func TestJa3Key() {
 		ClientVersion: "18.1",
 	}
 	// create client
-	var client, request, err = tls.CreateSession(reqBody)
-
-	if err != nil {
-		log.Printf("Client Error: %v", err)
-	}
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
+	var response, err = tls.DoRequest(reqBody)
 
 	if err != nil {
 		log.Printf("Error response: %v", err)

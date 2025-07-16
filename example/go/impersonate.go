@@ -17,15 +17,7 @@ func TestImpersonate() {
 		Impersonate:          "chrome_133",
 		RandomExtensionOrder: true,
 	}
-	// 创建 TLS 会话
-	var client, request, err = tls.CreateSession(reqBody)
-
-	if err != nil {
-		log.Printf("Client Error: %v", err)
-	}
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
+	var response, err = tls.DoRequest(reqBody)
 
 	if err != nil {
 		log.Printf("Error response: %v", err)
