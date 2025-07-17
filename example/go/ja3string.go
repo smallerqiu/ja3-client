@@ -10,13 +10,11 @@ import (
 
 func TestJa3Key() {
 	reqBody := &ja3.Ja3Request{
-		Method:        "GET",
-		URL:           "https://www.google.com",
-		Proxy:         "http://127.0.0.1:7890",
-		Headers:       make(map[string][]string),
-		Ja3:           "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
-		Client:        "Safari",
-		ClientVersion: "18.1",
+		Method:  "GET",
+		URL:     "https://www.google.com",
+		Proxy:   "http://127.0.0.1:7890",
+		Headers: make(map[string][]string),
+		Ja3:     "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
 	}
 	// create client
 	var response, err = tls.DoRequest(reqBody)

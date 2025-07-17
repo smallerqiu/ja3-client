@@ -11,7 +11,6 @@ import (
 	"github.com/smallerqiu/ja3-client/http2"
 	"github.com/smallerqiu/ja3-client/util"
 	tls "github.com/smallerqiu/utls"
-	"github.com/smallerqiu/utls/dicttls"
 )
 
 func getExtBaseMap() map[uint16]tls.TLSExtension {
@@ -110,6 +109,7 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 			CodePoint:          tls.ExtensionALPSOld,
 			SupportedProtocols: []string{"h2"},
 		},
+		//17613
 		tls.ExtensionALPS: &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPS,
 			SupportedProtocols: []string{"h2"},
@@ -207,16 +207,21 @@ func buildHttp2Spec(akamai_text string) (profile ClientProfile, err error) {
 }
 
 func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error) {
+	// return BuildClientHelloSpec(clientData)
 	config, ok := MappedTLSClients[impersonate]
 	if !ok {
 		log.Printf("the input client %v dont't support, so use default chrome 138", impersonate)
-		config = Chrome_136
+		config = DefaultClient
 	}
+	return BuildClientHelloSpecWithCP(config)
+}
+
+func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err error) {
 
 	var clientHelloSpec tls.ClientHelloSpec
 	// ciphers part 1
 	var ciphers = []uint16{}
-	// if grease is true, so the extention is to use grease twice.
+	// if grease is true, so the extension is to use grease twice.
 	if config.TlsGrease {
 		ciphers = append(ciphers, uint16(tls.GREASE_PLACEHOLDER))
 	}
@@ -241,19 +246,7 @@ func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error)
 	}
 	// 65037 ech
 	if config.Ech {
-		extMap[tls.ExtensionECH] = &tls.GREASEEncryptedClientHelloExtension{
-			CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-				{
-					KdfId:  dicttls.HKDF_SHA256,
-					AeadId: dicttls.AEAD_AES_128_GCM,
-				},
-				{
-					KdfId:  dicttls.HKDF_SHA256,
-					AeadId: dicttls.AEAD_CHACHA20_POLY1305,
-				},
-			},
-			CandidatePayloadLens: []uint16{128, 160, 192, 224},
-		}
+		extMap[tls.ExtensionECH] = tls.BoringGREASEECH()
 	}
 	// 21 padding
 	if config.TlsPadding {
@@ -621,9 +614,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 	clientHelloSpec.TLSVersMin = tls.VersionTLS12
 	// latest part 0
 	clientHelloId := tls.ClientHelloID{
-		Client:               "Custom",
 		RandomExtensionOrder: false,
-		Version:              "",
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
 			return clientHelloSpec, nil

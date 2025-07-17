@@ -15,6 +15,7 @@ type Ja3Request struct {
 	RandomExtensionOrder bool
 	Timeout              int // default 30s
 	NotFollowRedirects   bool
+	ClientData           *ClientData
 }
 
 type Response struct {

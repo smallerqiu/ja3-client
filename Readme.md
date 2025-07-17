@@ -1,7 +1,10 @@
 # 🔥🔥🔥 ja3-client 
-If you're having trouble with the fucking “just a moment” or fucking status code 429 in your project, you might want to try using this. It may help you . 
 
+
+# Why
+If you're having trouble with the fucking “just a moment” or fucking http status code 429 in your project, you might want to try using this. It may help you . 
 Demonstrates good performance with 10 million concurrent requests. It is safe to use.  
+
 # Features
  - Proxy support : HTTP ,HTTPS , Socks4 , Socks5, Socks5h
  - Custom headers
@@ -11,7 +14,7 @@ Demonstrates good performance with 10 million concurrent requests. It is safe to
  - Custom TLS extension order
  - Custom connection flow
  - Custom header order
- - Custom client identifier (Chrome, Firefox, Opera, Safari, iOS, iPadOS, Android)
+ - Custom client identifier (Chrome, Firefox, Opera, Safari, iOS, iPadOS, Android, Tor, Brave ,360 ,QQ ,UC...)
 
 # Supported browsers
 
@@ -46,7 +49,7 @@ $ go get github.com/smallerqiu/ja3-client
 # Usage
 
 ## Basic Usage
-default impersonate chrome 136 , but you can set you customized ja3 string or others browser and version
+default impersonate chrome 138 , but you can set you customized ja3 string or others browser and version
 
 ```go
 package main
@@ -59,7 +62,7 @@ import (
 )
 
 func main() {
-
+  // support Get,Post,Delete,Put
 	response, err := tls.Get("https://tls.browserleaks.com/json",nil)
 
 	if err != nil {
@@ -100,21 +103,14 @@ func main() {
 		// Proxy:	"http://127.0.0.1:7890", // optional
 		// Headers:	make(map[string][]string), // optional , your custom headers
 		Ja3:	"771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
-		// Akamai:	"1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p" // Optional if you want to use akamai to keep http2 fingerprint more accurate.
+		// Akamai:	"1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p" // Optional, if you want to use akamai to keep http2 fingerprint more accurate.
 		// RandomExtensionOrder:	true, // Optional , if is true, the extension order will be randomized
 	}
 	
-	var client, request, err = tls.CreateSession(reqBody)
+	var response, err := tls.DoRequest(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)
-	}
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
-
-	if err != nil {
-		log.Printf("Error response: %v", err)
 	}
 
 	defer response.Body.Close()
@@ -153,17 +149,10 @@ func main() {
 		// RandomExtensionOrder:	true, //optional , if is true, the order of extensions will be randomized
 	}
 	
-	var client, request, err = tls.CreateSession(reqBody)
+	var response, err := tls.DoRequest(reqBody)
 
 	if err != nil {
 		log.Printf("Client Error: %v", err)
-	}
-
-	response, err := client.Do(request)
-	defer client.CloseIdleConnections()
-
-	if err != nil {
-		log.Printf("Error response: %v", err)
 	}
 
 	defer response.Body.Close()
