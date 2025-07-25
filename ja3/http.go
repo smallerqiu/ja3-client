@@ -5,6 +5,7 @@ type Ja3Request struct {
 	URL                  string
 	Headers              map[string][]string
 	Proxy                string
+	SourceIP             string
 	Impersonate          string
 	Ja3                  string
 	Akamai               string

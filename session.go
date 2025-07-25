@@ -2,6 +2,7 @@ package ja3_client
 
 import (
 	"bytes"
+	"net"
 	"strings"
 
 	"github.com/smallerqiu/ja3-client/http"
@@ -60,6 +61,10 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 
 	if request.Proxy != "" {
 		options = append(options, WithProxyUrl(request.Proxy))
+	}
+
+	if request.SourceIP != "" {
+		options = append(options, WithLocalAddr(net.TCPAddr{IP: net.ParseIP(request.SourceIP), Port: 0}))
 	}
 
 	var header = http.Header{}

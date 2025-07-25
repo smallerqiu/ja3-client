@@ -15,21 +15,13 @@ import (
 
 func getExtBaseMap() map[uint16]tls.TLSExtension {
 	return map[uint16]tls.TLSExtension{
-		// 0
-		tls.ExtensionServerName: &tls.SNIExtension{},
-		// 5
-		tls.ExtensionStatusRequest: &tls.StatusRequestExtension{},
-		// 16
-		tls.ExtensionALPN: &tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
-		// 18
-		tls.ExtensionSCT: &tls.SCTExtension{},
-		// 23
+		tls.ExtensionServerName:           &tls.SNIExtension{},
+		tls.ExtensionStatusRequest:        &tls.StatusRequestExtension{},
+		tls.ExtensionALPN:                 &tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+		tls.ExtensionSCT:                  &tls.SCTExtension{},
 		tls.ExtensionExtendedMasterSecret: &tls.ExtendedMasterSecretExtension{},
-		// 35
-		tls.ExtensionSessionTicket: &tls.SessionTicketExtension{},
-		// 45
-		tls.ExtensionPSKModes: &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
-		// 65281
+		tls.ExtensionSessionTicket:        &tls.SessionTicketExtension{},
+		tls.ExtensionPSKModes:             &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
 		tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{
 			Renegotiation: tls.RenegotiateOnceAsClient,
 		},
@@ -38,7 +30,7 @@ func getExtBaseMap() map[uint16]tls.TLSExtension {
 
 func getExtExtraMap() map[uint16]tls.TLSExtension {
 	return map[uint16]tls.TLSExtension{
-		// 13 , important....
+		// important....
 		tls.ExtensionSignatureAlgorithms: &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 			tls.ECDSAWithP256AndSHA256,
 			tls.ECDSAWithP384AndSHA384,
@@ -52,40 +44,27 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 			tls.ECDSAWithSHA1,
 			tls.PKCS1WithSHA1,
 		}},
-		// 17
-		tls.ExtensionStatusRequestV2: &tls.GenericExtension{Id: 17}, //status_request_v2
-		// 21
-		tls.ExtensionPadding: &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
-		// 22
-		tls.ExtensionEncryptThenMac: &tls.GenericExtension{Id: 22}, //status_request_v2
-		// 24
+		tls.ExtensionStatusRequestV2:  &tls.GenericExtension{Id: 17}, //status_request_v2
+		tls.ExtensionPadding:          &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
+		tls.ExtensionEncryptThenMac:   &tls.GenericExtension{Id: 22},
 		tls.ExtensionFakeTokenBinding: &tls.FakeTokenBindingExtension{},
-		// 27
 		tls.ExtensionCompressCertificate: &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 			tls.CertCompressionBrotli,
 		}},
-		// 28
 		tls.ExtensionRecordSizeLimit: &tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
-		// 34
 		tls.ExtensionDelegatedCredentials: &tls.DelegatedCredentialsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
 			tls.ECDSAWithP256AndSHA256,
 			tls.ECDSAWithP384AndSHA384,
 			tls.ECDSAWithP521AndSHA512,
 			tls.ECDSAWithSHA1,
 		}},
-		// 41
 		tls.ExtensionPreSharedKey: &tls.UtlsPreSharedKeyExtension{},
-		// 42
-		tls.ExtensionEarlyData: &tls.GenericExtension{Id: tls.ExtensionEarlyData},
-		//43
+		tls.ExtensionEarlyData:    &tls.GenericExtension{Id: tls.ExtensionEarlyData},
 		tls.ExtensionSupportedVersions: &tls.SupportedVersionsExtension{
 			Versions: []uint16{tls.GREASE_PLACEHOLDER, tls.VersionTLS13, tls.VersionTLS12},
 		},
-		// 44
-		tls.ExtensionCookie: &tls.CookieExtension{},
-		// 49
+		tls.ExtensionCookie:            &tls.CookieExtension{},
 		tls.ExtensionPostHandShakeAuth: &tls.GenericExtension{Id: 49},
-		// 50
 		tls.ExtensionSignatureAlgorithmsCert: &tls.SignatureAlgorithmsCertExtension{
 			SupportedSignatureAlgorithms: []tls.SignatureScheme{
 				tls.ECDSAWithP256AndSHA256,
@@ -100,25 +79,18 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 				tls.SignatureScheme(0x0601),
 			},
 		},
-		// 57
 		tls.ExtensionQUICTransportParameters: &tls.QUICTransportParametersExtension{},
-		// 13172
-		tls.ExtensionNextProtoNeg: &tls.NPNExtension{},
-		// 17513
+		tls.ExtensionNextProtoNeg:            &tls.NPNExtension{},
 		tls.ExtensionALPSOld: &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPSOld,
 			SupportedProtocols: []string{"h2"},
 		},
-		//17613
 		tls.ExtensionALPS: &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPS,
 			SupportedProtocols: []string{"h2"},
 		},
-		// 65037
 		tls.ExtensionECH: tls.BoringGREASEECH(), //ech
-		// 65281
 		// tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
-		// 30032
 		tls.ExtensionChannelId: &tls.GenericExtension{Id: 0x7550, Data: []byte{0}}, //FIXME
 	}
 }
@@ -207,10 +179,9 @@ func buildHttp2Spec(akamai_text string) (profile ClientProfile, err error) {
 }
 
 func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error) {
-	// return BuildClientHelloSpec(clientData)
 	config, ok := MappedTLSClients[impersonate]
 	if !ok {
-		log.Printf("the input client %v dont't support, so use default chrome 138", impersonate)
+		log.Printf("the input client %v don't support, so use default %v", impersonate, DefaultImpersonate)
 		config = DefaultClient
 	}
 	return BuildClientHelloSpecWithCP(config)
@@ -244,16 +215,16 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	if config.NoTlsSessionTicket {
 		delete(extMap, tls.ExtensionSessionTicket)
 	}
-	// 65037 ech
+	// ech
 	if config.Ech {
 		extMap[tls.ExtensionECH] = tls.BoringGREASEECH()
 	}
-	// 21 padding
+	// padding
 	if config.TlsPadding {
 		extMap[tls.ExtensionPadding] = &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}
 	}
 
-	// 34 for firefox
+	// for firefox
 	var mappedDelegatedCredentialsAlgorithms []tls.SignatureScheme
 	if config.TlsDelegatedCredentials != "" {
 		for _, del := range strings.Split(config.TlsDelegatedCredentials, ",") {
@@ -276,13 +247,13 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 			}
 		}
 	}
-	// 28 for firefox share limit
+	// for firefox share limit
 	if config.TlsRecordSizeLimit != 0 {
 		extMap[tls.ExtensionRecordSizeLimit] = &tls.FakeRecordSizeLimitExtension{
 			Limit: uint16(config.TlsRecordSizeLimit),
 		}
 	}
-	// 43 tls version
+	// tls version
 	var tlsExtensionVersion = tls.SupportedVersionsExtension{}
 	switch config.TlsVersion {
 	case "any":
@@ -323,7 +294,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	}
 	extMap[tls.ExtensionSupportedVersions] = &tlsExtensionVersion
 
-	// 51 key share
+	// key share
 	var curvesParts = strings.Split(config.Curves, ":")
 	var keyShareCurves = []tls.KeyShare{}
 	if config.TlsGrease {
@@ -347,7 +318,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	}
 	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: keyShareCurves}
 
-	// 10 Curves part 3
+	// Curves part 3
 	var targetCurves []tls.CurveID
 	if config.TlsGrease {
 		targetCurves = append(targetCurves, tls.CurveID(tls.GREASE_PLACEHOLDER))
@@ -365,7 +336,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	}
 	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
 
-	// 27 CertCompression
+	// CertCompression
 	if config.CertCompression != "" {
 		var certCompressionAlgo []tls.CertCompressionAlgo
 		for _, e := range strings.Split(config.CertCompression, ",") {
@@ -378,14 +349,14 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: certCompressionAlgo}
 	}
 
-	// 17513 alps
+	// alps
 	if config.ALPSO {
 		extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPSOld,
 			SupportedProtocols: []string{"h2"},
 		}
 	}
-	// 17613 alps old
+	// alps old
 	if config.ALPS {
 		extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
 			CodePoint:          tls.ExtensionALPS,
@@ -397,7 +368,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}
 	}
 
-	// 13 signature algorithms
+	// signature algorithms
 	var SignatureHashed = "ECDSAWithP256AndSHA256,PSSWithSHA256,PKCS1WithSHA256,ECDSAWithP384AndSHA384,PSSWithSHA384,PKCS1WithSHA384,PSSWithSHA512,PKCS1WithSHA512"
 	if config.SignatureHashed != "" {
 		SignatureHashed = config.SignatureHashed
@@ -422,7 +393,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	}
 	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: mapSignatureAlgorithms}
 
-	// 11 end of parts , default "0"
+	// end of parts , default "0"
 	var targetPointFormats []byte
 	pid, err := strconv.ParseUint("0", 10, 8)
 	if err != nil {
@@ -567,9 +538,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		}
 		targetCurves = append(targetCurves, tls.CurveID(cid))
 	}
-	// 10
 	extMap[tls.ExtensionSupportedCurves] = &tls.SupportedCurvesExtension{Curves: targetCurves}
-	//51
 	extMap[tls.ExtensionKeyShare] = &tls.KeyShareExtension{KeyShares: keyShareCurves}
 
 	// part 4
@@ -579,7 +548,6 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		return profile, err
 	}
 	targetPointFormats = append(targetPointFormats, byte(pid))
-	// 11
 	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
 
 	// end

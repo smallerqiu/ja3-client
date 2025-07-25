@@ -2,17 +2,12 @@ import ctypes
 import unittest
 import json
 
-# 加载 Go 生成的动态库
 lib = ctypes.CDLL('./ja3-client-darwin-arm64.dylib')
 
-# 调用 SayHello 函数
-
-
-# class TestRequest(unittest.TestCase):
-
+# todo:
 def test_request():
     req = {
-        "url": "https://www.baidu.com",
+        "url": "https://www.google.com",
         "method": "GET",
         "proxy": "http://127.0.0.1:7890",
         "headers": {

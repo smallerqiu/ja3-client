@@ -169,4 +169,22 @@ func main() {
 }
 
 ```
+
+## Options 
+
+| Name        | Description                                                                     | Type        | Default         | Optional | example                  |
+| :---------- | :------------------------------------------------------------------------------ | :---------- | :-------------- | :------- | :----------------------- |
+| Method      | request type                                                                    | string      | -               | No       | GET, POST ,PUT, DELETE   |
+| URL         | request url                                                                     | http.Header | -               | No       | https://example.com      |
+| Body        | request body                                                                    | []byte      | -               | Yes      | b'{"a": 1}'              |
+| Proxy       | request proxy url                                                               | string      | -               | Yes      | http://198.168.1.55:7890 |
+| SourceIP    | if your server has multiple IPs,you can decide on one of them as the source IP. | string      | -               | Yes      | 193.189.xx.xx            |
+| Impersonate | which type of browser to impersonate                                            | string      | chrome_138      | Yes      | chrome_137               |
+| Ja3         | customized ja3 key                                                              | string      | -               | Yes      | 771,867-4865-....        |
+| Akamai      | customized akamai key                                                           | string      | chrome's akamai | Yes      | 1:65535;2:0;4:...        |
+| Timeout     | the timeout for the request.                                                    | int         | 30(s)           | Yes      | 60                       |
+| ClientData  | if you want to customized a browser's fingerprint, you can set this options     | *ClientData | -               | Yes      | ....                     |
+
  Of course, you can also look at other projects, such as [curl_cffi](https://github.com/lexiforest/curl_cffi), [REQ](https://github.com/imroc/req) etc.
+
+multple ips
