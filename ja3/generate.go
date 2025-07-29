@@ -524,6 +524,9 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 		mapCurves = []string{}
 	}
 	var targetCurves []tls.CurveID
+	// default grease
+	targetCurves = append(targetCurves, tls.CurveID(tls.GREASE_PLACEHOLDER))
+
 	var keyShareCurves = []tls.KeyShare{}
 	keyShareCurves = append(keyShareCurves, tls.KeyShare{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}})
 	limit := 0
