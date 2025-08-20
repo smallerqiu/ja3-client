@@ -24,7 +24,7 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 	if !request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}
-	userAgent := ja3.Chrome_138.UserAgent
+	userAgent := ja3.Chrome_139.UserAgent
 
 	if request.Ja3 != "" {
 		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai)
@@ -35,9 +35,21 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 		if profile.GetUserAgent() != "" {
 			userAgent = profile.GetUserAgent()
 		}
-	} else if request.Impersonate != "" {
-
-		profile, err := ja3.BuildClientHelloSpec(request.Impersonate)
+	} else if request.ClientData != nil {
+		profile, err := ja3.BuildClientHelloSpecWithCP(*request.ClientData)
+		if err != nil {
+			return nil, err
+		}
+		options = append(options, WithClientProfile(profile))
+		if profile.GetUserAgent() != "" {
+			userAgent = profile.GetUserAgent()
+		}
+	} else {
+		impersonate := ja3.DefaultImpersonate
+		if request.Impersonate != "" {
+			impersonate = request.Impersonate
+		}
+		profile, err := ja3.BuildClientHelloSpec(impersonate)
 		if err != nil {
 			return nil, err
 		}
@@ -45,15 +57,6 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 		if request.RandomExtensionOrder {
 			options = append(options, WithRandomTLSExtensionOrder())
 		}
-		if profile.GetUserAgent() != "" {
-			userAgent = profile.GetUserAgent()
-		}
-	} else if request.ClientData != nil {
-		profile, err := ja3.BuildClientHelloSpecWithCP(*request.ClientData)
-		if err != nil {
-			return nil, err
-		}
-		options = append(options, WithClientProfile(profile))
 		if profile.GetUserAgent() != "" {
 			userAgent = profile.GetUserAgent()
 		}

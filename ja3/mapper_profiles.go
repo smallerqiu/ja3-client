@@ -1,8 +1,8 @@
 package ja3
 
-var DefaultImpersonate = "chrome_138"
+var DefaultImpersonate = "chrome_139"
 
-var DefaultClient = Chrome_138
+var DefaultClient = Chrome_139
 
 var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate)
 
@@ -14,6 +14,7 @@ func c(current, target ClientData) ClientData {
 
 var MappedTLSClients = map[string]ClientData{
 	// "custom":          Custom,
+	"chrome_139":         c(Chrome_139, Chrome_136),
 	"chrome_138":         c(Chrome_138, Chrome_136),
 	"chrome_137":         c(Chrome_137, Chrome_136),
 	"chrome_137_ios":     Chrome_137_ios,
@@ -38,6 +39,7 @@ var MappedTLSClients = map[string]ClientData{
 	"chrome_120":         c(Chrome_120, Chrome_119),
 	"chrome_119":         Chrome_119,
 	"chrome_117":         Chrome_117,
+	"edge_139":           c(Edge_139, Edge_136),
 	"edge_138":           c(Edge_138, Edge_136),
 	"edge_137":           c(Edge_137, Edge_136),
 	"edge_136":           Edge_136,
@@ -47,6 +49,8 @@ var MappedTLSClients = map[string]ClientData{
 	"edge_132":           c(Edge_132, Edge_131),
 	"edge_131":           Edge_131,
 	"edge_101":           Edge_101,
+	"firefox_142":        c(Firefox_142, Firefox_135),
+	"firefox_141":        c(Firefox_141, Firefox_135),
 	"firefox_140":        c(Firefox_140, Firefox_135),
 	"firefox_139":        c(Firefox_139, Firefox_135),
 	"firefox_138":        c(Firefox_138, Firefox_135),

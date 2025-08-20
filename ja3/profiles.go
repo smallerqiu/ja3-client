@@ -1,5 +1,9 @@
 package ja3
 
+var Chrome_139 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+}
+
 var Chrome_138 = ClientData{
 	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
 }
@@ -212,6 +216,9 @@ var Chrome_117 = ClientData{
 	TlsPadding:           true,
 	RandomExtensionOrder: true,
 }
+var Edge_139 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+}
 var Edge_138 = ClientData{
 	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
 }
@@ -281,6 +288,12 @@ var Edge_101 = ClientData{
 	ALPSO:                true,
 	TlsPadding:           true,
 	RandomExtensionOrder: true,
+}
+var Firefox_142 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:142.0) Gecko/20100101 Firefox/142.0",
+}
+var Firefox_141 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0",
 }
 var Firefox_140 = ClientData{
 	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0",
