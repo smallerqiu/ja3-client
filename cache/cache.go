@@ -41,6 +41,10 @@ func (lc *localCache[K, V]) Set(key K, value V, ttl time.Duration) bool {
 
 func (lc *localCache[K, V]) Get(key K) (V, bool) {
 	value, b := lc.cache.Get(key)
+	if value == nil {
+		var NIL V
+		return NIL, false
+	}
 	return value.(V), b
 }
 

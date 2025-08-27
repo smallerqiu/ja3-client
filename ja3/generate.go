@@ -96,11 +96,7 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 	}
 }
 
-var memoryCache cache.Cache[string, *ClientProfile]
-
-func init() {
-	memoryCache, _ = cache.NewCache[string, *ClientProfile]()
-}
+var memoryCache, _ = cache.NewCache[string, *ClientProfile]()
 
 func buildHttp2Spec(akamai_text string) (ClientProfile, error) {
 	clientProfile, _ := memoryCache.Get(akamai_text)
