@@ -4,12 +4,13 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/smallerqiu/ja3-client/cache"
+	"github.com/smallerqiu/ja3-client/http2"
+	"github.com/smallerqiu/ja3-client/util"
 	"log"
 	"strconv"
 	"strings"
-
-	"github.com/smallerqiu/ja3-client/http2"
-	"github.com/smallerqiu/ja3-client/util"
+	//"github.com/smallerqiu/ja3-client/cache"
 	tls "github.com/smallerqiu/utls"
 )
 
@@ -95,35 +96,51 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 	}
 }
 
-func buildHttp2Spec(akamai_text string) (profile ClientProfile, err error) {
+var memoryCache, _ = cache.NewCache[string, *ClientProfile]()
+
+func buildHttp2Spec(akamai_text string) (ClientProfile, error) {
+	clientProfile, _ := memoryCache.Get(akamai_text)
+	if clientProfile != nil {
+		return *clientProfile, nil
+	}
+	clientProfile, err := doBuildHttp2Spec(akamai_text)
+	if err != nil {
+		return ClientProfile{}, err
+	}
+	memoryCache.Set(akamai_text, clientProfile, 0)
+	return *clientProfile, nil
+}
+
+func doBuildHttp2Spec(akamai_text string) (*ClientProfile, error) {
 	akamaiMap := strings.Split(akamai_text, "|")
 	if len(akamaiMap) < 4 {
-		return profile, errors.New("ja3 format error")
+		return nil, errors.New("ja3 format error")
 	}
 	var settings = map[http2.SettingID]uint32{}
 	var settingsOrder []http2.SettingID
 	for _, s := range strings.Split(akamaiMap[0], ";") {
 		s := strings.Split(s, ":")
 		if len(s) != 2 {
-			return profile, fmt.Errorf("invalid http2 setting: %s", s)
+			return nil, fmt.Errorf("invalid http2 setting: %s", s)
 		}
 		id, ok := H2SettingsOrder[s[0]]
 		if !ok {
-			return profile, fmt.Errorf("invalid http2 setting order: %s", s[0])
+			return nil, fmt.Errorf("invalid http2 setting order: %s", s[0])
 		}
 		idStr := s[1]
 		idUint, err := strconv.ParseUint(idStr, 10, 32)
 		if err != nil {
-			return profile, fmt.Errorf("failed to parse extension ID: %v", err)
+			return nil, fmt.Errorf("failed to parse extension ID: %v", err)
 		}
 		settings[id] = uint32(idUint)
 		settingsOrder = append(settingsOrder, id)
 	}
+	profile := new(ClientProfile)
 	profile.Settings = settings
 	profile.SettingsOrder = settingsOrder
 	flow, err := strconv.ParseUint(akamaiMap[1], 10, 32)
 	if err != nil {
-		return profile, fmt.Errorf("failed to parse connection flow: %v", err)
+		return nil, fmt.Errorf("failed to parse connection flow: %v", err)
 	}
 	profile.ConnectionFlow = uint32(flow)
 
@@ -133,23 +150,23 @@ func buildHttp2Spec(akamai_text string) (profile ClientProfile, err error) {
 		for _, p := range strings.Split(prioritiesMap, ",") {
 			pParts := strings.Split(p, ":")
 			if len(pParts) != 4 {
-				return profile, fmt.Errorf("don't support this http2Priorities: %s ", p)
+				return nil, fmt.Errorf("don't support this http2Priorities: %s ", p)
 			}
 			sid, err := strconv.ParseUint(pParts[0], 10, 32)
 			if err != nil {
-				return profile, err
+				return nil, err
 			}
 			priority := http2.Priority{}
 			priority.StreamID = uint32(sid)
 
 			dep, err := strconv.ParseUint(pParts[1], 10, 32)
 			if err != nil {
-				return profile, err
+				return nil, err
 			}
 
 			weight, err := strconv.ParseUint(pParts[3], 10, 8)
 			if err != nil {
-				return profile, err
+				return nil, err
 			}
 
 			priority.PriorityParam = http2.PriorityParam{
@@ -164,12 +181,12 @@ func buildHttp2Spec(akamai_text string) (profile ClientProfile, err error) {
 	pseudoHeaderOrder := []string{}
 	pseudoMap := strings.Split(akamaiMap[3], ",")
 	if len(pseudoMap) != 4 {
-		return profile, fmt.Errorf("don't support this pseudo: %s ", pseudoMap)
+		return nil, fmt.Errorf("don't support this pseudo: %s ", pseudoMap)
 	}
 	for _, pseudo := range pseudoMap {
 		pseudo, exist := pseudoHeader[pseudo]
 		if !exist {
-			return profile, fmt.Errorf("don't support this pseudoHeader: %s ", pseudo)
+			return nil, fmt.Errorf("don't support this pseudoHeader: %s ", pseudo)
 		}
 		pseudoHeaderOrder = append(pseudoHeaderOrder, (pseudo))
 	}

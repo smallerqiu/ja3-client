@@ -10,11 +10,15 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.1
+	github.com/dgraph-io/ristretto v0.2.0
 	github.com/klauspost/compress v1.17.11
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cloudflare/circl v1.5.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
