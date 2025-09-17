@@ -5,6 +5,8 @@ import (
 )
 
 func TestOne(t *testing.T) {
+	t.Log("testing firefox 120")
+	MatchTlsInfo(t, "firefox_120")
 	// MatchTlsInfo(t, "qh360_16_0")
 }
 func TestChrome(t *testing.T) {

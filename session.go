@@ -20,7 +20,12 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 		WithForceHttp1(request.ForceHTTP1),
 		WithCookieJar(jar),
 	}
-
+	if request.DisableHTTP3 {
+		options = append(options, WithDisableHttp3())
+	}
+	if request.WithDebug {
+		options = append(options, WithDebug())
+	}
 	if !request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}

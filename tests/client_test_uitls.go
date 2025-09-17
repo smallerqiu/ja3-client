@@ -92,7 +92,7 @@ var TlsInfoMap = map[string]map[string]string{
 		"ja3_text":    "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,51-0-16-18-43-45-5-17613-10-65281-23-11-65037-13-27-35,4588-29-23-24,0",
 		"ja3n_hash":   "8e19337e7524d2573be54efb2b0784c9",
 		"ja3n_text":   "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-5-10-11-13-16-18-23-27-35-43-45-51-17613-65037-65281,4588-29-23-24,0",
-		"ja4":         "t13d1516h2_8daaf6152771_d8a2da3f94cd",
+		"ja4":         "t13d1516h3_8daaf6152771_d8a2da3f94cd",
 		"akamai_hash": "52d84b11737d980aef856699f885ca86",
 	},
 	"chrome_132": {
@@ -478,6 +478,7 @@ var TlsInfoMap = map[string]map[string]string{
 		"ja3n_text":   "771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-5-10-11-13-16-23-28-34-43-51-65037-65281,29-23-24-25-256-257,0",
 		"ja4":         "t13d1713h2_5b57614c22b0_748f4c70de1c",
 		"akamai_hash": "3d9132023bf26a71d40fe766e5c24c9d",
+		"akamai_text": "1:65536;4:131072;5:16384|12517377|3:0:0:201,5:0:0:101,7:0:0:1,9:0:7:1,11:0:3:1,13:0:0:241|m,p,a,s",
 	},
 	"firefox_117": {
 		"ja3_hash":    "579ccef312d18482fc42e2b822ca2430",
@@ -673,17 +674,17 @@ var TlsInfoMap = map[string]map[string]string{
 	},
 }
 
-func gettlsContent(t *testing.T, api string, impersonate string) (data []byte, ex error) {
-	reqBody := &ja3.Ja3Request{
+func getTlsContent(t *testing.T, api string, impersonate string) (data []byte, ex error) {
+	options := &ja3.Ja3Request{
 		Method: "GET",
 		URL:    tlsApi,
-		// Proxy:                "http://127.0.0.1:7890",
+		Proxy:  "http://127.0.0.1:7890",
 		// Headers:              make(map[string][]string),
 		Impersonate:          impersonate,
 		RandomExtensionOrder: true,
 	}
 
-	response, err := tls.DoRequest(reqBody)
+	response, err := tls.DoRequest(options)
 
 	if err != nil {
 		log.Printf("Error response: %v", err)
@@ -700,44 +701,44 @@ func gettlsContent(t *testing.T, api string, impersonate string) (data []byte, e
 	}
 	return bytes, nil
 }
-func getPeetInfo(t *testing.T, impersonate string) (tlsinfo PeetInfo, ex error) {
-	bytes, err := gettlsContent(t, tlsApi, impersonate)
+func getPeetInfo(t *testing.T, impersonate string) (peet_info PeetInfo, ex error) {
+	bytes, err := getTlsContent(t, tlsApi, impersonate)
 	if err != nil {
 		t.Error(err)
-		return tlsinfo, err
+		return peet_info, err
 	}
 	log.Printf("Response: %s", string(bytes))
 
-	// log.Printf("%v,%s: %s", response.StatusCode, reqBody.Method, reqBody.URL)
-	tlsinfo = PeetInfo{}
-	if err := json.Unmarshal(bytes, &tlsinfo); err != nil {
+	// log.Printf("%v,%s: %s", response.StatusCode, options.Method, options.URL)
+	peet_info = PeetInfo{}
+	if err := json.Unmarshal(bytes, &peet_info); err != nil {
 		t.Error(err)
-		return tlsinfo, err
+		return peet_info, err
 	}
 
-	return tlsinfo, nil
+	return peet_info, nil
 }
-func getTlsInfo(t *testing.T, impersonate string) (tlsinfo TlsInfo, ex error) {
-	bytes, err := gettlsContent(t, tlsApi, impersonate)
+func getTlsInfo(t *testing.T, impersonate string) (tls_info TlsInfo, ex error) {
+	bytes, err := getTlsContent(t, tlsApi, impersonate)
 	if err != nil {
 		t.Error(err)
-		return tlsinfo, err
+		return tls_info, err
 	}
 	// log.Printf("Response: %s", string(bytes))
 
-	// log.Printf("%v,%s: %s", response.StatusCode, reqBody.Method, reqBody.URL)
-	tlsinfo = TlsInfo{}
-	if err := json.Unmarshal(bytes, &tlsinfo); err != nil {
+	// log.Printf("%v,%s: %s", response.StatusCode, options.Method, options.URL)
+	tls_info = TlsInfo{}
+	if err := json.Unmarshal(bytes, &tls_info); err != nil {
 		t.Error(err)
-		return tlsinfo, err
+		return tls_info, err
 	}
 
-	return tlsinfo, nil
+	return tls_info, nil
 }
 
 func MatchPeetInfo(t *testing.T, impersonate string) {
 
-	tlsinfo, err := getPeetInfo(t, impersonate)
+	tls_info, err := getPeetInfo(t, impersonate)
 	if err != nil {
 		t.Errorf("%v err", impersonate)
 		return
@@ -747,54 +748,55 @@ func MatchPeetInfo(t *testing.T, impersonate string) {
 
 	// just match the ja3n_hash , ja4 , akamai_hash
 
-	if tlsinfo.TLS.Ja3Hash != info["ja3_hash"] {
-		t.Logf("ja31: %v", tlsinfo.TLS.Ja3)
+	if tls_info.TLS.Ja3Hash != info["ja3_hash"] {
+		t.Logf("ja31: %v", tls_info.TLS.Ja3)
 		t.Logf("ja32: %v", info["ja3_text"])
-		t.Errorf("ja3n hash mismatch: %s != %s", tlsinfo.TLS.Ja3Hash, info["ja3n_hash"])
+		t.Errorf("ja3n hash mismatch: %s != %s", tls_info.TLS.Ja3Hash, info["ja3n_hash"])
 	}
-	if tlsinfo.TLS.Ja4 != info["ja4"] {
-		t.Errorf("ja4 mismatch: %s != %s", tlsinfo.TLS.Ja4, info["ja4"])
+	if tls_info.TLS.Ja4 != info["ja4"] {
+		t.Errorf("ja4 mismatch: %s != %s", tls_info.TLS.Ja4, info["ja4"])
 	}
-	if tlsinfo.Http2.AkamaiFingerprintHash != info["akamai_hash"] {
-		t.Logf("akamai_text: %v", tlsinfo.Http2.AkamaiFingerprintHash)
-		t.Errorf("akamai hash mismatch: %s != %s", tlsinfo.Http2.AkamaiFingerprint, info["akamai_hash"])
+	if tls_info.Http2.AkamaiFingerprintHash != info["akamai_hash"] {
+		t.Logf("akamai_text: %v", tls_info.Http2.AkamaiFingerprintHash)
+		t.Errorf("akamai hash mismatch: %s != %s", tls_info.Http2.AkamaiFingerprint, info["akamai_hash"])
 	}
 }
 func MatchTlsInfo(t *testing.T, impersonate string) {
 
-	tlsinfo, err := getTlsInfo(t, impersonate)
+	tls_info, err := getTlsInfo(t, impersonate)
 	if err != nil {
 		t.Errorf("%v err", impersonate)
 		return
 	}
 
-	print(tlsinfo.UserAgent, "\n\n")
+	print(tls_info.UserAgent, "\n\n")
 
 	info := TlsInfoMap[impersonate]
 
 	// just match the ja3n_hash , ja4 , akamai_hash
 
 	// if !RandomExtensionOrder {
-	// 	if tlsinfo.Ja3Text != info["ja3_text"] {
-	// fmt.Printf("cur ja3: %v \n", tlsinfo.Ja3Text)
+	// 	if tls_info.Ja3Text != info["ja3_text"] {
+	// fmt.Printf("cur ja3: %v \n", tls_info.Ja3Text)
 	// fmt.Printf("tar ja3: %v \n", info["ja3_text"])
 	// 		t.Errorf("ja3 mismatch")
 	// 	}
 	// }
-	if tlsinfo.Ja3nHash != info["ja3n_hash"] {
-		fmt.Printf("cur ja3: %v \n", tlsinfo.Ja3Text)
+	if tls_info.Ja3nHash != info["ja3n_hash"] {
+		fmt.Printf("cur ja3: %v \n", tls_info.Ja3Text)
 		fmt.Printf("tar ja3: %v \n", info["ja3_text"])
 		t.Errorf("ja3 hash mismatch")
 	}
-	if tlsinfo.Ja4 != info["ja4"] {
-		fmt.Printf("cur ja4: %v \n", tlsinfo.Ja4)
+	if tls_info.Ja4 != info["ja4"] {
+		fmt.Printf("cur ja4: %v \n", tls_info.Ja4)
 		fmt.Printf("tar ja4: %v \n", info["ja4"])
 		t.Errorf("ja4 mismatch")
 	}
-	if tlsinfo.AkamaiHash != info["akamai_hash"] {
-		// fmt.Printf("cur ja4: %v \n", tlsinfo.Ja4)
+	if tls_info.AkamaiHash != info["akamai_hash"] {
+		// fmt.Printf("cur ja4: %v \n", tls_info.Ja4)
 		// fmt.Printf("tar ja4: %v \n", info["ja4"])
-		fmt.Printf("cur akamai_text: %v \n", tlsinfo.AkamaiText)
+		fmt.Printf("cur akamai_text: %v \n", tls_info.AkamaiText)
+		fmt.Printf("tar akamai_text: %v \n", info["akamai_text"])
 		t.Errorf("akamai mismatch")
 	}
 }

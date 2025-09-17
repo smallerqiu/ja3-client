@@ -7,11 +7,11 @@ import (
 	"io"
 
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
 	ja3 "github.com/smallerqiu/ja3-client/ja3"
-	"github.com/smallerqiu/ja3-client/util"
 
 	http "github.com/smallerqiu/ja3-client/http"
 	"golang.org/x/net/proxy"
@@ -92,7 +92,7 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		return nil, err
 	}
 
-	config.clientProfile = *clientProfile
+	config.clientProfile = clientProfile
 
 	if config.debug {
 		if logger == nil {
@@ -119,14 +119,14 @@ func validateConfig(_ *httpClientConfig) error {
 	return nil
 }
 
-func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, BandwidthTracker, *ja3.ClientProfile, error) {
+func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, BandwidthTracker, ja3.ClientProfile, error) {
 	var dialer proxy.ContextDialer
 	dialer = newDirectDialer(config.timeout, config.localAddr, config.dialer)
 
 	if config.proxyUrl != "" && config.proxyDialerFactory == nil {
 		proxyDialer, err := newConnectDialer(config.proxyUrl, config.timeout, config.localAddr, config.dialer, config.connectHeaders, logger)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, ja3.ClientProfile{}, err
 		}
 
 		dialer = proxyDialer
@@ -135,7 +135,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 	if config.proxyDialerFactory != nil {
 		proxyDialer, err := config.proxyDialerFactory(config.proxyUrl, config.timeout, config.localAddr, config.connectHeaders, logger)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, ja3.ClientProfile{}, err
 		}
 
 		dialer = proxyDialer
@@ -161,9 +161,9 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 
 	clientProfile := config.clientProfile
 
-	transport, err := newRoundTripper(clientProfile, config.transportOptions, config.serverNameOverwrite, config.insecureSkipVerify, config.withRandomTlsExtensionOrder, config.forceHttp1, config.certificatePins, config.badPinHandler, config.disableIPV6, config.disableIPV4, bandwidthTracker, dialer)
+	transport, err := newRoundTripper(clientProfile, config.transportOptions, config.serverNameOverwrite, config.insecureSkipVerify, config.withRandomTlsExtensionOrder, config.forceHttp1, config.disableHttp3, config.certificatePins, config.badPinHandler, config.disableIPV6, config.disableIPV4, bandwidthTracker, dialer)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, clientProfile, err
 	}
 
 	client := &http.Client{
@@ -176,7 +176,7 @@ func buildFromConfig(logger Logger, config *httpClientConfig) (*http.Client, Ban
 		client.Jar = config.cookieJar
 	}
 
-	return client, bandwidthTracker, &clientProfile, nil
+	return client, bandwidthTracker, clientProfile, nil
 }
 
 // CloseIdleConnections closes all idle connections of the underlying http client.
@@ -242,7 +242,7 @@ func (c *httpClient) applyProxy() error {
 	var dialer proxy.ContextDialer
 	dialer = proxy.Direct
 
-	if c.config.proxyUrl != "" && c.config.proxyDialerFactory != nil {
+	if c.config.proxyUrl != "" && c.config.proxyDialerFactory == nil {
 		c.logger.Debug("proxy url %s supplied - using proxy connect dialer", c.config.proxyUrl)
 		proxyDialer, err := newConnectDialer(c.config.proxyUrl, c.config.timeout, c.config.localAddr, c.config.dialer, c.config.connectHeaders, c.logger)
 		if err != nil {
@@ -264,7 +264,7 @@ func (c *httpClient) applyProxy() error {
 		dialer = proxyDialer
 	}
 
-	transport, err := newRoundTripper(c.config.clientProfile, c.config.transportOptions, c.config.serverNameOverwrite, c.config.insecureSkipVerify, c.config.withRandomTlsExtensionOrder, c.config.forceHttp1, c.config.certificatePins, c.config.badPinHandler, c.config.disableIPV6, c.config.disableIPV4, c.bandwidthTracker, dialer)
+	transport, err := newRoundTripper(c.config.clientProfile, c.config.transportOptions, c.config.serverNameOverwrite, c.config.insecureSkipVerify, c.config.withRandomTlsExtensionOrder, c.config.forceHttp1, c.config.disableHttp3, c.config.certificatePins, c.config.badPinHandler, c.config.disableIPV6, c.config.disableIPV4, c.bandwidthTracker, dialer)
 	if err != nil {
 		return err
 	}
@@ -337,7 +337,7 @@ func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
 		req.Header = c.config.defaultHeaders.Clone()
 	}
 
-	req.Header[http.HeaderOrderKey] = util.AllToLower(req.Header[http.HeaderOrderKey])
+	req.Header[http.HeaderOrderKey] = allToLower(req.Header[http.HeaderOrderKey])
 	c.headerLck.Unlock()
 
 	if c.config.debug {
@@ -431,4 +431,14 @@ func (c *httpClient) Post(url, contentType string, body io.Reader) (resp *http.R
 	req.Header.Set("Content-Type", contentType)
 
 	return c.Do(req)
+}
+
+func allToLower(list []string) []string {
+	lower := make([]string, len(list))
+
+	for i, elem := range list {
+		lower[i] = strings.ToLower(elem)
+	}
+
+	return lower
 }

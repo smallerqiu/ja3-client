@@ -9,6 +9,9 @@ var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate)
 func c(current, target ClientData) ClientData {
 	n := target
 	n.UserAgent = current.UserAgent
+	if current.WithHttp3 {
+		n.WithHttp3 = current.WithHttp3
+	}
 	return n
 }
 

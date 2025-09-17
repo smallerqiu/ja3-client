@@ -12,11 +12,13 @@ type Ja3Request struct {
 	Client               string
 	ClientVersion        string
 	ForceHTTP1           bool
+	DisableHTTP3         bool
 	Body                 []byte
 	RandomExtensionOrder bool
 	Timeout              int // default 30s
 	NotFollowRedirects   bool
 	ClientData           *ClientData
+	WithDebug            bool
 }
 
 type Response struct {

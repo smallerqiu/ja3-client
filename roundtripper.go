@@ -9,8 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/smallerqiu/ja3-client/http"
+	http "github.com/smallerqiu/ja3-client/http"
 	"github.com/smallerqiu/ja3-client/http2"
+	"github.com/smallerqiu/ja3-client/http3"
 	ja3 "github.com/smallerqiu/ja3-client/ja3"
 	tls "github.com/smallerqiu/utls"
 	"golang.org/x/net/proxy"
@@ -46,7 +47,8 @@ type roundTripper struct {
 	cachedTransportsLck sync.Mutex
 	connectionFlow      uint32
 
-	forceHttp1 bool
+	forceHttp1   bool
+	disableHttp3 bool
 
 	insecureSkipVerify          bool
 	withRandomTlsExtensionOrder bool
@@ -157,23 +159,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 
 	rawConn = rt.bandwidthTracker.TrackConnection(ctx, rawConn)
 
-	conn := tls.UClient(rawConn, tlsConfig, rt.clientHelloId, rt.withRandomTlsExtensionOrder, rt.forceHttp1)
-
-	// fix handshake state
-	// var spec, err1 = rt.clientHelloId.ToSpec()
-	// if err1 != nil {
-	// 	return nil, err
-	// }
-	// err = conn.ApplyPreset(&spec)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = conn.BuildHandshakeState()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// end
-
+	conn := tls.UClient(rawConn, tlsConfig, rt.clientHelloId, rt.withRandomTlsExtensionOrder, rt.forceHttp1, rt.disableHttp3)
 	if err = conn.HandshakeContext(ctx); err != nil {
 		_ = conn.Close()
 
@@ -270,6 +256,57 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 
 		t2.PushHandler = &http2.DefaultPushHandler{}
 		rt.cachedTransports[addr] = &t2
+	case http3.NextProtoH3:
+		utlsConfig := &tls.Config{
+			ClientSessionCache: rt.clientSessionCache,
+			InsecureSkipVerify: rt.insecureSkipVerify,
+			OmitEmptyPsk:       true,
+		}
+		if rt.transportOptions != nil {
+			utlsConfig.RootCAs = rt.transportOptions.RootCAs
+		}
+
+		if rt.serverNameOverwrite != "" {
+			utlsConfig.ServerName = rt.serverNameOverwrite
+		}
+
+		if rt.transportOptions != nil {
+			utlsConfig.RootCAs = rt.transportOptions.RootCAs
+		}
+
+		if rt.serverNameOverwrite != "" {
+			utlsConfig.ServerName = rt.serverNameOverwrite
+		}
+
+		t3 := http3.Transport{
+			TLSClientConfig: utlsConfig,
+		}
+
+		if rt.settings == nil {
+			// when we not provide a map of custom http2 settings
+			t3.AdditionalSettings = map[uint64]uint64{
+				uint64(http2.SettingMaxConcurrentStreams): 1000,
+				uint64(http2.SettingMaxFrameSize):         16384,
+				uint64(http2.SettingInitialWindowSize):    6291456,
+				uint64(http2.SettingHeaderTableSize):      65536,
+			}
+		} else {
+			// convert settings map from uint32 to uint64
+			convertedSettings := map[uint64]uint64{}
+			for key, value := range rt.settings {
+				convertedSettings[uint64(key)] = uint64(value)
+			}
+
+			// use custom settings
+			t3.AdditionalSettings = convertedSettings
+		}
+
+		if rt.transportOptions != nil {
+			t3.DisableCompression = rt.transportOptions.DisableCompression
+			t3.MaxResponseHeaderBytes = rt.transportOptions.MaxResponseHeaderBytes
+		}
+
+		rt.cachedTransports[addr] = &t3
 	default:
 		rt.cachedTransports[addr] = rt.buildHttp1Transport()
 	}
@@ -332,8 +369,7 @@ func (rt *roundTripper) getDialTLSAddr(req *http.Request) string {
 
 	return net.JoinHostPort(req.URL.Host, "443")
 }
-
-func newRoundTripper(clientProfile ja3.ClientProfile, transportOptions *TransportOptions, serverNameOverwrite string, insecureSkipVerify bool, withRandomTlsExtensionOrder bool, forceHttp1 bool, certificatePins map[string][]string, badPinHandlerFunc BadPinHandlerFunc, disableIPV6 bool, disableIPV4 bool, bandwidthTracker BandwidthTracker, dialer ...proxy.ContextDialer) (http.RoundTripper, error) {
+func newRoundTripper(clientProfile ja3.ClientProfile, transportOptions *TransportOptions, serverNameOverwrite string, insecureSkipVerify bool, withRandomTlsExtensionOrder bool, forceHttp1 bool, disableHttp3 bool, certificatePins map[string][]string, badPinHandlerFunc BadPinHandlerFunc, disableIPV6 bool, disableIPV4 bool, bandwidthTracker BandwidthTracker, dialer ...proxy.ContextDialer) (http.RoundTripper, error) {
 	pinner, err := NewCertificatePinner(certificatePins)
 	if err != nil {
 		return nil, fmt.Errorf("can not instantiate certificate pinner: %w", err)
@@ -366,6 +402,7 @@ func newRoundTripper(clientProfile ja3.ClientProfile, transportOptions *Transpor
 		pseudoHeaderOrder:           clientProfile.GetPseudoHeaderOrder(),
 		insecureSkipVerify:          insecureSkipVerify,
 		forceHttp1:                  forceHttp1,
+		disableHttp3:                disableHttp3,
 		withRandomTlsExtensionOrder: withRandomTlsExtensionOrder,
 		connectionFlow:              clientProfile.GetConnectionFlow(),
 		clientHelloId:               clientProfile.GetClientHelloId(),

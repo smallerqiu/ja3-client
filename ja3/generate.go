@@ -4,15 +4,19 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"log"
+	"slices"
+	"strconv"
+	"strings"
+
 	"github.com/smallerqiu/ja3-client/cache"
 	"github.com/smallerqiu/ja3-client/http2"
 	"github.com/smallerqiu/ja3-client/util"
-	"log"
-	"strconv"
-	"strings"
-	//"github.com/smallerqiu/ja3-client/cache"
+
 	tls "github.com/smallerqiu/utls"
 )
+
+var memoryCache, _ = cache.NewCache[string, *ClientProfile]()
 
 func getExtBaseMap() map[uint16]tls.TLSExtension {
 	return map[uint16]tls.TLSExtension{
@@ -83,11 +87,9 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 		tls.ExtensionQUICTransportParameters: &tls.QUICTransportParametersExtension{},
 		tls.ExtensionNextProtoNeg:            &tls.NPNExtension{},
 		tls.ExtensionALPSOld: &tls.ApplicationSettingsExtension{
-			CodePoint:          tls.ExtensionALPSOld,
 			SupportedProtocols: []string{"h2"},
 		},
-		tls.ExtensionALPS: &tls.ApplicationSettingsExtension{
-			CodePoint:          tls.ExtensionALPS,
+		tls.ExtensionALPS: &tls.ApplicationSettingsExtensionNew{
 			SupportedProtocols: []string{"h2"},
 		},
 		tls.ExtensionECH: tls.BoringGREASEECH(), //ech
@@ -96,22 +98,12 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 	}
 }
 
-var memoryCache, _ = cache.NewCache[string, *ClientProfile]()
-
-func buildHttp2Spec(akamai_text string) (ClientProfile, error) {
+func buildHttp2Spec(akamai_text string) (*ClientProfile, error) {
 	clientProfile, _ := memoryCache.Get(akamai_text)
 	if clientProfile != nil {
-		return *clientProfile, nil
+		return clientProfile, nil
 	}
-	clientProfile, err := doBuildHttp2Spec(akamai_text)
-	if err != nil {
-		return ClientProfile{}, err
-	}
-	memoryCache.Set(akamai_text, clientProfile, 0)
-	return *clientProfile, nil
-}
 
-func doBuildHttp2Spec(akamai_text string) (*ClientProfile, error) {
 	akamaiMap := strings.Split(akamai_text, "|")
 	if len(akamaiMap) < 4 {
 		return nil, errors.New("ja3 format error")
@@ -191,6 +183,8 @@ func doBuildHttp2Spec(akamai_text string) (*ClientProfile, error) {
 		pseudoHeaderOrder = append(pseudoHeaderOrder, (pseudo))
 	}
 	profile.PseudoHeaderOrder = pseudoHeaderOrder
+
+	memoryCache.Set(akamai_text, profile, 0)
 
 	return profile, nil
 }
@@ -365,24 +359,33 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		}
 		extMap[tls.ExtensionCompressCertificate] = &tls.UtlsCompressCertExtension{Algorithms: certCompressionAlgo}
 	}
-
+	if config.ALPSS {
+		// cause ja4 like t13xxh1 ,should be t13xxh2
+		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}
+	}
+	alpsProtocols := []string{"h2"}
+	if config.WithHttp3 {
+		alpsProtocols = []string{"h3", "h2"}
+		alpnProtocols := []string{"h3", "h2", "http/1.1"}
+		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: alpnProtocols}
+		if config.ALPSS {
+			slices.Reverse(alpnProtocols)
+			extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: alpnProtocols}
+		}
+	}
 	// alps
 	if config.ALPSO {
 		extMap[tls.ExtensionALPSOld] = &tls.ApplicationSettingsExtension{
-			CodePoint:          tls.ExtensionALPSOld,
-			SupportedProtocols: []string{"h2"},
+			// CodePoint:          tls.ExtensionALPSOld,
+			SupportedProtocols: alpsProtocols,
 		}
 	}
 	// alps old
 	if config.ALPS {
-		extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtension{
-			CodePoint:          tls.ExtensionALPS,
-			SupportedProtocols: []string{"h2"},
+		extMap[tls.ExtensionALPS] = &tls.ApplicationSettingsExtensionNew{
+			// CodePoint:          tls.ExtensionALPS,
+			SupportedProtocols: alpsProtocols,
 		}
-	}
-	if config.ALPSS {
-		// cause ja4 like t13xxh1 ,should be t13xxh2
-		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}
 	}
 
 	// signature algorithms
