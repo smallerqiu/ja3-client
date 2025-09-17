@@ -34,7 +34,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 
-	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
+	httptrace "github.com/smallerqiu/ja3-client/http/httptrace"
 	tls "github.com/smallerqiu/utls"
 
 	"golang.org/x/net/http/httpguts"

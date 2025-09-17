@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	http "github.com/smallerqiu/ja3-client/http"
-	cookiejar "github.com/smallerqiu/ja3-client/internal/cookiejar"
+	cookiejar "github.com/smallerqiu/ja3-client/http/cookiejar"
 )
 
 type CookieJarOption func(config *cookieJarConfig)

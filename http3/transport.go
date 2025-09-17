@@ -12,7 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/smallerqiu/ja3-client/internal/httptrace"
+	"github.com/smallerqiu/ja3-client/http/httptrace"
 
 	tls "github.com/smallerqiu/utls"
 

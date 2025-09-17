@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
+	httptrace "github.com/smallerqiu/ja3-client/http/httptrace"
 )
 
 // A Header represents the Key-value pairs in an HTTP header.

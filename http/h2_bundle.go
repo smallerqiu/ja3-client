@@ -31,7 +31,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	tls "github.com/smallerqiu/utls"
 	"io"
 	"log"
 	"math"
@@ -49,10 +48,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	tls "github.com/smallerqiu/utls"
+
+	httptrace "github.com/smallerqiu/ja3-client/http/httptrace"
+	"github.com/smallerqiu/ja3-client/http2/hpack"
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/idna"
-	"github.com/smallerqiu/ja3-client/http2/hpack"
-	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
 )
 
 // A list of the possible cipher suite ids. Taken from

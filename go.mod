@@ -1,6 +1,8 @@
 module github.com/smallerqiu/ja3-client
 
-go 1.24.0
+go 1.24.1
+
+toolchain go1.24.7
 
 require (
 	github.com/smallerqiu/utls v1.1.1
@@ -17,10 +19,11 @@ require (
 )
 
 require (
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 )
 

@@ -24,7 +24,7 @@ type TlsInfo struct {
 	UserAgent  string `json:"user_agent"`
 }
 
-// var peetApi = "https://tls.peet.ws/api/all"
+var peetApi = "https://tls.peet.ws/api/all"
 
 type PeetInfo struct {
 	TLS struct {
@@ -32,7 +32,7 @@ type PeetInfo struct {
 		Ja3Hash string `json:"ja3n_hash"`
 		Ja4     string `json:"ja4"`
 	} `json:"tls"`
-	Http2 struct {
+	HTTP2 struct {
 		AkamaiFingerprint     string `json:"akamai_fingerprint"`
 		AkamaiFingerprintHash string `json:"akamai_fingerprint_hash"`
 	} `json:"http2"`
@@ -677,11 +677,11 @@ var TlsInfoMap = map[string]map[string]string{
 func getTlsContent(t *testing.T, api string, impersonate string) (data []byte, ex error) {
 	options := &ja3.Ja3Request{
 		Method: "GET",
-		URL:    tlsApi,
+		URL:    api,
 		Proxy:  "http://127.0.0.1:7890",
 		// Headers:              make(map[string][]string),
-		Impersonate:          impersonate,
-		RandomExtensionOrder: true,
+		Impersonate: impersonate,
+		// RandomExtensionOrder: true,
 	}
 
 	response, err := tls.DoRequest(options)
@@ -702,12 +702,12 @@ func getTlsContent(t *testing.T, api string, impersonate string) (data []byte, e
 	return bytes, nil
 }
 func getPeetInfo(t *testing.T, impersonate string) (peet_info PeetInfo, ex error) {
-	bytes, err := getTlsContent(t, tlsApi, impersonate)
+	bytes, err := getTlsContent(t, peetApi, impersonate)
 	if err != nil {
 		t.Error(err)
 		return peet_info, err
 	}
-	log.Printf("Response: %s", string(bytes))
+	// log.Printf("Response: %s", string(bytes))
 
 	// log.Printf("%v,%s: %s", response.StatusCode, options.Method, options.URL)
 	peet_info = PeetInfo{}
@@ -738,7 +738,7 @@ func getTlsInfo(t *testing.T, impersonate string) (tls_info TlsInfo, ex error) {
 
 func MatchPeetInfo(t *testing.T, impersonate string) {
 
-	tls_info, err := getPeetInfo(t, impersonate)
+	peet_info, err := getPeetInfo(t, impersonate)
 	if err != nil {
 		t.Errorf("%v err", impersonate)
 		return
@@ -748,17 +748,21 @@ func MatchPeetInfo(t *testing.T, impersonate string) {
 
 	// just match the ja3n_hash , ja4 , akamai_hash
 
-	if tls_info.TLS.Ja3Hash != info["ja3_hash"] {
-		t.Logf("ja31: %v", tls_info.TLS.Ja3)
-		t.Logf("ja32: %v", info["ja3_text"])
-		t.Errorf("ja3n hash mismatch: %s != %s", tls_info.TLS.Ja3Hash, info["ja3n_hash"])
+	if peet_info.TLS.Ja3Hash != info["ja3_hash"] {
+		log.Printf("tar: %v", peet_info.TLS.Ja3)
+		log.Printf("cur: %v", info["ja3_text"])
+		t.Errorf("ja3n hash mismatch: %s != %s", peet_info.TLS.Ja3Hash, info["ja3n_hash"])
 	}
-	if tls_info.TLS.Ja4 != info["ja4"] {
-		t.Errorf("ja4 mismatch: %s != %s", tls_info.TLS.Ja4, info["ja4"])
+	if peet_info.TLS.Ja4 != info["ja4"] {
+		log.Printf("tar: %v", peet_info.TLS.Ja4)
+		log.Printf("cur: %v", info["ja4"])
+		t.Errorf("ja4 mismatch: %s != %s", peet_info.TLS.Ja4, info["ja4"])
 	}
-	if tls_info.Http2.AkamaiFingerprintHash != info["akamai_hash"] {
-		t.Logf("akamai_text: %v", tls_info.Http2.AkamaiFingerprintHash)
-		t.Errorf("akamai hash mismatch: %s != %s", tls_info.Http2.AkamaiFingerprint, info["akamai_hash"])
+	if peet_info.HTTP2.AkamaiFingerprintHash != info["akamai_hash"] {
+		log.Printf("tar: %v", peet_info.HTTP2.AkamaiFingerprintHash)
+		log.Printf("cur: %v", info["akamai_hash"])
+		// t.Logf("akamai_text: %v", peet_info.Http2.AkamaiFingerprintHash)
+		t.Errorf("akamai hash mismatch: %s != %s", peet_info.HTTP2.AkamaiFingerprint, info["akamai_hash"])
 	}
 }
 func MatchTlsInfo(t *testing.T, impersonate string) {

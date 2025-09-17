@@ -92,9 +92,9 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 		tls.ExtensionALPS: &tls.ApplicationSettingsExtensionNew{
 			SupportedProtocols: []string{"h2"},
 		},
-		tls.ExtensionECH: tls.BoringGREASEECH(), //ech
-		// tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
-		tls.ExtensionChannelId: &tls.GenericExtension{Id: 0x7550, Data: []byte{0}}, //FIXME
+		tls.ExtensionECH:               tls.BoringGREASEECH(), //ech
+		tls.ExtensionRenegotiationInfo: &tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
+		tls.ExtensionChannelId:         &tls.GenericExtension{Id: 0x7550, Data: []byte{0}}, //FIXME
 	}
 }
 

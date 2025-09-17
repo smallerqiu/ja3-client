@@ -19,6 +19,7 @@ type Ja3Request struct {
 	NotFollowRedirects   bool
 	ClientData           *ClientData
 	WithDebug            bool
+	ClientProfile        *ClientProfile
 }
 
 type Response struct {

@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/smallerqiu/ja3-client/internal/httptrace"
+	"github.com/smallerqiu/ja3-client/http/httptrace"
 
 	http "github.com/smallerqiu/ja3-client/http"
 

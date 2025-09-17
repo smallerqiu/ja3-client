@@ -23,7 +23,7 @@ import (
 	"strings"
 	"sync"
 
-	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
+	httptrace "github.com/smallerqiu/ja3-client/http/httptrace"
 	tls "github.com/smallerqiu/utls"
 
 	"golang.org/x/net/idna"

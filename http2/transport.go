@@ -29,7 +29,7 @@ import (
 	tls "github.com/smallerqiu/utls"
 
 	http "github.com/smallerqiu/ja3-client/http"
-	httptrace "github.com/smallerqiu/ja3-client/internal/httptrace"
+	httptrace "github.com/smallerqiu/ja3-client/http/httptrace"
 
 	"github.com/smallerqiu/ja3-client/http2/hpack"
 	"golang.org/x/net/http/httpguts"
