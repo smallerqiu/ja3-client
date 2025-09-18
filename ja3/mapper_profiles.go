@@ -17,6 +17,7 @@ func c(current, target ClientData) ClientData {
 
 var MappedTLSClients = map[string]ClientData{
 	// "custom":          Custom,
+	"chrome_140":         c(Chrome_140, Chrome_136),
 	"chrome_139":         c(Chrome_139, Chrome_136),
 	"chrome_138":         c(Chrome_138, Chrome_136),
 	"chrome_137":         c(Chrome_137, Chrome_136),
@@ -42,6 +43,7 @@ var MappedTLSClients = map[string]ClientData{
 	"chrome_120":         c(Chrome_120, Chrome_119),
 	"chrome_119":         Chrome_119,
 	"chrome_117":         Chrome_117,
+	"edge_140":           c(Edge_140, Edge_136),
 	"edge_139":           c(Edge_139, Edge_136),
 	"edge_138":           c(Edge_138, Edge_136),
 	"edge_137":           c(Edge_137, Edge_136),
