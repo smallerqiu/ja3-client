@@ -5,7 +5,7 @@ go 1.24.1
 toolchain go1.24.7
 
 require (
-	github.com/smallerqiu/utls v1.1.1
+	github.com/smallerqiu/utls v1.2.0
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5
 	golang.org/x/net v0.38.0
 )
