@@ -27,4 +27,4 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 )
 
-replace github.com/smallerqiu/utls => ../ja3-utls
+// replace github.com/smallerqiu/utls => ../ja3-utls
