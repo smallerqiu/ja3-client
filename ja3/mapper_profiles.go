@@ -1,8 +1,8 @@
 package ja3
 
-var DefaultImpersonate = "chrome_139"
+var DefaultImpersonate = "chrome_140"
 
-var DefaultClient = Chrome_139
+var DefaultClient = c(Chrome_140, Chrome_136)
 
 var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate)
 
