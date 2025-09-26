@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/proxy"
-
+	_ "github.com/bdandy/go-socks4"
 	"github.com/smallerqiu/ja3-client/http"
 	"github.com/smallerqiu/ja3-client/http2"
+	"golang.org/x/net/proxy"
 )
 
 type directDialer struct {
@@ -121,6 +121,8 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration, localAddr *net.
 		if proxyUrl.Port() == "" {
 			proxyUrl.Host = net.JoinHostPort(proxyUrl.Host, "443")
 		}
+	case "socks4", "socks4a":
+		return handleSocks4ProxyDialer(proxyUrl, _dialer)
 	case "socks5", "socks5h":
 		return handleSocks5ProxyDialer(proxyUrl, _dialer)
 	case "":
@@ -152,7 +154,15 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration, localAddr *net.
 	}
 	return dialer, nil
 }
+func handleSocks4ProxyDialer(proxyUrl *url.URL, dialer net.Dialer) (proxy.ContextDialer, error) {
+	socks4Dialer, err := proxy.FromURL(proxyUrl, &dialer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create socks4 proxy dialer: %w", err)
+	}
 
+	scd := newSocksContextDialer(socks4Dialer)
+	return &scd, nil
+}
 func handleSocks5ProxyDialer(proxyUrl *url.URL, dialer net.Dialer) (proxy.ContextDialer, error) {
 	var proxyAuth *proxy.Auth
 	if proxyUrl.User != nil {
