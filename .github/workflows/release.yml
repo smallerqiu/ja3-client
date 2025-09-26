@@ -1,9 +1,11 @@
 name: Cross-platform Shared Library Release
 
 on:
-  push:
-    tags:
-      - 'v*'  # Only triggers on version tags like v1.2.3
+  release:
+    types: [published]
+  # push:
+  #   tags:
+  #     - 'v*'  # Only triggers on version tags like v1.2.3
 
 jobs:
   build:
