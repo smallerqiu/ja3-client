@@ -6,6 +6,7 @@ on:
   push:
     tags:
       - 'v*'  # Only triggers on version tags like v1.2.3
+  workflow_dispatch:
 
 jobs:
   build:
@@ -65,7 +66,8 @@ jobs:
 
       - name: Build shared lib
         run: |
-          OUTPUT="ja3-client-${{ matrix.os }}-${{ matrix.arch }}-${GITHUB_REF_NAME}.${{ matrix.ext }}"
+          TAG_NAME=${{ github.event.release.tag_name || github.ref_name }}
+          OUTPUT="ja3-client-${{ matrix.os }}-${{ matrix.arch }}-${TAG_NAME}.${{ matrix.ext }}"
           go build -buildmode=c-shared -o $OUTPUT ./cffi/main.go
           zip $OUTPUT.zip $OUTPUT ja3_client.h
 
