@@ -535,8 +535,6 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile 
 	// The direct impact is that the ja4 value cannot approximate that of a real browser.
 	// However, it can still bypass Cloudflare. That's the best i can do.
 	// so, all i can say wocao.
-	// var signature = []tls.SignatureScheme{}
-	// extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: signature}
 
 	// curves part 3
 	mapCurves := strings.Split(ja3StringParts[3], "-")

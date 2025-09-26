@@ -17,7 +17,7 @@ def test_request():
     }
     requestStr = json.dumps(req)
     # print(requestStr)
-    res = lib.request("requestStr")
+    res = lib.request(requestStr)
     print(res)
 
 

@@ -1,0 +1,75 @@
+name: Cross-platform Shared Library Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Only triggers on version tags like v1.2.3
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            ext: so
+          - os: linux
+            arch: arm64
+            ext: so
+          - os: linux
+            arch: arm
+            ext: so
+            goarm: 7
+          - os: linux
+            arch: 386
+            ext: so
+          - os: darwin
+            arch: amd64
+            ext: dylib
+          - os: darwin
+            arch: arm64
+            ext: dylib
+          - os: windows
+            arch: 386
+            ext: dll
+          - os: windows
+            arch: amd64
+            ext: dll
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install build dependencies (for CGO)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib mingw-w64
+
+      - name: Set Go env
+        run: |
+          echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          if [ "${{ matrix.goarm }}" ]; then
+            echo "GOARM=${{ matrix.goarm }}" >> $GITHUB_ENV
+          fi
+
+      - name: Build shared lib
+        run: |
+          OUTPUT="ja3-client-${{ matrix.os }}-${{ matrix.arch }}-${GITHUB_REF_NAME}.${{ matrix.ext }}"
+          go build -buildmode=c-shared -o $OUTPUT ./cffi/main.go
+          zip $OUTPUT.zip $OUTPUT ja3_client.h
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

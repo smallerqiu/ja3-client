@@ -23,6 +23,7 @@ type Ja3Request struct {
 }
 
 type Response struct {
+	ErrorCode  int
 	StatusCode int
 	Headers    map[string][]string
 	Cookies    map[string]string

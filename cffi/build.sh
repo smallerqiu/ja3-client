@@ -1,0 +1,1 @@
+go build -o ja3_client.so -buildmode=c-shared main.go
