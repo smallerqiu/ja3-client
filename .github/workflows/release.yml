@@ -5,75 +5,149 @@ on:
     types: [published]
   push:
     tags:
-      - 'v*'  # Only triggers on version tags like v1.2.3
+      - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag v1.2.3"
+        required: false
+        default: "v1.2.3"
+
+env:
+  CGO_ENABLED: 1
+  LIB_NAME: "ja3-client"
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}-${{ matrix.arch }}
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        include:
-          - os: linux
-            arch: amd64
-            ext: so
-          - os: linux
-            arch: arm64
-            ext: so
-          - os: linux
-            arch: arm
-            ext: so
-            goarm: 7
-          - os: linux
-            arch: 386
-            ext: so
-          - os: darwin
-            arch: amd64
-            ext: dylib
-          - os: darwin
-            arch: arm64
-            ext: dylib
-          - os: windows
-            arch: 386
-            ext: dll
-          - os: windows
-            arch: amd64
-            ext: dll
+        platform:
+          [
+            "windows/386",
+            "windows/amd64",
+            "linux/amd64",
+            "linux/arm64",
+            "linux/arm-7",
+            "darwin/amd64",
+            "darwin/arm64",
+          ]
+      fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
-      - name: Install build dependencies (for CGO)
+      - name: Setup Docker and QEMU
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib g++-multilib mingw-w64
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          sudo docker buildx create --use
 
-      - name: Set Go env
+      - name: Install cross-compilers
         run: |
-          echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
-          echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
-          echo "CGO_ENABLED=1" >> $GITHUB_ENV
-          if [ "${{ matrix.goarm }}" ]; then
-            echo "GOARM=${{ matrix.goarm }}" >> $GITHUB_ENV
+          sudo apt-get install -y \
+            gcc-multilib \
+            gcc-arm-linux-gnueabi \
+            gcc-aarch64-linux-gnu \
+            gcc-mingw-w64
+            gcc-mingw-w64-i686
+
+      - name: Install xgo
+        run: go install github.com/crazy-max/xgo@latest
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ ${{ github.event_name }} == 'release' ]]; then
+            VERSION=${{ github.event.release.tag_name }}
+          elif [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            VERSION=${{ inputs.tag }}
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
           fi
 
-      - name: Build shared lib
-        run: |
-          TAG_NAME=${{ github.event.release.tag_name || github.ref_name }}
-          OUTPUT="ja3-client-${{ matrix.os }}-${{ matrix.arch }}-${TAG_NAME}.${{ matrix.ext }}"
-          go build -buildmode=c-shared -o $OUTPUT ./cffi/main.go
-          zip $OUTPUT.zip $OUTPUT ja3_client.h
+          CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//;s/[^a-zA-Z0-9._-]//g')
+          echo "version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${CLEAN_VERSION}"
 
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
+      - name: Build versioned library
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          case "${{ matrix.platform }}" in 
+            windows/386)
+              OUTPUT_BASE="$LIB_NAME-$VERSION-${{ matrix.platform }}"
+              OUTPUT_FILE="$OUTPUT_BASE.dll"
+              LDFLAGS="-extldflags=-Wl,--out-implib,${OUTPUT_BASE}.lib"
+              export CC=i686-w64-mingw32-gcc
+              ;;
+            windows*)
+              OUTPUT_BASE="$LIB_NAME-$VERSION-${{ matrix.platform }}"
+              OUTPUT_FILE="$OUTPUT_BASE.dll"
+              LDFLAGS="-extldflags=-Wl,--out-implib,${OUTPUT_BASE}.lib"
+              ;;
+            linux*)
+              OUTPUT_BASE="lib$LIB_NAME-$VERSION-${{ matrix.platform }}"
+              OUTPUT_FILE="$OUTPUT_BASE.so"
+              LDFLAGS="-extldflags=-Wl,-soname,lib$LIB_NAME.so"
+              ;;
+            darwin*)
+              OUTPUT_BASE="lib$LIB_NAME-$VERSION-${{ matrix.platform }}"
+              OUTPUT_FILE="$OUTPUT_BASE.dylib"
+              LDFLAGS=""
+              ;;
+          esac
+
+          BUILD_FLAGS="-X main.Version=$VERSION -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')"
+
+          if [[ "${{ matrix.platform }}" == "windows/386" ]]; then
+            CGO_ENABLED=1 GOOS=windows GOARCH=386 CC=i686-w64-mingw32-gcc \
+              go build -buildmode=c-shared \
+              -ldflags="$LDFLAGS $BUILD_FLAGS" \
+              -o "dist/$OUTPUT_FILE" \
+              ./cffi/main.go
+          else
+            xgo --targets=${{ matrix.platform }} \
+              -buildmode=c-shared \
+              -out "dist/$OUTPUT_BASE" \
+              -ldflags="$LDFLAGS $BUILD_FLAGS" \
+              -v \
+              ./cffi/main.go
+          fi
+
+          mkdir -p artifacts
+          mv dist/* artifacts/
+
+          if [[ "${{ matrix.platform }}" == windows* ]]; then
+            mv artifacts/$LIB_NAME-$VERSION-${{ matrix.platform }}.h artifacts/$OUTPUT_BASE.h
+          fi
+
+          echo "$VERSION" > artifacts/VERSION
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          files: "*.zip"
+          name: ${{ matrix.platform }}-${{ steps.version.outputs.version }}
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Create release (tag only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/*.dll
+            artifacts/*.so
+            artifacts/*.dylib
+            artifacts/*.h
+            artifacts/VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
