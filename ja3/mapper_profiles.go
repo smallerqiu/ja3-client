@@ -4,12 +4,12 @@ var DefaultImpersonate = "chrome_140"
 
 var DefaultClient = c(Chrome_140, Chrome_136)
 
-var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate)
+var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate, nil)
 
 func c(current, target ClientData) ClientData {
 	n := target
 	n.UserAgent = current.UserAgent
-	if current.WithHttp3 {
+	if current.WithHttp3 != nil {
 		n.WithHttp3 = current.WithHttp3
 	}
 	return n
@@ -17,6 +17,7 @@ func c(current, target ClientData) ClientData {
 
 var MappedTLSClients = map[string]ClientData{
 	// "custom":          Custom,
+	"chrome_141":         c(Chrome_141, Chrome_136),
 	"chrome_140":         c(Chrome_140, Chrome_136),
 	"chrome_139":         c(Chrome_139, Chrome_136),
 	"chrome_138":         c(Chrome_138, Chrome_136),
@@ -54,6 +55,8 @@ var MappedTLSClients = map[string]ClientData{
 	"edge_132":           c(Edge_132, Edge_131),
 	"edge_131":           Edge_131,
 	"edge_101":           Edge_101,
+	"firefox_144":        c(Firefox_144, Firefox_135),
+	"firefox_143":        c(Firefox_143, Firefox_135),
 	"firefox_142":        c(Firefox_142, Firefox_135),
 	"firefox_141":        c(Firefox_141, Firefox_135),
 	"firefox_140":        c(Firefox_140, Firefox_135),

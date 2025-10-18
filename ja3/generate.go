@@ -9,20 +9,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/smallerqiu/ja3-client/cache"
 	"github.com/smallerqiu/ja3-client/http2"
 	"github.com/smallerqiu/ja3-client/util"
 
 	tls "github.com/smallerqiu/utls"
 )
 
-var memoryCache, _ = cache.NewCache[string, *ClientProfile]()
-
-func getExtBaseMap() map[uint16]tls.TLSExtension {
+func getExtBaseMap(withHttp3 *bool) map[uint16]tls.TLSExtension {
+	protos := []string{"h2", "http/1.1"}
+	if withHttp3 != nil && *withHttp3 == true {
+		protos = append([]string{"h3"}, protos...)
+	}
 	return map[uint16]tls.TLSExtension{
 		tls.ExtensionServerName:           &tls.SNIExtension{},
 		tls.ExtensionStatusRequest:        &tls.StatusRequestExtension{},
-		tls.ExtensionALPN:                 &tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
+		tls.ExtensionALPN:                 &tls.ALPNExtension{AlpnProtocols: protos},
 		tls.ExtensionSCT:                  &tls.SCTExtension{},
 		tls.ExtensionExtendedMasterSecret: &tls.ExtendedMasterSecretExtension{},
 		tls.ExtensionSessionTicket:        &tls.SessionTicketExtension{},
@@ -99,11 +100,6 @@ func getExtExtraMap() map[uint16]tls.TLSExtension {
 }
 
 func buildHttp2Spec(akamai_text string) (*ClientProfile, error) {
-	clientProfile, _ := memoryCache.Get(akamai_text)
-	if clientProfile != nil {
-		return clientProfile, nil
-	}
-
 	akamaiMap := strings.Split(akamai_text, "|")
 	if len(akamaiMap) < 4 {
 		return nil, errors.New("ja3 format error")
@@ -184,16 +180,17 @@ func buildHttp2Spec(akamai_text string) (*ClientProfile, error) {
 	}
 	profile.PseudoHeaderOrder = pseudoHeaderOrder
 
-	memoryCache.Set(akamai_text, profile, 0)
-
 	return profile, nil
 }
 
-func BuildClientHelloSpec(impersonate string) (profile ClientProfile, err error) {
+func BuildClientHelloSpec(impersonate string, withHttp3 *bool) (profile ClientProfile, err error) {
 	config, ok := MappedTLSClients[impersonate]
 	if !ok {
 		log.Printf("the input client %v don't support, so use default %v", impersonate, DefaultImpersonate)
 		config = DefaultClient
+	}
+	if withHttp3 != nil {
+		config.WithHttp3 = withHttp3
 	}
 	return BuildClientHelloSpecWithCP(config)
 }
@@ -221,7 +218,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		clientHelloSpec.CompressionMethods = []byte{tls.CompressionNone}
 	}
 
-	extMap := getExtBaseMap()
+	extMap := getExtBaseMap(config.WithHttp3)
 	// for safari
 	if config.NoTlsSessionTicket {
 		delete(extMap, tls.ExtensionSessionTicket)
@@ -364,7 +361,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1", "h2"}}
 	}
 	alpsProtocols := []string{"h2"}
-	if config.WithHttp3 {
+	if config.WithHttp3 != nil && *config.WithHttp3 == true {
 		alpsProtocols = []string{"h3", "h2"}
 		alpnProtocols := []string{"h3", "h2", "http/1.1"}
 		extMap[tls.ExtensionALPN] = &tls.ALPNExtension{AlpnProtocols: alpnProtocols}
@@ -506,12 +503,12 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 // ja3key as the tls finger , akamai_text as the http2 finger
 // In theory, it’s not possible to reverse-infer solely from the JA3 key,
 // because the information is not complete — it can only be roughly reconstructed.
-func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string) (profile ClientProfile, err error) {
+func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3 *bool) (profile ClientProfile, err error) {
 	ja3StringParts := strings.Split(ja3key, ",")
 	if len(ja3StringParts) < 4 {
 		return profile, errors.New("ja3 format error")
 	}
-	extMap := getExtBaseMap()
+	extMap := getExtBaseMap(withHttp3)
 
 	var clientHelloSpec tls.ClientHelloSpec
 	// tls version part 0

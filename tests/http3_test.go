@@ -51,16 +51,18 @@ func TestHTTP3(t *testing.T) {
 	}
 }
 
-func TestDisableHTTP3(t *testing.T) {
+var useHttp3 = true
+
+func TestWithHTTP3(t *testing.T) {
 	options := ja3.Ja3Request{
-		Method:       "GET",
-		URL:          "https://http3.is/",
-		Impersonate:  "chrome_133", // because we enabled HTTP3 for chrome 133, so other browsers will not be able to connect
-		Timeout:      30,
-		DisableHTTP3: true,
-		WithDebug:    true,
-		Headers:      defaultHeader,
-		Proxy:        "http://127.0.0.1:7890",
+		Method:      "GET",
+		URL:         "https://http3.is/",
+		Impersonate: "chrome_133", // because we enabled HTTP3 for chrome 133, so other browsers will not be able to connect
+		Timeout:     30,
+		WithHTTP3:   &useHttp3,
+		WithDebug:   true,
+		Headers:     defaultHeader,
+		Proxy:       "http://127.0.0.1:7890",
 	}
 
 	resp, err := client.DoRequest(&options)

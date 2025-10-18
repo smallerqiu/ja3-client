@@ -12,7 +12,7 @@ type Ja3Request struct {
 	Client               string
 	ClientVersion        string
 	ForceHTTP1           bool
-	DisableHTTP3         bool
+	WithHTTP3            *bool
 	Body                 []byte
 	RandomExtensionOrder bool
 	Timeout              int // default 30s

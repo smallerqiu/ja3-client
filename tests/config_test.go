@@ -14,7 +14,7 @@ import (
 
 func TestConfig(t *testing.T) {
 	impersonate := "qq_19_4"
-	clientProfile, err := ja3.BuildClientHelloSpec(impersonate)
+	clientProfile, err := ja3.BuildClientHelloSpec(impersonate, nil)
 
 	// chrome138
 	// impersonate := "chrome_136"

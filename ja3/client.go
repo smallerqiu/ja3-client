@@ -33,6 +33,6 @@ type ClientData struct {
 	NoTlsSessionTicket      bool
 	Version                 string
 	TlsPadding              bool
-	WithHttp3               bool
+	WithHttp3               *bool
 	RandomExtensionOrder    bool
 }

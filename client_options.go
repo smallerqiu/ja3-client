@@ -62,7 +62,7 @@ type httpClientConfig struct {
 	insecureSkipVerify          bool
 	withRandomTlsExtensionOrder bool
 	forceHttp1                  bool
-	disableHttp3                bool
+	withHttp3                   *bool
 
 	// Establish a connection to origin server via ipv4 only
 	disableIPV6 bool
@@ -230,9 +230,9 @@ func WithForceHttp1(forceHttp1 bool) HttpClientOption {
 		config.forceHttp1 = forceHttp1
 	}
 }
-func WithClient(impersonate string) HttpClientOption {
+func WithClient(impersonate string, withHttp3 *bool) HttpClientOption {
 	return func(config *httpClientConfig) {
-		profile, err := ja3.BuildClientHelloSpec(impersonate)
+		profile, err := ja3.BuildClientHelloSpec(impersonate, withHttp3)
 		if err == nil {
 			config.clientProfile = profile
 		}
@@ -251,9 +251,9 @@ func WithImpersonate(impersonate string) HttpClientOption {
 		config.impersonate = impersonate
 	}
 }
-func WithDisableHttp3() HttpClientOption {
+func WithHttp3(withHttp3 *bool) HttpClientOption {
 	return func(config *httpClientConfig) {
-		config.disableHttp3 = true
+		config.withHttp3 = withHttp3
 	}
 }
 

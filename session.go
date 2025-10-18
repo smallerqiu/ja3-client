@@ -20,8 +20,8 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 		WithForceHttp1(request.ForceHTTP1),
 		WithCookieJar(jar),
 	}
-	if request.DisableHTTP3 {
-		options = append(options, WithDisableHttp3())
+	if request.WithHTTP3 != nil {
+		options = append(options, WithHttp3(request.WithHTTP3))
 	}
 	if request.WithDebug {
 		options = append(options, WithDebug())
@@ -29,10 +29,10 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 	if !request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}
-	userAgent := ja3.Chrome_139.UserAgent
+	userAgent := ja3.Chrome_140.UserAgent
 
 	if request.Ja3 != "" {
-		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai)
+		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai, request.WithHTTP3)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +54,7 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 		if request.Impersonate != "" {
 			impersonate = request.Impersonate
 		}
-		profile, err := ja3.BuildClientHelloSpec(impersonate)
+		profile, err := ja3.BuildClientHelloSpec(impersonate, request.WithHTTP3)
 		if err != nil {
 			return nil, err
 		}
