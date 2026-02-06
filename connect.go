@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/bdandy/go-socks4"
 	"github.com/smallerqiu/ja3-client/http"
 	"github.com/smallerqiu/ja3-client/http2"
+	_ "github.com/smallerqiu/ja3-client/socks"
 	"golang.org/x/net/proxy"
 )
 

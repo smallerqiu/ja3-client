@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	http "github.com/smallerqiu/ja3-client/http"
+	hpkp "github.com/smallerqiu/ja3-client/http/hpkp"
 	tls "github.com/smallerqiu/utls"
-	"github.com/tam7t/hpkp"
 )
 
 var DefaultBadPinHandler = func(req *http.Request) {
