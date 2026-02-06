@@ -1,23 +1,67 @@
-# define the supported platforms and architectures
-PLATFORMS = linux/amd64 windows/amd64 darwin/amd64 linux/arm64
+NAME=ja3_client
+BUILD_DIR=build
+SOURCE=main.go
 
-# define the shared library prefix and extension
-LIB_PREFIX = ja3_client
-LIB_EXT_linux = .so
-LIB_EXT_windows = .dll
-LIB_EXT_darwin = .dylib
+LDFLAGS=-ldflags="-s -w"
 
-# default target
-all: $(PLATFORMS)
+.PHONY: all windows linux darwin clean help
 
-$(PLATFORMS):
-	@echo "Building for $@"
-	@$(MAKE) build-platform GOOS=$(word 1, $(subst /, ,$@)) GOARCH=$(word 2, $(subst /, ,$@))
+all: clean linux windows darwin
 
-build-platform:
-	@echo "Building for $(GOOS)/$(GOARCH)"
-	@GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(LIB_PREFIX)_$(GOOS)_$(GOARCH)$(LIB_EXT_$(GOOS)) -buildmode=c-shared main.go
+## Linux (x86_64)
+## if your system is mac , you need to install musl-gcc :
+## brew install FiloSottile/musl-cross/musl-cross
+linux:
+	@echo "Building for Linux..."
+	@mkdir -p $(BUILD_DIR)/linux
+	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+	CC=x86_64-linux-musl-gcc \
+	go build $(LDFLAGS) \
+		-buildmode=c-shared \
+		-o $(BUILD_DIR)/linux/$(NAME).so $(SOURCE)
 
+## Windows (x86_64)
+
+## if your system is mac , you need to install mingw-w64 :
+## brew install mingw-w64
+
+windows:
+	@echo "Building for Windows..."
+	@mkdir -p $(BUILD_DIR)/windows
+	# 注意：跨平台编译需要指定 CC (C 编译器)
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
+	CC=x86_64-w64-mingw32-gcc \
+	go build $(LDFLAGS) \
+		-buildmode=c-shared \
+		-o $(BUILD_DIR)/windows/$(NAME).dll $(SOURCE)
+
+## macOS (支持 Intel 和 Apple Silicon)
+darwin: darwin-amd64 darwin-arm64
+
+darwin-amd64:
+	@echo "Building for macOS (Intel)..."
+	@mkdir -p $(BUILD_DIR)/darwin
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) \
+		-buildmode=c-shared \
+		-o $(BUILD_DIR)/darwin/$(NAME)_amd64.dylib $(SOURCE)
+
+darwin-arm64:
+	@echo "Building for macOS (M1/M2/M3)..."
+	@mkdir -p $(BUILD_DIR)/darwin
+	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) \
+		-buildmode=c-shared \
+		-o $(BUILD_DIR)/darwin/$(NAME)_arm64.dylib $(SOURCE)
+
+# 清理构建目录
 clean:
-	@rm -f $(LIB_PREFIX)_*
-	@echo "Cleaned up all generated files."
+	@echo "Cleaning up..."
+	@rm -rf $(BUILD_DIR)
+
+# 帮助信息
+help:
+	@echo "Usage:"
+	@echo "  make all      - Build for all platforms"
+	@echo "  make linux    - Build for Linux"
+	@echo "  make windows  - Build for Windows (requires mingw-w64)"
+	@echo "  make darwin   - Build for macOS (Intel & M-Series)"
+	@echo "  make clean    - Remove build directory"

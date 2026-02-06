@@ -13,42 +13,45 @@ import (
 	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
-func outPut(res *ja3.Response, error bool) *C.char {
-	if error {
-		// res.StatusCode = 0
+//export Free
+func Free(ptr *C.char) {
+	if ptr != nil {
+		C.free(unsafe.Pointer(ptr))
 	}
+}
+
+func outPut(res *ja3.Response) *C.char {
 	jsonResponse, err := json.Marshal(res)
 	if err != nil {
-		return C.CString(`{"Body":"` + err.Error() + `","StatusCode":0}`)
+		return C.CString(`{"Body":"json marshal error","StatusCode":0}`)
 	}
-
-	respStr := C.CString(string(jsonResponse))
-
-	defer C.free(unsafe.Pointer(respStr))
-	return respStr
+	return C.CString(string(jsonResponse))
 }
 
 //export request
 func request(params *C.char) *C.char {
-	response := ja3.Response{}
 	optionsStr := C.GoString(params)
 	options := ja3.Ja3Request{}
+
+	response := ja3.Response{}
+
 	err := json.Unmarshal([]byte(optionsStr), &options)
 	if err != nil {
-		response.Body = err.Error()
-		return outPut(&response, true)
+		response.Body = "Invalid input JSON: " + err.Error()
+		return outPut(&response)
 	}
-	res, err := client.DoRequest(&options)
 
+	res, err := client.DoRequest(&options)
 	if err != nil {
-		response.Body = err.Error()
-		return outPut(&response, true)
+		response.Body = "Request error: " + err.Error()
+		return outPut(&response)
 	}
 	defer res.Body.Close()
+
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		response.Body = err.Error()
-		return outPut(&response, false)
+		response.Body = "Read body error: " + err.Error()
+		return outPut(&response)
 	}
 
 	cookiesMap := make(map[string]string)
@@ -62,6 +65,7 @@ func request(params *C.char) *C.char {
 		Headers:    res.Header,
 		Cookies:    cookiesMap,
 	}
-	return outPut(&response, false)
+	return outPut(&response)
 }
+
 func main() {}
