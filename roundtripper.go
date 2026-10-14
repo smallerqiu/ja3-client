@@ -19,6 +19,8 @@ import (
 
 const defaultIdleConnectionTimeout = 90 * time.Second
 
+type transportKind int
+
 var errProtocolNegotiated = errors.New("protocol negotiated")
 
 type roundTripper struct {
@@ -34,6 +36,9 @@ type roundTripper struct {
 	badPinHandlerFunc BadPinHandlerFunc
 	cachedConnections map[string]net.Conn
 	cachedTransports  map[string]http.RoundTripper
+
+	cachedKinds    map[string]transportKind
+	cachedKindsLck sync.Mutex
 
 	headerPriority      *http2.PriorityParam
 	settings            map[http2.SettingID]uint32
@@ -169,6 +174,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	err = rt.certificatePinner.Pin(conn, host)
 
 	if err != nil {
+		_ = conn.Close()
 		return nil, err
 	}
 
