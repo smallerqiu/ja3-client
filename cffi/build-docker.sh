@@ -52,11 +52,21 @@ REPO_ROOT="$(dirname "$CFFI_DIR")"
 # binutils-* is listed beside its gcc-* even though the gcc pulls it in: this script
 # is the release gate, and an explicit dependency is cheaper than a CI run spent
 # discovering that a dependency moved.
+#
+# libc6-dev-<arch>-cross has to be named too, and that one is not redundant: Debian
+# makes it a Recommends of the cross gcc, and this script installs with
+# --no-install-recommends, so the toolchain arrives without the target's C headers.
+# The build then dies in runtime/cgo with fatal error: bits/wordsize.h /
+# bits/libc-header-start.h: No such file or directory - the cross gcc finds its own
+# include dir but the target libc is missing, and it falls back to the host /usr/include
+# (Release run #9: amd64 and both windows targets shipped, all three Linux cross
+# targets failed this way). mingw needs nothing similar because
+# gcc-mingw-w64-* depends on the libc headers outright.
 TARGETS=(
   "linux/amd64|linux|amd64|-|libja3_client_amd64.so|x86_64-linux-gnu-gcc|-|-Wl,-soname,libja3_client_amd64.so|-|nm"
-  "linux/arm64|linux|arm64|-|libja3_client_arm64.so|aarch64-linux-gnu-gcc|gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu|-Wl,-soname,libja3_client_arm64.so|-|aarch64-linux-gnu-nm"
-  "linux/arm/v7|linux|arm|7|libja3_client_armv7.so|arm-linux-gnueabihf-gcc|gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf|-Wl,-soname,libja3_client_armv7.so|-|arm-linux-gnueabihf-nm"
-  "linux/386|linux|386|-|libja3_client_386.so|i686-linux-gnu-gcc|gcc-i686-linux-gnu binutils-i686-linux-gnu|-Wl,-soname,libja3_client_386.so|-|i686-linux-gnu-nm"
+  "linux/arm64|linux|arm64|-|libja3_client_arm64.so|aarch64-linux-gnu-gcc|gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu libc6-dev-arm64-cross|-Wl,-soname,libja3_client_arm64.so|-|aarch64-linux-gnu-nm"
+  "linux/arm/v7|linux|arm|7|libja3_client_armv7.so|arm-linux-gnueabihf-gcc|gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf libc6-dev-armhf-cross|-Wl,-soname,libja3_client_armv7.so|-|arm-linux-gnueabihf-nm"
+  "linux/386|linux|386|-|libja3_client_386.so|i686-linux-gnu-gcc|gcc-i686-linux-gnu binutils-i686-linux-gnu libc6-dev-i386-cross|-Wl,-soname,libja3_client_386.so|-|i686-linux-gnu-nm"
   "windows/amd64|windows|amd64|-|ja3_client_amd64.dll|x86_64-w64-mingw32-gcc|gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64|-|ja3_client_amd64.lib|x86_64-w64-mingw32-nm"
   "windows/386|windows|386|-|ja3_client_386.dll|i686-w64-mingw32-gcc|gcc-mingw-w64-i686 binutils-mingw-w64-i686|-|ja3_client_386.lib|i686-w64-mingw32-nm"
 )
