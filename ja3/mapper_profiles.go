@@ -1,8 +1,11 @@
 package ja3
 
-var DefaultImpersonate = "chrome_140"
+var DefaultImpersonate = "chrome_141"
 
-var DefaultClient = c(Chrome_140, Chrome_136)
+// c() only swaps the User-Agent, so DefaultClient stays byte-identical to the
+// "chrome_141" mapping below - which is what the fallback log in
+// BuildClientHelloSpec promises when it names DefaultImpersonate.
+var DefaultClient = c(Chrome_141, Chrome_136)
 
 var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate, nil)
 

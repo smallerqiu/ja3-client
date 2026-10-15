@@ -26,10 +26,17 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 	if request.WithDebug {
 		options = append(options, WithDebug())
 	}
-	if !request.NotFollowRedirects {
+	// NotFollowRedirects opts out of the default, which is to follow redirects the
+	// way net/http does. This used to read `if !request.NotFollowRedirects`, which
+	// inverted it: leaving the field alone disabled following, and setting it to
+	// true enabled it.
+	if request.NotFollowRedirects {
 		options = append(options, WithNotFollowRedirects())
 	}
-	userAgent := ja3.Chrome_140.UserAgent
+	// Seeds the UA for the branches that cannot resolve one from a profile
+	// (empty GetUserAgent). Read from DefaultClient so it follows
+	// ja3.DefaultImpersonate instead of drifting behind it.
+	userAgent := ja3.DefaultClient.UserAgent
 
 	if request.Ja3 != "" {
 		profile, err := ja3.BuildClientHelloSpecFromJa3Key(request.Ja3, request.Akamai, request.WithHTTP3)
