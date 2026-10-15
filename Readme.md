@@ -15,7 +15,7 @@ Demonstrates good performance with 10 million concurrent requests. It is safe to
 - Custom TLS extension order
 - Custom connection flow
 - Custom header order
-- Custom client identifier (Chrome, Firefox, Opera, Safari, iOS, iPadOS, Android, Tor, Brave ,360 ,QQ ,UC...)
+- Custom client identifier (Chrome, Firefox, Opera, Safari, iOS, iPadOS, Android, Tor, Brave ,360 ,UC...)
 - Supported Http3 protocols
 
 ## Supported browsers
@@ -24,24 +24,30 @@ The following browsers can be impersonated.
 
 | Browser    | Version                                                                                                                                                                                                                                                                                                                              |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Chrome     | chrome_140,chrome_139, chrome_138, chrome_137, chrome_137, chrome_136, chrome_135, chrome_134, chrome_133, chrome_132, chrome_131_android, chrome_99_android, chrome_131, chrome_130, chrome_129, chrome_128, chrome_127, chrome_126, chrome_125, chrome_124, chrome_123, chrome_122, chrome_121, chrome_120, chrome_119, chrome_117 |
-| Firefox    | firefox_142, firefox_141, firefox_140, firefox_139, firefox_138, firefox_137, firefox_136, firefox_135, firefox_134, firefox_133, firefox_132, firefox_123, firefox_120, firefox_117                                                                                                                                                 |
-| Safari Mac | safari_15_3 , safari_15_5 , safari_17_0 , safari_18_0 , safari_18_1 , safari_18_5 , safari_26_0 ,                                                                                                                                                                                                                                    |
+| Chrome     | chrome_141, chrome_140, chrome_139, chrome_138, chrome_137, chrome_136, chrome_135, chrome_134, chrome_133, chrome_132, chrome_131, chrome_130, chrome_129, chrome_128, chrome_127, chrome_126, chrome_125, chrome_124, chrome_123, chrome_122, chrome_121, chrome_120, chrome_119, chrome_117, chrome_137_ios, chrome_131_android, chrome_99_android |
+| Firefox    | firefox_144, firefox_143, firefox_142, firefox_141, firefox_140, firefox_139, firefox_138, firefox_137, firefox_136, firefox_135, firefox_134, firefox_133, firefox_132, firefox_123, firefox_120, firefox_117 |
+| Safari Mac | safari_26_0, safari_18_5, safari_18_1, safari_18_0, safari_17_0, safari_15_5, safari_15_3 |
 | Safari IOS | safari_ios_17_0, safari_ios_18_0, safari_ios_18_5, safari_ios_26_0                                                                                                                                                                                                                                                                   |
 | Edge       | edge_140,edge_139, edge_138, edge_137, edge_136, edge_135, edge_134, edge_133, edge_132, edge_131, edge_101                                                                                                                                                                                                                          |
 | Opera      | opera_120, opera_119, opera_117                                                                                                                                                                                                                                                                                                      |
-| 360        | qh360_16_0                                                                                                                                                                                                                                                                                                                           |
+| 360        | qh360_16_0, qh360_5_5_ios |
 | UC         | uc_17_9                                                                                                                                                                                                                                                                                                                              |
 | Xiaomi     | xiaomi_15_9                                                                                                                                                                                                                                                                                                                          |
 | Samsung    | samsung_27_1                                                                                                                                                                                                                                                                                                                         |
 | Tor        | tor_14_5                                                                                                                                                                                                                                                                                                                             |
-| Brave      | brave_1_8                                                                                                                                                                                                                                                                                                                            |
+| Brave      | brave_1_8 |
+
+75 identifiers in total. `ja3/mapper_profiles.go` is the authoritative list, and the keys are case-sensitive.
+
+Heads-up: a typo in `Impersonate` does not return an error. `BuildClientHelloSpec` logs `the input client ... don't support, so use default` and quietly falls back to `chrome_141`, so a mis-cased value looks like it worked while you are sending Chrome's fingerprint. Check that log line (or `WithDebug`) if the fingerprint site disagrees with you.
 
 ## Dependencies
 
 ```bash
-golang ^v1.21x
+golang >= 1.26
 ```
+
+`go.mod` declares `go 1.26.0`, which is forced by `golang.org/x/net v0.61.0` and `golang.org/x/crypto v0.58.0` (both require Go 1.26). Go 1.21+ ships `GOTOOLCHAIN=auto`, so an older local toolchain still builds this module by downloading Go 1.26 on demand.
 
 ## Installation
 
@@ -53,7 +59,7 @@ go get github.com/smallerqiu/ja3-client
 
 ### Basic Usage
 
-default impersonate chrome 138 , but you can set you customized ja3 string or others browser and version
+default impersonate `chrome_141` (`ja3.DefaultImpersonate`), but you can set your customized ja3 string or another browser and version.
 
 ```go
 package main
@@ -66,24 +72,21 @@ import (
 )
 
 func main() {
-  // support Get,Post,Delete,Put
- response, err := tls.Get("https://tls.browserleaks.com/json",nil)
+	// Get / Post / Put / Delete are available for one-off requests.
+	// Note: these helpers build a throwaway client per call and do not follow
+	// redirects; use CreateSession when you want cookie and connection reuse.
+	response, err := tls.Get("https://tls.browserleaks.com/json", nil)
+	if err != nil {
+		log.Fatalf("request failed: %v", err)
+	}
+	defer response.Body.Close()
 
- if err != nil {
-  log.Printf("Error response: %v", err)
- }
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("read response body failed: %v", err)
+	}
 
- defer response.Body.Close()
-
- bytes, err := io.ReadAll(response.Body)
-
- if err != nil {
-  log.Printf("Error response: %v", err)
- }
-
- log.Printf("Response: %s", string(bytes))
-
- log.Printf("%v,%s: %s", response.StatusCode)
+	log.Printf("status %d, body: %s", response.StatusCode, bytes)
 }
 ```
 
@@ -92,46 +95,49 @@ func main() {
 use custom ja3 string do http request .
 If you're going to use a customized JA3 , you'd better know the browser type.  Or you can just use the Custom Client
 
+`Ja3Request` lives in the `ja3` subpackage — the root package does not re-export it, so both imports are needed.
+
+The profile is picked in this order: `Ja3` (custom JA3 string) → `ClientData` (fully custom fingerprint) → `Impersonate` (built-in browser, default `chrome_141`).
+
 ```go
 package main
 
 import (
- "io"
- "log"
+	"io"
+	"log"
 
- tls "github.com/smallerqiu/ja3-client"
+	tls "github.com/smallerqiu/ja3-client"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
 func main() {
- reqBody := &tls.Ja3Request{
-  Method: "GET",
-  URL: "https://www.google.com",
-  // Proxy: "http://127.0.0.1:7890", // optional
-  // Headers: make(map[string][]string), // optional , your custom headers
-  Ja3: "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
-  // Akamai: "1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p" // Optional, if you want to use akamai to keep http2 fingerprint more accurate.
-  // RandomExtensionOrder: true, // Optional , if is true, the extension order will be randomized
- }
- 
- var response, err := tls.DoRequest(reqBody)
+	reqBody := &ja3.Ja3Request{
+		Method: "GET",
+		URL:    "https://tls.browserleaks.com/json",
+		Ja3:    "771,4867-4865-4866-52393-52392-49195-49199-49196-49200-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+		// Proxy:   "http://127.0.0.1:7890",         // optional
+		// Headers: make(map[string][]string),       // optional, your custom headers
+		// Akamai:  "1:65535;2:0;4:5840;6:262144|15663105|0|m,a,s,p", // optional, keeps the HTTP2 fingerprint accurate
+		// RandomExtensionOrder: true,               // optional, randomizes the TLS extension order
+	}
 
- if err != nil {
-  log.Printf("Client Error: %v", err)
- }
+	response, err := tls.DoRequest(reqBody)
+	if err != nil {
+		log.Fatalf("client error: %v", err)
+	}
+	defer response.Body.Close()
 
- defer response.Body.Close()
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("read response body failed: %v", err)
+	}
 
- bytes, err := io.ReadAll(response.Body)
-
- if err != nil {
-  log.Printf("Error response: %v", err)
- }
-
- log.Printf("Response: %s", string(bytes))
-
- log.Printf("%v,%s: %s", response.StatusCode, reqBody.Method, reqBody.URL)
+	log.Printf("%s %s -> %d", reqBody.Method, reqBody.URL, response.StatusCode)
+	log.Printf("Response: %s", bytes)
 }
 ```
+
+Runnable version: `go run ./example/ja3string`
 
 ## Custom Client
 
@@ -139,41 +145,80 @@ func main() {
 package main
 
 import (
- "io"
- "log"
+	"io"
+	"log"
 
- tls "github.com/smallerqiu/ja3-client"
+	tls "github.com/smallerqiu/ja3-client"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
 )
 
 func main() {
- reqBody := &tls.Ja3Request{
-  Method:"GET",
-  URL:"https://tls.browserleaks.com/json",
-  // Proxy:"http://127.0.0.1:7890", // optional
-  // Headers:make(map[string][]string), //optional
-  Impersonate:"chrome_136",
-  // RandomExtensionOrder: true, //optional , if is true, the order of extensions will be randomized
- }
- 
- var response, err := tls.DoRequest(reqBody)
+	reqBody := &ja3.Ja3Request{
+		Method:      "GET",
+		URL:         "https://tls.browserleaks.com/json",
+		Impersonate: "chrome_136",
+		// Proxy:   "http://127.0.0.1:7890",   // optional
+		// Headers: make(map[string][]string), // optional
+		// RandomExtensionOrder: true,         // optional, randomizes the extension order
+	}
 
- if err != nil {
-  log.Printf("Client Error: %v", err)
- }
+	response, err := tls.DoRequest(reqBody)
+	if err != nil {
+		log.Fatalf("client error: %v", err)
+	}
+	defer response.Body.Close()
 
- defer response.Body.Close()
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("read response body failed: %v", err)
+	}
 
- bytes, err := io.ReadAll(response.Body)
-
- if err != nil {
-  log.Printf("Error response: %v", err)
- }
-
- log.Printf("Response: %s", string(bytes))
-
- log.Printf("%v,%s: %s", response.StatusCode, reqBody.Method, reqBody.URL)
+	log.Printf("%s %s -> %d", reqBody.Method, reqBody.URL, response.StatusCode)
+	log.Printf("Response: %s", bytes)
 }
 
+```
+
+Runnable version: `go run ./example/impersonate`
+
+## Reusing a session
+
+`DoRequest` builds a client per call and closes idle connections when it returns, so every call does a fresh TCP + TLS handshake. For anything beyond a smoke test, build one client with `CreateSession` and keep it around — it is safe for concurrent use and carries cookies in its own jar.
+
+```go
+package main
+
+import (
+	"io"
+	"log"
+
+	tls "github.com/smallerqiu/ja3-client"
+	ja3 "github.com/smallerqiu/ja3-client/ja3"
+)
+
+func main() {
+	client, err := tls.CreateSession(&ja3.Ja3Request{
+		Impersonate: "chrome_140",
+		Timeout:     30,
+	})
+	if err != nil {
+		log.Fatalf("create session failed: %v", err)
+	}
+	defer client.CloseIdleConnections()
+
+	response, err := client.Get("https://tls.browserleaks.com/json")
+	if err != nil {
+		log.Fatalf("request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("read response body failed: %v", err)
+	}
+
+	log.Printf("status %d, body: %s", response.StatusCode, bytes)
+}
 ```
 
 ## Options
@@ -181,16 +226,89 @@ func main() {
 | Name        | Description                                                                     | Type        | Default         | Optional | example                  |
 | :---------- | :------------------------------------------------------------------------------ | :---------- | :-------------- | :------- | :----------------------- |
 | Method      | request type                                                                    | string      | -               | No       | GET, POST ,PUT, DELETE   |
-| URL         | request url                                                                     | http.Header | -               | No       | `https://example.com`      |
-| Body        | request body                                                                    | []byte      | -               | Yes      | b'{"a": 1}'              |
+| URL         | request url                                                                     | string      | -               | No       | `https://example.com`      |
+| Body        | request body                                                                    | []byte      | -               | Yes      | `[]byte("{\"a\": 1}")`   |
 | Proxy       | request proxy url                                                               | string      | -               | Yes      | `http://198.168.1.55:7890` |
 | SourceIP    | if your server has multiple IPs,you can decide on one of them as the source IP. | string      | -               | Yes      | 193.189.xx.xx            |
-| Impersonate | which type of browser to impersonate                                            | string      | chrome_138      | Yes      | chrome_137               |
-| Ja3         | customized ja3 key                                                              | string      | -               | Yes      | 771,867-4865-....        |
+| Impersonate | which type of browser to impersonate                                            | string      | chrome_141      | Yes      | chrome_137               |
+| Ja3         | customized ja3 key                                                              | string      | -               | Yes      | 771,4867-4865-....        |
 | Akamai      | customized akamai key                                                           | string      | chrome's akamai | Yes      | 1:65535;2:0;4:...        |
 | Timeout     | the timeout for the request.                                                    | int         | 30(s)           | Yes      | 60                       |
+| ForceHTTP1  | skip ALPN-based HTTP2/HTTP3 selection and stay on HTTP/1.1                       | bool        | false           | Yes      | true                     |
+| WithDebug   | log raw request/response sizes and headers                                         | bool        | false           | Yes      | true                     |
 | ClientData  | if you want to customized a browser's fingerprint, you can set this options     | *ClientData | -               | Yes      | ....                     |
 
- Of course, you can also look at other projects, such as [curl_cffi](https://github.com/lexiforest/curl_cffi), [REQ](https://github.com/imroc/req) etc.
+## From Node, Python or C#
 
-multple ips
+`cffi/` builds this same library as one shared object with a small C ABI
+(JSON in, JSON out), and [`cffi/README.md`](cffi/README.md) is the contract: payload
+fields, the response envelope, the error codes, and the memory rules that ctypes/koffi
+callers get wrong.
+
+| binding | dependency |
+| --- | --- |
+| [`cffi/bindings/python`](cffi/bindings/python/ja3_client.py) | none (ctypes) |
+| [`cffi/bindings/node`](cffi/bindings/node/index.js) | `koffi` |
+| [`cffi/bindings/csharp`](cffi/bindings/csharp/Ja3.cs) | none (P-Invoke) |
+
+```python
+from ja3_client import Ja3
+
+ja3 = Ja3()
+print(ja3.get("https://tls.browserleaks.com/json", impersonate="chrome_140").json()["ja3n_hash"])
+
+with ja3.session(impersonate="chrome_140") as session:   # one connection pool, one cookie jar
+    session.get("https://httpbin.org/cookies")
+```
+
+Releases carry prebuilt libraries (`libja3_client_<arch>.so`,
+`ja3_client_<arch>.dll` / `.lib`, `ja3_client_<arch>.dylib`) as zips, each with the
+generated header and `smoke.py`, so you can check the file you downloaded before
+writing any code against it. Build your own with `make` in `cffi/`.
+
+## Reporting problems
+
+The issue forms ask for the two things that make a TLS report fixable: the version the
+library reports (`ja3_version()` / `python3 smoke.py`), and captures from both the real
+browser and this library against the same endpoint on the same day.
+
+* **Bug report** - anything that does not behave as documented.
+* **Fingerprint mismatch** - the browser and this library send different bytes.
+* **New browser version** - a profile that does not exist yet; bring the capture.
+
+One thing worth knowing before you file: a typo in `Impersonate` is not an error. The
+library logs `the input client ... don't support, so use default` and sends
+`DefaultClient`'s fingerprint instead, so check the ids in
+[`ja3/mapper_profiles.go`](ja3/mapper_profiles.go) if a fingerprint site disagrees
+with you.
+
+## Local development with ja3-utls
+
+The TLS fingerprint itself lives in the sibling module `github.com/smallerqiu/utls`. During development that checkout is usually worked on next to this one:
+
+```
+My/
+├── ja3-client/
+└── ja3-utls/
+```
+
+Do **not** put `replace github.com/smallerqiu/utls => ../ja3-utls` back into `go.mod`. A `replace` in a library's own `go.mod` is ignored by every module that imports it, so it only affects your machine while silently breaking `go get github.com/smallerqiu/ja3-client` for everyone else (go.sum then has no `utls` entry at all).
+
+Use a gitignored `go.work` for the local pairing instead:
+
+```
+go 1.26.0
+
+use (
+	.
+	../ja3-utls
+)
+```
+
+Before shipping, verify the published-dependency path — it resolves `utls` from the proxy exactly like a consumer does:
+
+```bash
+GOWORK=off go build ./...
+```
+
+Of course, you can also look at other projects, such as [curl_cffi](https://github.com/lexiforest/curl_cffi), [REQ](https://github.com/imroc/req) etc.
