@@ -1,0 +1,195 @@
+name: CI
+
+# Every check that can run without internet. The live fingerprint suite in
+# tests/ is deliberately NOT here: it compares against tls.peet.ws and a local
+# proxy at 127.0.0.1:7890, so it is a release-day manual check, not a gate.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # cffi is a separate main module with `replace ... => ../`. The repository's
+  # go.work would take over module resolution and hide that, so CI resolves
+  # modules exactly the way a consumer does.
+  GOWORK: off
+
+jobs:
+  hygiene:
+    name: module hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
+
+      - name: gofmt
+        run: |
+          # http/, http2/, http3/, internal/, quic/ are copies of net/http and
+          # quic-go, kept as close to upstream as possible so they stay diffable.
+          bad="$(gofmt -l . | grep -vE '^(http|http2|http3|internal|quic)/' || true)"
+
+          if [ -n "$bad" ]; then
+            echo "run gofmt on:"
+            echo "$bad"
+            exit 1
+          fi
+
+      - name: go.mod replace rules
+        run: |
+          # A replace in the root go.mod is ignored by everyone who imports this
+          # module, so the published version silently built against a different
+          # ja3-utls than the one being developed. That is how `go get` broke once.
+          if grep -qE '^[[:space:]]*replace' go.mod; then
+            echo '::error::go.mod must not contain a replace directive. Use the'
+            echo '::error::gitignored go.work for local co-development instead.'
+            exit 1
+          fi
+
+          # cffi is the opposite case: it is a main module nobody imports, and the
+          # replace is what makes the shipped .so/.dll/.dylib contain this checkout.
+          if ! grep -q 'replace github.com/smallerqiu/ja3-client => ../' cffi/go.mod; then
+            echo '::error::cffi/go.mod must replace github.com/smallerqiu/ja3-client with'
+            echo '::error::../ or the shared library ships the last published tag, not'
+            echo '::error::the code that was just tested.'
+            exit 1
+          fi
+
+      - name: go.sum is tidy
+        run: |
+          go mod tidy -diff
+          cd cffi && go mod tidy -diff
+
+      - name: go vet
+        run: |
+          go vet ./...
+          cd cffi && go vet ./...
+
+  test:
+    name: go tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
+
+      - name: Everything compiles
+        shell: bash
+        run: go build ./...
+
+      - name: Root module tests
+        shell: bash
+        run: |
+          # ./tests needs the internet and third-party endpoints; see the header.
+          go test -count=1 -timeout 300s $(go list ./... | grep -v '/tests$')
+
+      # cffi is cgo: it needs a C toolchain, and the Windows runner's mingw is not
+      # what the release build uses (the dlls are cross-built on Linux).
+      - name: cffi module tests
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        working-directory: cffi
+        run: |
+          go build ./...
+          go test -count=1 -timeout 300s ./...
+
+  ffi:
+    name: shared library (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
+
+      - name: Build for this machine
+        shell: bash
+        working-directory: cffi
+        run: make host
+
+      - name: ABI contract, offline
+        shell: bash
+        working-directory: cffi
+        run: |
+          make smoke
+          make node-smoke
+
+      # Build -> package -> unpack -> load, the same path a user follows after
+      # downloading a release asset, minus the network.
+      - name: Release archive is self-verifying
+        shell: bash
+        working-directory: cffi
+        run: |
+          ./package-release.sh /tmp/ja3-dist ci-$GITHUB_SHA
+
+          # Spelled out rather than guessed from `uname -m`: the archive name is
+          # what the packaging script asserts against, and a runner whose arch the
+          # case below does not know must fail here instead of opening a zip that
+          # was never built.
+          case "$(uname -s)/$(uname -m)" in
+            Linux/x86_64)  slug=linux-amd64 ;;
+            Linux/aarch64) slug=linux-arm64 ;;
+            Darwin/arm64)  slug=darwin-arm64 ;;
+            Darwin/x86_64) slug=darwin-amd64 ;;
+            *)
+              echo "::error::no release slug for $(uname -s)/$(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          stage="$(mktemp -d)"
+          (cd "$stage" && unzip -q "/tmp/ja3-dist/ja3-client-ci-${GITHUB_SHA}-${slug}.zip")
+          cd "$stage"/ja3-client-*/
+          python3 smoke.py
+
+  bindings-csharp:
+    name: C# binding compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Build the library and the example
+        run: |
+          dotnet build cffi/bindings/csharp/Ja3Client.csproj -c Release
+          dotnet build cffi/bindings/csharp/example/Ja3Client.Example.csproj -c Release
+
+      # Running it needs the native library and internet, so CI only checks that
+      # the P-Invoke signatures compile. `make csharp-check` in cffi/ runs it for
+      # real wherever both are available.

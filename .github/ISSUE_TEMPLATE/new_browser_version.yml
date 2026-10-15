@@ -1,0 +1,97 @@
+name: New browser version
+description: Add a Chrome, Firefox, Safari, Edge or mobile profile that does not exist yet
+title: "[profile] "
+labels: ["enhancement", "browser-profile"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A new profile is a capture job, not a feature request. The bytes that make
+        it up - TLS extension order, supported groups, signature algorithms, HTTP/2
+        SETTINGS and WINDOW_UPDATE, header order - have to come from the real
+        browser, and they have to come from you or from a public capture, because
+        nobody can guess them.
+
+        Two facts worth knowing before you file:
+
+        * Profile ids live in `ja3/mapper_profiles.go` (`MappedTLSClients`). If the
+          TLS layer itself has no matching ClientHello spec, the work belongs in
+          [smallerqiu/utls](https://github.com/smallerqiu/utls) first, and
+          this repo can only follow it.
+        * An id that typos fails quietly: an unknown `impersonate` value logs
+          `the input client ... don't support, so use default` and falls back to
+          `DefaultClient` (chrome_141 today) rather than erroring, so a "not
+          implemented" report should say whether that line appeared.
+  - type: input
+    id: wanted-id
+    attributes:
+      label: Profile id you want
+      description: The spelling you will use in code, following the existing convention.
+      placeholder: chrome_156
+    validations:
+      required: true
+  - type: input
+    id: browser-version
+    attributes:
+      label: Exact browser version and platform
+      description: From the browser's own about page, plus OS. Android/iOS builds differ from desktop, so say which.
+      placeholder: Chrome 156.0.7845.117, Windows 11 24H2
+    validations:
+      required: true
+  - type: textarea
+    id: capture
+    attributes:
+      label: Capture from that browser
+      description: |
+        Paste the JSON from https://tls.peet.ws/api/all (TLS + HTTP/2 + TCP/IP) and
+        https://tls.browserleaks.com/json, both opened in that browser, incognito with
+        no extensions. For header order, add the request headers as DevTools shows
+        them (the Network tab's request line order, or a HAR export). Paste the text -
+        do not only link, those pages expire and the comparison has to survive the
+        issue being closed.
+      render: json
+      placeholder: |
+        {
+          "tls": { "ja3": "...", "ja3_hash": "...", "ja4": "t13d1516h2_...", "extensions": [0, 18, 16, 5, "..."], "ciphers": ["..."] },
+          "http2": { "akamai_fingerprint": "1:65536,2:0,4:6291456,5:1071|3|100:h2,h3|...", "sent_frames": ["..."] },
+          "tcpip": { "base_mss": 1360, "window_size": 47548 },
+          "user_agent": "Mozilla/5.0 ... Chrome/156.0.0.0 Safari/537.36",
+          "headers": ["sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "upgrade-insecure-requests", "...in the order sent"]
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: delta
+    attributes:
+      label: What changed from the previous version
+      description: |
+        If you can diff the two captures yourself, say what moved: new extension,
+        new ALPN value, changed SETTINGS, new sec-ch-ua major. This is usually the
+        whole fix.
+      placeholder: |
+        chrome_155 -> chrome_156: ja3 hash identical, ja4 identical, akamai gained
+        1:2048 (initial window size), sec-ch-ua major 155 -> 156.
+  - type: dropdown
+    id: can-supply
+    attributes:
+      label: Can you test the profile once it exists?
+      description: A profile that matches a capture is not the same as a profile a real site accepts, and only you have the target site.
+      options:
+        - "Yes, I can build from source and report back"
+        - "Yes, I can wait for a release and report back"
+        - "No"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked `ja3/mapper_profiles.go` (and Readme.md's supported browser table) and this id is really missing
+          required: true
+        - label: I checked the open and closed issues for this browser version
+          required: true
+        - label: My capture is from the exact version above, not an older install
+          required: true
+        - label: I pasted the capture as text instead of only linking to it
+        - label: I know the difference between "the fingerprint does not match the browser" and "a site blocks this fingerprint", and this request is the first

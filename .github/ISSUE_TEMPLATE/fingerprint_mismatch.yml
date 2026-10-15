@@ -1,0 +1,102 @@
+name: Fingerprint mismatch
+description: The library sends a different TLS or HTTP2 fingerprint than the browser it impersonates
+title: "[fingerprint] "
+labels: ["bug", "fingerprint"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A mismatch can only be diagnosed from **both sides captured at the same
+        time**: the real browser and this library, against the same endpoint.
+        "Chrome works, this library gets 403" is not enough information.
+
+        Do not report "the site blocked me": sites rotate their rules, and the
+        useful part is the diff, so a mismatch report still helps even when the
+        block came from something else.
+  - type: input
+    id: profile
+    attributes:
+      label: Profile you are impersonating
+      description: The `impersonate` value, or the `ja3` string if you build your own.
+      placeholder: chrome_140
+    validations:
+      required: true
+  - type: input
+    id: real-browser
+    attributes:
+      label: The real browser and version
+      description: Chrome 140.0.7339.127 on macOS 15.1, said in the browser's own about page. Incognito with no extensions.
+      placeholder: Chrome 140.0.7339.127, macOS 15.1
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference fingerprints from the browser
+      description: |
+        Open https://tls.peet.ws/api/all (plus https://tls.browserleaks.com/json for
+        the normalized hashes) in that browser and paste the JSON here. Paste it -
+        capture links expire, and the extension/order lists are what actually gets
+        compared. `/api/all` is the JSON endpoint; `/api/basic` serves the website.
+      render: json
+      placeholder: |
+        {
+          "tls": { "ja3": "...", "ja3_hash": "...", "ja4": "t13d1516h2_...", "extensions": [0, 18, 16, 5, "..."], "ciphers": ["..."] },
+          "http2": { "akamai_fingerprint": "1:65536,2:0,4:6291456,5:1071|3|100:h2,h3|...", "sent_frames": [...] },
+          "tcpip": { "base_mss": 1360, "window_size": 47548 },
+          "user_agent": "Mozilla/5.0 ... Chrome/140.0.0.0 Safari/537.36"
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What this library sends
+      description: The same endpoint, requested through this library with the profile above. Include the `warnings` list from the response.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: diff
+    attributes:
+      label: What you think differs
+      description: |
+        ja3 hash, ja4, ALPN, header order, HTTP/2 SETTINGS, or something the site
+        told you. Saying where you think the two diverge is often what makes the
+        report actionable - a wrong guess is still useful.
+  - type: dropdown
+    id: http3
+    attributes:
+      label: Is HTTP/3 involved?
+      description: |
+        `with_http3` changes the answer. In this build every profile advertises
+        `h3` first in the TCP ALPN, so browserleaks reads `ja4` as `...h3` where
+        a real Chrome reads `...h2` (tls.peet.ws reads `h2` for both) - see the
+        HTTP/3 section of cffi/README.md. Say which of the two you compared.
+      options:
+        - "No"
+        - "Yes: with_http3 true"
+        - "Yes: with_http3 false"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: surface
+    attributes:
+      label: How you call the library
+      description: Go code, or the payload you hand to `ja3_request` (Node/Python/C#), plus `ja3_version()` output for the shared library.
+      render: go
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: Both captures are from the same endpoint, same day
+          required: true
+        - label: The browser profile was incognito, no extensions
+          required: true
+        - label: I also tried the newest Chrome profile listed in Readme.md, and the one before it
+        - label: I checked the closed issues for this profile id
+        - label: The library version above is a release, not `dev`

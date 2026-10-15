@@ -1,153 +1,348 @@
-name: Cross-platform Shared Library Release
+name: Release
+
+# Ships the cross-language shared library (cffi/) as release assets.
+#
+#   git tag v1.2.5 && git push --tags   -> builds the matrix, opens the release
+#   release published (manual)          -> builds the matrix, attaches the assets
+#   workflow_dispatch                   -> builds artifacts for any ref; attaches
+#                                          them to a release only when "Publish"
+#                                          is checked and the tag exists
+#
+# The build itself lives in cffi/build-docker.sh (Linux + Windows, one Debian
+# bookworm container per target, so glibc stays old enough to matter) and in
+# cffi/Makefile (macOS, which Apple forbids building in a container). This file
+# only resolves the version, runs the gate, packages and uploads - so the exact
+# same commands work on a laptop:
+#
+#   cd cffi && ./build-docker.sh 1.2.5 && make darwin VERSION=1.2.5 && make package
+#
+# Each asset is a zip with the library, the cgo header, the Python binding and
+# smoke.py, so the download can prove itself offline:
+#
+#   unzip ja3-client-1.2.5-linux-amd64.zip && cd * && python3 smoke.py
 
 on:
   release:
-    types: [published]
+    types:
+      - published
   push:
     tags:
       - "v*"
   workflow_dispatch:
     inputs:
+      ref:
+        description: "Branch or tag to build"
+        type: string
+        default: master
       tag:
-        description: "Release tag v1.2.3"
+        description: "Release tag to stamp and publish (leave empty for artifacts only)"
+        type: string
         required: false
-        default: "v1.2.3"
+      publish:
+        description: "Publish"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: false
 
 env:
-  CGO_ENABLED: 1
-  LIB_NAME: "ja3-client"
+  GOWORK: off
 
 jobs:
-  build:
+  prepare:
+    name: version and gate
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform:
-          [
-            "windows/386",
-            "windows/amd64",
-            "linux/amd64",
-            "linux/arm64",
-            "linux/arm-7",
-            "darwin/amd64",
-            "darwin/arm64",
-          ]
-      fail-fast: false
-
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      ref: ${{ steps.version.outputs.ref }}
+      publish: ${{ steps.version.outputs.publish }}
+      docker_targets: ${{ steps.targets.outputs.matrix }}
+      artifact_count: ${{ steps.targets.outputs.count }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
         with:
-          go-version: "1.21"
+          # Tags are needed for `git describe`, and an explicit ref for dispatch runs.
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
 
-      - name: Setup Docker and QEMU
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          sudo docker buildx create --use
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
 
-      - name: Install cross-compilers
-        run: |
-          sudo apt-get install -y \
-            gcc-multilib \
-            gcc-arm-linux-gnueabi \
-            gcc-aarch64-linux-gnu \
-            gcc-mingw-w64
-            gcc-mingw-w64-i686
-
-      - name: Install xgo
-        run: go install github.com/crazy-max/xgo@latest
-
-      - name: Determine version
+      - name: Resolve the version
         id: version
-        run: |
-          if [[ ${{ github.event_name }} == 'release' ]]; then
-            VERSION=${{ github.event.release.tag_name }}
-          elif [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
-            VERSION=${{ inputs.tag }}
-          else
-            VERSION=${GITHUB_REF#refs/tags/}
-          fi
-
-          CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//;s/[^a-zA-Z0-9._-]//g')
-          echo "version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
-          echo "Using version: ${CLEAN_VERSION}"
-
-      - name: Build versioned library
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          PUBLISH_INPUT: ${{ inputs.publish }}
         run: |
-          case "${{ matrix.platform }}" in 
-            windows/386)
-              OUTPUT_BASE="$LIB_NAME-$VERSION-${{ matrix.platform }}"
-              OUTPUT_FILE="$OUTPUT_BASE.dll"
-              LDFLAGS="-extldflags=-Wl,--out-implib,${OUTPUT_BASE}.lib"
-              export CC=i686-w64-mingw32-gcc
+          tag=""
+          publish=false
+
+          case "$EVENT" in
+            release)
+              tag="$RELEASE_TAG"
+              publish=true
               ;;
-            windows*)
-              OUTPUT_BASE="$LIB_NAME-$VERSION-${{ matrix.platform }}"
-              OUTPUT_FILE="$OUTPUT_BASE.dll"
-              LDFLAGS="-extldflags=-Wl,--out-implib,${OUTPUT_BASE}.lib"
+            push)
+              tag="$GITHUB_REF_NAME"
+              publish=true
               ;;
-            linux*)
-              OUTPUT_BASE="lib$LIB_NAME-$VERSION-${{ matrix.platform }}"
-              OUTPUT_FILE="$OUTPUT_BASE.so"
-              LDFLAGS="-extldflags=-Wl,-soname,lib$LIB_NAME.so"
-              ;;
-            darwin*)
-              OUTPUT_BASE="lib$LIB_NAME-$VERSION-${{ matrix.platform }}"
-              OUTPUT_FILE="$OUTPUT_BASE.dylib"
-              LDFLAGS=""
+            workflow_dispatch)
+              tag="${INPUT_TAG:-}"
+
+              if [ "$PUBLISH_INPUT" = "true" ]; then
+                if [ -z "$tag" ]; then
+                  echo "::error::Publish needs the tag input. Without a tag this build"
+                  echo "::error::would attach artifacts to whatever release the newest"
+                  echo "::error::tag names, which is never what a manual run means."
+                  exit 1
+                fi
+
+                publish=true
+              fi
               ;;
           esac
 
-          BUILD_FLAGS="-X main.Version=$VERSION -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')"
-
-          if [[ "${{ matrix.platform }}" == "windows/386" ]]; then
-            CGO_ENABLED=1 GOOS=windows GOARCH=386 CC=i686-w64-mingw32-gcc \
-              go build -buildmode=c-shared \
-              -ldflags="$LDFLAGS $BUILD_FLAGS" \
-              -o "dist/$OUTPUT_FILE" \
-              ./cffi/main.go
-          else
-            xgo --targets=${{ matrix.platform }} \
-              -buildmode=c-shared \
-              -out "dist/$OUTPUT_BASE" \
-              -ldflags="$LDFLAGS $BUILD_FLAGS" \
-              -v \
-              ./cffi/main.go
+          # No tag means "artifacts only": stamp from the newest tag so the library
+          # can still say which release it is closest to.
+          if [ -z "$tag" ]; then
+            tag="$(git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0-dev)"
           fi
 
-          mkdir -p artifacts
-          mv dist/* artifacts/
-
-          if [[ "${{ matrix.platform }}" == windows* ]]; then
-            mv artifacts/$LIB_NAME-$VERSION-${{ matrix.platform }}.h artifacts/$OUTPUT_BASE.h
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z. -]+)?$'; then
+            echo "::error::refusing to publish '$tag': use vX.Y.Z (with an optional -suffix)"
+            exit 1
           fi
 
-          echo "$VERSION" > artifacts/VERSION
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          # The commit this job actually checked out - dispatch runs can point at a
+          # different ref than the workflow was triggered on.
+          echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "==> tag=$tag version=${tag#v} publish=$publish"
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+      # The gate: nothing gets built, let alone shipped, while the module does not
+      # compile or the ABI contract is broken. Same commands as `make check`.
+      - name: Library tests
+        run: |
+          go build ./...
+          go test -count=1 -timeout 300s $(go list ./... | grep -v '/tests$')
+
+      - name: ABI gate
+        working-directory: cffi
+        run: |
+          go test -count=1 -timeout 300s ./...
+          make host
+          make smoke
+
+      - name: Matrix from the build script
+        id: targets
+        working-directory: cffi
+        run: |
+          # The script owns the target list, so a new platform is added in one file
+          # and CI picks it up; this job only fails if the list comes back empty.
+          matrix="$(./build-docker.sh --list |
+            jq -R -s -c 'split("\n") | map(select(length > 0)) |
+                         map({id: ., slug: (. | gsub("/"; "-"))})')"
+
+          count="$(printf '%s' "$matrix" | jq 'length')"
+
+          if [ "$count" = "0" ]; then
+            echo "::error::build-docker.sh --list returned nothing"
+            exit 1
+          fi
+
+          # +2: the two dylibs the macOS runner builds with make.
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=$((count + 2))" >> "$GITHUB_OUTPUT"
+          echo "==> docker targets: $matrix (+2 darwin)"
+
+  build-portable:
+    name: ${{ matrix.id }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.docker_targets) }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TARGET: ${{ matrix.id }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: ${{ matrix.platform }}-${{ steps.version.outputs.version }}
-          path: artifacts/*
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Build ${{ matrix.id }}
+        working-directory: cffi
+        run: ./build-docker.sh "$VERSION" --only "$TARGET"
+
+      # The container writes as root; without this the runner cannot clean its own
+      # workspace and the job fails after a green build.
+      - name: Return ownership to the runner user
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" cffi/build cffi/dist 2>/dev/null || true
+
+      - name: Package
+        working-directory: cffi
+        run: ./package-release.sh dist "$VERSION"
+
+      - name: Archive contents
+        working-directory: cffi
+        run: |
+          ls -l dist
+          unzip -l dist/*.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libs-${{ matrix.slug }}
+          path: cffi/dist/*.zip
           if-no-files-found: error
 
-      - name: Create release (tag only)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+  build-darwin:
+    name: darwin (amd64 + arm64)
+    needs: prepare
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          files: |
-            artifacts/*.dll
-            artifacts/*.so
-            artifacts/*.dylib
-            artifacts/*.h
-            artifacts/VERSION
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
+
+      # Apple's SDK licence rules out building dylibs in Linux containers, so this
+      # is the one job that needs a Mac. Both arches cross-compile with clang.
+      - name: Build both dylibs
+        working-directory: cffi
+        run: make darwin VERSION="$VERSION"
+
+      - name: Exports and ABI
+        working-directory: cffi
+        run: |
+          for dylib in build/darwin/*.dylib; do
+            found="$(nm -gU "$dylib" | grep -cE '_ja3_(version|request|session_new|session_request|session_close|free)')"
+
+            if [ "$found" != "6" ]; then
+              echo "::error::${dylib} exports ${found} of 6 ABI functions"
+              exit 1
+            fi
+
+            echo "==> ${dylib}: 6/6 exports"
+          done
+
+          arch="$(uname -m)"
+          [ "$arch" = x86_64 ] && arch=amd64
+          python3 bindings/python/smoke.py "build/darwin/ja3_client_${arch}.dylib"
+
+      - name: Package
+        working-directory: cffi
+        run: ./package-release.sh dist "$VERSION"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libs-darwin
+          path: cffi/dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: attach assets
+    needs: [prepare, build-portable, build-darwin]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: libs-*
+          merge-multiple: true
+          path: dist
+
+      - name: Every platform is here
+        run: |
+          expected="${{ needs.prepare.outputs.artifact_count }}"
+          got="$(ls dist/*.zip | wc -l | tr -d ' ')"
+
+          if [ "$got" != "$expected" ]; then
+            echo "::error::expected $expected archives, found $got"
+            ls -l dist
+            exit 1
+          fi
+
+      - name: Checksums and release notes
+        run: |
+          (cd dist && sha256sum *.zip > ../checksums.txt)
+
+          # One source of truth for the ABI number: cffi/main.go declares it.
+          abi="$(grep -m1 'ABIVersion = ' cffi/main.go | awk '{print $NF}')"
+
+          {
+            printf '## ja3-client %s\n\n' "$VERSION"
+            printf 'C ABI version %s. Built from %s.\n\n' "$abi" "$TAG"
+            printf '### Use the archives\n\n'
+            printf 'Each zip holds the library, its cgo header, the Python binding and\n'
+            printf '`smoke.py`, which verifies the download offline - no request, no key:\n\n'
+            printf '```sh\n'
+            printf 'unzip ja3-client-%s-linux-amd64.zip\n' "$VERSION"
+            printf 'cd ja3-client-%s-linux-amd64\n' "$VERSION"
+            printf 'python3 smoke.py\n'
+            printf '```\n\n'
+            printf 'Drop the library next to a binding, or point `JA3_CLIENT_LIB` at it.\n'
+            printf 'Node: copy `cffi/bindings/node` into your project and `npm i koffi`.\n'
+            printf 'C#: add `cffi/bindings/csharp/Ja3.cs` and put the dll on the search path.\n'
+            printf 'Go: `go get github.com/smallerqiu/ja3-client@%s`.\n\n' "$TAG"
+            printf 'File names are the contract: `libja3_client_<arch>.so`,\n'
+            printf '`ja3_client_<arch>.dll` / `.lib`, `ja3_client_<arch>.dylib`.\n\n'
+            printf '### Assets\n\n| archive | sha256 |\n| --- | --- |\n'
+
+            while read -r sha name; do
+              printf '| %s | `%s...` |\n' "$name" "${sha:0:16}"
+            done < checksums.txt
+
+            printf '\n### How much of this CI actually ran\n\n'
+            printf '* Linux and Windows: cross-compiled in Debian bookworm containers, and\n'
+            printf '  every artifact is checked for its 6 ABI exports plus its architecture.\n'
+            printf '* macOS: built and loaded by `smoke.py` on an arm64 runner; the amd64\n'
+            printf '  dylib is export-checked but never executed.\n'
+            printf '* Linux arm64/armv7/386 and Windows 32-bit: built and checked, not executed.\n'
+          } > notes.md
+
+          cat notes.md
+
+      - name: Publish
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --target "${{ needs.prepare.outputs.ref }}" \
+              --title "ja3-client $TAG" \
+              --notes-file notes.md
+          fi
+
+          gh release upload "$TAG" dist/*.zip checksums.txt --clobber
+          gh release view "$TAG" --json name,assets --jq '.name, (.assets[] | "  " + .name)'

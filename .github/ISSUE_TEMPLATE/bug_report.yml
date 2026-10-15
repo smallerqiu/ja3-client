@@ -1,0 +1,111 @@
+name: Bug report
+description: Something does not work the way the documentation says it should
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing this. Two things make the difference between a fix in a
+        day and a thread nobody can follow: **a repro that needs no private site**,
+        and **the version the library says it is**.
+
+        If TLS/HTTP2 fingerprints differ from a real browser, please use
+        **"Fingerprint mismatch"** instead - it asks for the captures needed to
+        compare ClientHello bytes.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, what you got, and the exact error text.
+      placeholder: |
+        Expected: 200 from https://example.com with impersonate="chrome_140".
+        Got: error "tls: CurvePreferences includes unsupported curve".
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal repro
+      description: |
+        One file that fails on a fresh clone. Delete everything unrelated - a
+        10-line repro gets fixed; a 500-line one usually stalls. No proxy
+        credentials, cookies or session tokens, please.
+      render: go
+      placeholder: |
+        package main
+
+        import (
+            "fmt"
+
+            tls "github.com/smallerqiu/ja3-client"
+            ja3 "github.com/smallerqiu/ja3-client/ja3"
+        )
+
+        func main() {
+            resp, err := tls.DoRequest(&ja3.Ja3Request{
+                URL:         "https://example.com",
+                Impersonate: "chrome_140",
+            })
+            fmt.Println(resp, err)
+        }
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which API are you using?
+      description: The Go module and the shared library have different build, version and error paths.
+      options:
+        - Go module
+        - Shared library / cffi (Node, Python, C#, C, ...)
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: |
+        For the Go module: `go version` and the line from your go.mod.
+        For the shared library: paste the output of `ja3_version()` (or
+        `python3 smoke.py`, `node smoke.js`) - it names the release, the ABI and
+        the build time of the exact file you loaded. "latest" is not a version.
+      placeholder: |
+        go version go1.26.0 darwin/arm64
+        github.com/smallerqiu/ja3-client v1.2.4
+        {"error_code":0,"body_size":0,"version":"1.2.4","abi":2,"build_time":"2026-10-15T02:46:28Z","ok":true}
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS and version, architecture, whether traffic leaves through a proxy (type only, no address), container or bare metal.
+      placeholder: |
+        Ubuntu 24.04 amd64, Docker container, HTTP proxy (not SOCKS), no VPN.
+    validations:
+      required: true
+  - type: textarea
+    id: warnings
+    attributes:
+      label: Warnings the library returned
+      description: |
+        Every response carries a `warnings` list - an option name the library does
+        not know, a header it had to drop, and so on. A typo'd option is reported,
+        not silently ignored, so paste what came back. The key is missing entirely
+        when nothing was reported, which is worth saying out loud.
+      render: json
+      placeholder: |
+        "warnings": ["unknown option \"timeout_ms\" ignored"]
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched open and closed issues, including for the site I am testing
+          required: true
+        - label: I reproduced this against the newest release, not an old vendored copy
+          required: true
+        - label: The repro above fails without my proxy, cookies or account
+          required: true
+        - label: I am not reporting a site that started blocking a fingerprint it accepted last week (that is their change, not this library's - see the fingerprint template for what still helps)

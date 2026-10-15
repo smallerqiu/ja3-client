@@ -1,0 +1,21 @@
+# No blank issues: the three forms ask for the capture, version and repro data a
+# report needs to be actionable. If none of them fits, open a bug report and say
+# why in the first line.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Go package documentation
+    url: https://pkg.go.dev/github.com/smallerqiu/ja3-client
+    about: API reference for the Go module, generated from this repository.
+
+  - name: Shared library ABI and bindings
+    url: https://github.com/smallerqiu/ja3-client/blob/master/cffi/README.md
+    about: >-
+      The C contract, payload keys, error codes, memory rules and the Node,
+      Python and C# bindings. Read this before reporting a cffi problem.
+
+  - name: TLS profiles
+    url: https://github.com/smallerqiu/utls
+    about: >-
+      The ClientHello specs live in this sibling module. Report a missing or wrong
+      TLS extension order there, not here.
