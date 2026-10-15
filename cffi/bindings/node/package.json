@@ -1,0 +1,33 @@
+{
+  "name": "@smallqiu/ja3-client-ffi",
+  "version": "0.0.0",
+  "description": "Node.js binding for the ja3-client TLS-impersonation shared library",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs",
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.mjs",
+    "index.d.ts",
+    "README.md"
+  ],
+  "dependencies": {
+    "koffi": "^2.16.3"
+  },
+  "keywords": [
+    "ja3",
+    "ja4",
+    "tls",
+    "impersonate",
+    "fingerprint",
+    "ffi",
+    "koffi"
+  ],
+  "license": "MIT"
+}

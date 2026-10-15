@@ -1,25 +1,24 @@
-module cffi
+module github.com/smallerqiu/ja3-client/cffi
 
-go 1.24.1
+go 1.26.0
 
-toolchain go1.24.7
-
-require github.com/smallerqiu/ja3-client v1.2.3
+// The shared library is built from this repo, not from a published tag.
+// Pinning github.com/smallerqiu/ja3-client to a released version meant every
+// .so/.dll/.dylib shipped the old library code while the repo moved on.
+// cffi is a main module that is never imported by anyone, so a local replace
+// here is safe (unlike in the root go.mod, where it would be ignored by
+// consumers).
+require github.com/smallerqiu/ja3-client v1.2.4
 
 require (
-	github.com/andybalholm/brotli v1.1.1 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cloudflare/circl v1.5.0 // indirect
-	github.com/dgraph-io/ristretto v0.2.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/smallerqiu/utls v1.2.0 // indirect
-	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	github.com/andybalholm/brotli v1.2.6 // indirect
+	github.com/cloudflare/circl v1.6.5 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
+	github.com/smallerqiu/utls v1.2.1 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )
 
-// replace github.com/smallerqiu/ja3-client => ../../ja3-client
+replace github.com/smallerqiu/ja3-client => ../

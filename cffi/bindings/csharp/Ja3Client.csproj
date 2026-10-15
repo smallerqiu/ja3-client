@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net8.0 is the floor: the binding uses NativeLibrary (Core 3.0+), required
+         members and records (C# 11). Retarget freely; nothing here is net9-only. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Ja3Client</RootNamespace>
+    <AssemblyName>ja3-client-ffi</AssemblyName>
+    <PackageId>Ja3Client.Ffi</PackageId>
+    <Description>P-Invoke binding for the ja3-client TLS-impersonation shared library</Description>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- The native library is not packaged here; set JA3_CLIENT_LIB or copy it
+         next to the executable. See cffi/README.md. -->
+    <NoWarn>NU1701</NoWarn>
+  </PropertyGroup>
+
+</Project>
