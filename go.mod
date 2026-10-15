@@ -18,5 +18,3 @@ require (
 	github.com/cloudflare/circl v1.6.5 // indirect
 	golang.org/x/text v0.43.0 // indirect
 )
-
-replace github.com/smallerqiu/utls => ../ja3-utls

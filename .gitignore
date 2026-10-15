@@ -1,4 +1,26 @@
 .idea
 .vscode/
 __pycache__
+.mypy_cache/
 cffi/build/
+
+# Local co-development with the sibling ../ja3-utls checkout.
+# Never commit this: consumers must resolve github.com/smallerqiu/utls from
+# go.mod's published version, and go.work would silently override that locally.
+go.work
+go.work.sum
+
+# FFI build output and binding deps
+cffi/bindings/node/node_modules/
+cffi/bindings/node/package-lock.json
+cffi/bindings/csharp/example/bin/
+cffi/bindings/csharp/example/obj/
+cffi/bindings/python/__pycache__/
+cffi/dist/
+
+# `go build ./...` inside cffi/ drops the plain executable of the c-shared
+# package next to it. Only the -buildmode output is the library; this file is
+# the same code built as a program that does nothing.
+cffi/cffi
+
+.DS_Store
