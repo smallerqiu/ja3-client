@@ -141,11 +141,19 @@ EOF
   # should fail on the first target rather than six.
   docker image inspect "$IMAGE" >/dev/null 2>&1 || docker pull "$IMAGE"
 
+  # GOFLAGS=-buildvcs=false: building a main package makes `go build` stamp the git
+  # revision into the binary, and that git call fails with exit 128 inside the
+  # container - /src belongs to whoever owns the checkout on the host while git runs
+  # as root, so git reports a dubious ownership. Every docker target died on it
+  # before compiling a line (Release run #8). The library's identity comes from
+  # -X main.Version anyway; the alternative, git config --global safe.directory
+  # /src, would stamp a revision taken from a tree CI does not own.
   docker run --rm \
     -v "${REPO_ROOT}":/src \
     -w /src/cffi \
     -e GOWORK=off \
     -e CGO_ENABLED=1 \
+    -e GOFLAGS=-buildvcs=false \
     -e GOOS="${GOOS}" \
     -e GOARCH="${GOARCH}" \
     ${GOARM_FLAG:+-e GOARM=${GOARM}} \
