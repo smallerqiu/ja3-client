@@ -18,4 +18,13 @@
     <NoWarn>NU1701</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The SDK globs **/*.cs below the project directory, which would otherwise
+         compile example/Program.cs into the library. Top-level statements are only
+         legal in an executable, so the binding project failed to build with
+         "Program using top-level statements must be an executable". The example is
+         its own project and includes ../Ja3.cs directly. -->
+    <Compile Remove="example/**" />
+  </ItemGroup>
+
 </Project>

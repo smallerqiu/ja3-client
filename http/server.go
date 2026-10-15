@@ -1925,7 +1925,13 @@ func (c *conn) serve(ctx context.Context) {
 					return
 				}
 				publicErr := "400 Bad Request"
-				fmt.Fprintf(c.rwc, "HTTP/1.1 "+publicErr+errorHeaders+publicErr)
+				// Upstream net/http builds the format string by concatenation
+				// ("HTTP/1.1 "+publicErr+…). That is a non-constant format string,
+				// which `go vet`'s printf check fails since Go 1.24 — and `go test`
+				// runs that check by default, so the whole module's tests would not
+				// build. The verbs make the bytes identical without the variable
+				// format.
+				fmt.Fprintf(c.rwc, "HTTP/1.1 %s%s%s", publicErr, errorHeaders, publicErr)
 				return
 			}
 		}

@@ -138,14 +138,26 @@ jobs:
       - name: Build for this machine
         shell: bash
         working-directory: cffi
-        run: make host
+        env:
+          # The Makefile stamps -X main.Version from `git describe --tags`, and a
+          # default checkout is shallow with no tags, so on CI that resolves to
+          # "dev". smoke.py fails on an unstamped version - a real check for a
+          # release artifact, but here it would only be testing actions/checkout's
+          # defaults. Name the build instead of fetching the whole tag history.
+          BUILD_VERSION: ci-${{ github.sha }}
+        run: make host VERSION="$BUILD_VERSION"
 
-      - name: ABI contract, offline
+      # Split in two so the failing step names the runtime: `make` exits 2 whatever
+      # recipe line failed, so one combined step says only "exit code 2".
+      - name: ABI contract through Python
         shell: bash
         working-directory: cffi
-        run: |
-          make smoke
-          make node-smoke
+        run: make smoke
+
+      - name: ABI contract through Node
+        shell: bash
+        working-directory: cffi
+        run: make node-smoke
 
       # Build -> package -> unpack -> load, the same path a user follows after
       # downloading a release asset, minus the network.
