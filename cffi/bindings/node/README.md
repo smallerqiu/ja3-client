@@ -20,6 +20,33 @@ console.log(res.json().ja3n_hash);       // the fingerprint the site read from y
 `npm install ja3-client` requires Node >= 16 and installs one dependency (`koffi`).
 TypeScript types ship with the package.
 
+## CommonJS and ESM
+
+Both spellings are the same binding — the package maps `require` to `index.js` and `import`
+to an `index.mjs` wrapper around it, so nothing about the download, the ABI guard or the
+session pool changes with the module system:
+
+```js
+// ESM: a .mjs file, or a package.json with "type": "module"
+import { Ja3, Ja3Error, ABI_VERSION, ERROR_CODES } from 'ja3-client';
+import ja3client from 'ja3-client';              // the same exports as an object
+
+const ja3 = new Ja3();
+const res = await ja3.request('https://tls.browserleaks.com/json', { impersonate: 'chrome_153' });
+
+console.log(res.json().ja3n_hash, ABI_VERSION, ja3client.Ja3 === Ja3);   // true
+```
+
+Named imports are complete: `Ja3`, `Session`, `Response`, `Ja3Error`, `ABI_VERSION`,
+`ERROR_CODES`. Requests are synchronous, so `await` above is optional — a `Response` is
+returned, not a promise, and awaiting a non-promise just gives it back.
+
+TypeScript resolves the declarations through the same map, under `node16`, `nodenext` and
+`bundler` module resolution alike, for `require` and `import` both; the repository
+typechecks a consumer against the packaged files on every push (`make types-check`), so a
+`.d.ts` that fails your build fails ours first. `Buffer` in the signatures is Node's, so a
+project needs `@types/node` (or `skipLibCheck`) like any other Node library.
+
 ## What you can call
 
 | call | returns | |
