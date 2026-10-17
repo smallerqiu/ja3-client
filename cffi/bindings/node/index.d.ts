@@ -26,11 +26,16 @@ export interface ClientOptions {
   random_extension_order?: boolean;
   not_follow_redirects?: boolean;
   with_debug?: boolean;
+  /**
+   * Headers this client/session sends by default. A call's own `headers` are merged over
+   * these rather than replacing them, which is what keeps the profile's `user-agent`
+   * alive; a `null` value removes a header the session would otherwise have sent.
+   */
+  headers?: Record<string, string | string[] | null>;
 }
 
 export interface RequestOptions extends ClientOptions {
   method?: string;
-  headers?: Record<string, string | string[] | null>;
   body?: string | Buffer | Uint8Array | Record<string, unknown> | number | boolean;
   /** Use instead of `body` when the payload is not valid UTF-8 text. */
   body_base64?: string;
@@ -64,6 +69,8 @@ export declare class Session {
 }
 
 export declare class Ja3Error extends Error {
+  /** `new Ja3Error('HTTP 404', 5, response.raw)` - the shape `raiseForStatus()` throws. */
+  constructor(message: string, errorCode?: number, payload?: Record<string, unknown>);
   readonly errorCode: number;
   readonly codeName: string;
   readonly payload: Record<string, unknown>;
@@ -91,5 +98,11 @@ declare const binding: {
   ERROR_CODES: Record<number, string>;
 };
 
+// `Ja3`, `Session`, `Response` and `Ja3Error` are exported where they are declared, so
+// there is no re-export list at the bottom of this file: a second `export { Ja3, … }`
+// next to `export declare class Ja3` is not a restatement, it is a duplicate name in the
+// same module, and every TypeScript consumer - `require` or `import`, node16 or bundler -
+// then compiles their own project into "Cannot redeclare exported variable 'Ja3'".
+// `make types-check` (cffi/check-node-types.sh) typechecks a real consumer against these
+// declarations, which is what catches that shape.
 export default binding;
-export { Ja3, Session, Response, Ja3Error };
