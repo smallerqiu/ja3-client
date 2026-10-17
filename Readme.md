@@ -1,9 +1,11 @@
 # 🔥🔥🔥 ja3-client
 
+**English** | [简体中文](Readme.zh-CN.md)
+
 ## Why
 
 If you're having trouble with the fucking “just a moment” or fucking http status code 429 in your project, you might want to try using this. It may help you .
-Demonstrates good performance with 10 million concurrent requests. It is safe to use.  
+It has held up at 10 million concurrent requests in our own production use. It is safe to use.  
 
 ## Features
 
@@ -24,7 +26,7 @@ The following browsers can be impersonated.
 
 | Browser    | Version                                                                                                                                                                                                                                                                                                                              |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Chrome     | chrome_141, chrome_140, chrome_139, chrome_138, chrome_137, chrome_136, chrome_135, chrome_134, chrome_133, chrome_132, chrome_131, chrome_130, chrome_129, chrome_128, chrome_127, chrome_126, chrome_125, chrome_124, chrome_123, chrome_122, chrome_121, chrome_120, chrome_119, chrome_117, chrome_137_ios, chrome_131_android, chrome_99_android |
+| Chrome     | chrome_155, chrome_154, chrome_153, chrome_152, chrome_151, chrome_150, chrome_149, chrome_148, chrome_147, chrome_146, chrome_145, chrome_144, chrome_143, chrome_142, chrome_141, chrome_140, chrome_139, chrome_138, chrome_137, chrome_136, chrome_135, chrome_134, chrome_133, chrome_132, chrome_131, chrome_130, chrome_129, chrome_128, chrome_127, chrome_126, chrome_125, chrome_124, chrome_123, chrome_122, chrome_121, chrome_120, chrome_119, chrome_117, chrome_137_ios, chrome_131_android, chrome_99_android |
 | Firefox    | firefox_144, firefox_143, firefox_142, firefox_141, firefox_140, firefox_139, firefox_138, firefox_137, firefox_136, firefox_135, firefox_134, firefox_133, firefox_132, firefox_123, firefox_120, firefox_117 |
 | Safari Mac | safari_26_0, safari_18_5, safari_18_1, safari_18_0, safari_17_0, safari_15_5, safari_15_3 |
 | Safari IOS | safari_ios_17_0, safari_ios_18_0, safari_ios_18_5, safari_ios_26_0                                                                                                                                                                                                                                                                   |
@@ -37,7 +39,7 @@ The following browsers can be impersonated.
 | Tor        | tor_14_5                                                                                                                                                                                                                                                                                                                             |
 | Brave      | brave_1_8 |
 
-75 identifiers in total. `ja3/mapper_profiles.go` is the authoritative list, and the keys are case-sensitive.
+81 identifiers in total. [`ja3/mapper_profiles.go`](ja3/mapper_profiles.go) is the authoritative list, and the keys are case-sensitive.
 
 Heads-up: a typo in `Impersonate` does not return an error. `BuildClientHelloSpec` logs `the input client ... don't support, so use default` and quietly falls back to `chrome_141`, so a mis-cased value looks like it worked while you are sending Chrome's fingerprint. Check that log line (or `WithDebug`) if the fingerprint site disagrees with you.
 
@@ -245,11 +247,26 @@ func main() {
 fields, the response envelope, the error codes, and the memory rules that ctypes/koffi
 callers get wrong.
 
-| binding | dependency |
-| --- | --- |
-| [`cffi/bindings/python`](cffi/bindings/python/ja3_client.py) | none (ctypes) |
-| [`cffi/bindings/node`](cffi/bindings/node/index.js) | `koffi` |
-| [`cffi/bindings/csharp`](cffi/bindings/csharp/Ja3.cs) | none (P-Invoke) |
+| binding | dependency | package |
+| --- | --- | --- |
+| [`cffi/bindings/python`](cffi/bindings/python/ja3_client.py) | none (ctypes) | `ja3-client` on PyPI |
+| [`cffi/bindings/node`](cffi/bindings/node/index.js) | `koffi` | `ja3-client` on npm |
+| [`cffi/bindings/csharp`](cffi/bindings/csharp/Ja3.cs) | none (P-Invoke) | `ja3-client` on NuGet |
+
+The three packages carry the binding and a resolver, never the library: their install
+step downloads `ja3-client-<version>-<os>-<arch>.zip` from the GitHub Release with the
+same version and checks it against `SHA256SUMS.txt` first. That contract - the asset
+names, the shared cache under `~/.cache/ja3-client`, the `JA3_CLIENT_*` variables, and
+the failure message every binding gives when the download is not possible - is written
+down in [`cffi/PACKAGING.md`](cffi/PACKAGING.md).
+
+`ja3-client` is not on those three registries yet, so today you take the binding file and
+the library yourself:
+
+```sh
+pip install /path/to/cffi/bindings/python      # or npm pack / dotnet pack locally
+export JA3_CLIENT_LIB=/path/to/ja3_client_arm64.dylib
+```
 
 ```python
 from ja3_client import Ja3
@@ -276,39 +293,10 @@ browser and this library against the same endpoint on the same day.
 * **Fingerprint mismatch** - the browser and this library send different bytes.
 * **New browser version** - a profile that does not exist yet; bring the capture.
 
-One thing worth knowing before you file: a typo in `Impersonate` is not an error. The
-library logs `the input client ... don't support, so use default` and sends
-`DefaultClient`'s fingerprint instead, so check the ids in
-[`ja3/mapper_profiles.go`](ja3/mapper_profiles.go) if a fingerprint site disagrees
-with you.
+Want to add one yourself? [CONTRIBUTING.md](CONTRIBUTING.md) is the whole procedure, from
+capturing the bytes to landing the profile.
 
-## Local development with ja3-utls
-
-The TLS fingerprint itself lives in the sibling module `github.com/smallerqiu/utls`. During development that checkout is usually worked on next to this one:
-
-```
-My/
-├── ja3-client/
-└── ja3-utls/
-```
-
-Do **not** put `replace github.com/smallerqiu/utls => ../ja3-utls` back into `go.mod`. A `replace` in a library's own `go.mod` is ignored by every module that imports it, so it only affects your machine while silently breaking `go get github.com/smallerqiu/ja3-client` for everyone else (go.sum then has no `utls` entry at all).
-
-Use a gitignored `go.work` for the local pairing instead:
-
-```
-go 1.26.0
-
-use (
-	.
-	../ja3-utls
-)
-```
-
-Before shipping, verify the published-dependency path — it resolves `utls` from the proxy exactly like a consumer does:
-
-```bash
-GOWORK=off go build ./...
-```
+One thing worth knowing before you file: a typo in `Impersonate` is not an error, so the
+note under [Supported browsers](#supported-browsers) is the first thing to rule out.
 
 Of course, you can also look at other projects, such as [curl_cffi](https://github.com/lexiforest/curl_cffi), [REQ](https://github.com/imroc/req) etc.
