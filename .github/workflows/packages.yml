@@ -134,6 +134,24 @@ jobs:
           # checks that copy against ffi.go instead of trusting it.
           bash cffi/check-binding-readmes.sh
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # index.d.ts is the only part of this package a TypeScript project reads, and nothing
+      # else in the release path compiles it: v1.2.5 and v1.2.6 both shipped with every class
+      # declared twice - `export declare class Ja3` plus a trailing `export { Ja3, ... }` -
+      # and a duplicate name is not a restatement, so every consumer's own `tsc` failed on the
+      # import while our smoke test and README gate stayed green. The check reads the "exports"
+      # map too, because the TypeScript resolver reaches the declarations either way and only
+      # Node's answers for a missing ESM entry.
+      - name: The npm package typechecks for its consumers
+        env:
+          # Without a compiler the script reports a skip and exits 0, which is right on a
+          # laptop and wrong here: a gate that can silently not run is not a gate.
+          JA3_TYPES_STRICT: 1
+        run: bash cffi/check-node-types.sh
+
       - name: The release this version points at
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

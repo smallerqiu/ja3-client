@@ -89,6 +89,21 @@ jobs:
           # only place anybody sees the rot is a registry page.
           bash cffi/check-binding-readmes.sh
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # index.d.ts is a compile input for every TypeScript consumer and is read by nothing
+      # else in this repository: node-smoke loads the runtime, the gate above reads the
+      # READMEs. Two releases shipped declarations that failed a consumer's `tsc` on import
+      # while both of those stayed green, so the compiler gets its own step.
+      - name: the npm package typechecks for its consumers
+        env:
+          # A machine without a compiler reports a skip and exits 0, which is right on a
+          # laptop and wrong here - a gate that can silently not run is not a gate.
+          JA3_TYPES_STRICT: 1
+        run: bash cffi/check-node-types.sh
+
   test:
     name: go tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

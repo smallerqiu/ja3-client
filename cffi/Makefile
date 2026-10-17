@@ -4,6 +4,7 @@
 #   make test            go test for the FFI contract (offline, httptest based)
 #   make smoke           load the host library and check the ABI, no network
 #   make docs-check      the package READMEs still document the whole ABI
+#   make types-check     typecheck the node binding's index.d.ts as a consumer would
 #   make check           host build + go tests + smoke + every binding with a runtime here
 #   make darwin          both macOS arches;  make linux / make windows likewise
 #   make all             everything this machine can reach
@@ -59,7 +60,7 @@ endif
 # Native toolchain on Linux, musl cross elsewhere.
 LINUX_NATIVE := $(filter linux,$(HOST_OS))
 
-.PHONY: host test lint docs-check smoke node-smoke check all docker package installers \
+.PHONY: host test lint docs-check types-check smoke node-smoke check all docker package installers \
         python-check node-check csharp-check clean help
 .PHONY: darwin darwin-amd64 darwin-arm64 linux linux-amd64 linux-arm64 \
         windows windows-amd64 windows-386
@@ -77,7 +78,7 @@ host:
 	@$(MAKE) --no-print-directory $(HOST_OS)-$(HOST_ARCH)
 endif
 
-check: host test smoke node-smoke docs-check python-check node-check csharp-check
+check: host test smoke node-smoke docs-check types-check python-check node-check csharp-check
 
 test:
 	go test -count=1 ./...
@@ -104,6 +105,14 @@ node-smoke:
 # network, so CI runs it on every push.
 docs-check:
 	./check-binding-readmes.sh
+
+# index.d.ts is the only part of the npm package a TypeScript consumer compiles, and no
+# other gate here reads it: node-smoke loads the runtime, docs-check reads the READMEs. It
+# shipped two releases with every class exported twice, which is a compile error in the
+# consumer's project and silent in ours. types-check compiles a consumer against the staged
+# package - entry points included - in CommonJS, ESM and bundler form.
+types-check:
+	./check-node-types.sh
 
 lint:
 	@test -z "$(shell gofmt -l .)" || (echo "run gofmt on:" && gofmt -l . && exit 1)
