@@ -394,7 +394,12 @@ jobs:
         with:
           pattern: packages-*
           merge-multiple: true
-          path: pkgs
+          # Absolute, because every step below leaves the workspace: npm installs in
+          # /tmp/n, pip in a venv at /tmp/v, dotnet in /tmp/c/app, and a NuGet.config
+          # source or a pip argument written relative to the workspace would resolve
+          # against those instead. An unmatched glob is handed to the tool verbatim, so
+          # the first real run of this job had npm open a file literally named "*.tgz".
+          path: /tmp/pkgs
 
       - name: Serve the release the packages will ask for
         working-directory: cffi
