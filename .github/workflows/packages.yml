@@ -296,51 +296,60 @@ jobs:
           for pkg in out/*; do
             echo "==> $pkg"
 
+            # Read the archive ONCE into a variable and let every match read that.
+            # Piping the listing straight into `grep -q` is a race: grep exits at the
+            # first match, closes the pipe, and tar (still writing) dies on SIGPIPE with
+            # "tar: stdout: write error". Under `shell: bash`, which Actions runs with
+            # -eo pipefail, that makes the whole pipeline fail on a listing that visibly
+            # contained the file - and the bigger the package gets, the likelier it is.
+            case "$pkg" in
+              *.tgz)   listing="$(tar -tzf "$pkg" | sort)" ;;
+              *.whl)   listing="$(python3 -m zipfile -l "$pkg")" ;;
+              *.nupkg) listing="$(unzip -l "$pkg")" ;;
+              *)       listing="" ;;
+            esac
+
+            printf '%s\n' "$listing"
+
             case "$pkg" in
               *.tgz)
-                tar -tzf "$pkg" | sort
-
                 for want in package/lib/native.js package/scripts/postinstall.js package/index.js; do
-                  tar -tzf "$pkg" | grep -qx "$want" || {
+                  grep -qx "$want" <<<"$listing" || {
                     echo "::error::$want is missing from the npm package; its installer cannot run"
                     exit 1
                   }
                 done
 
-                if tar -tzf "$pkg" | grep -qE "$native"; then
+                if grep -qE "$native" <<<"$listing"; then
                   echo "::error::the npm package contains a native library"
                   exit 1
                 fi
                 ;;
               *.whl)
-                python3 -m zipfile -l "$pkg"
-
                 for want in ja3_client.py ja3_client_binaries.py; do
-                  python3 -m zipfile -l "$pkg" | grep -q "$want" || {
+                  grep -q "$want" <<<"$listing" || {
                     echo "::error::$want is missing from the wheel"
                     exit 1
                   }
                 done
 
-                if python3 -m zipfile -l "$pkg" | grep -qE "$native"; then
+                if grep -qE "$native" <<<"$listing"; then
                   echo "::error::the wheel contains a native library"
                   exit 1
                 fi
                 ;;
               *.nupkg)
-                unzip -l "$pkg"
-
                 # The binding compiles into the dll; the targets file is what puts the
                 # native library next to the executable. Without the second one the
                 # package installs a binding that cannot find anything.
                 for want in lib/net8.0/ja3-client-ffi.dll build/ja3-client.targets README.md; do
-                  unzip -l "$pkg" | grep -q "$want" || {
+                  grep -q "$want" <<<"$listing" || {
                     echo "::error::$want is missing from the nupkg"
                     exit 1
                   }
                 done
 
-                if unzip -l "$pkg" | grep -qE "$native"; then
+                if grep -qE "$native" <<<"$listing"; then
                   echo "::error::the nupkg contains a native library"
                   exit 1
                 fi
