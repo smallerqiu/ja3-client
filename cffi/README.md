@@ -48,6 +48,18 @@ handle is safe too — the Go client pools connections and guards its cookie jar
 the handle table itself is mutex-guarded. The one rule: do not use a handle after
 `ja3_session_close`, which returns `error_code: 4` rather than crashing.
 
+Above that line, the three bindings are still synchronous calls on the calling thread —
+Python's `ctypes` releases the GIL around them, so threads already work there. Node is the
+exception: `ja3.fetch()` is the same export dispatched on a worker thread through koffi's
+async form, which is what keeps the event loop running while a request is out. Two numbers
+decide how much overlaps — the binding queues at `maxConcurrency` (256, koffi's own async
+limit) and only `UV_THREADPOOL_SIZE` (Node's, 4 by default) run at the same instant — and one
+consequence belongs here rather than in the README: **once any export has been called from a
+worker thread, Node's normal shutdown does not complete.** The loop drains, `beforeExit`
+fires, and the process stays up (the same async call into a plain C library exits fine, so it
+is the Go runtime's thread handover, not the FFI layer's bookkeeping). A server will never
+notice; a script has to end with `process.exit()`.
+
 ## Payload fields
 
 `snake_case` is the documented spelling. Every name is also accepted in its Go-field
@@ -194,6 +206,7 @@ make docker      # full matrix in throwaway containers (needs Docker)
 make test        # the FFI contract tests - offline, uses httptest
 make smoke       # load the host library and check the ABI, no network (Python)
 make node-smoke  # same checks through koffi (Node)
+make node-async  # the Node binding's fetch(): gate, worker threads, error shape (no network)
 make check       # host build + go tests + both smokes + python/node/c# examples
 make package     # zip whatever is in build/ into dist/, the way CI does
 ```

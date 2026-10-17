@@ -3,6 +3,7 @@
 #   make host            build for the machine you are on (default)
 #   make test            go test for the FFI contract (offline, httptest based)
 #   make smoke           load the host library and check the ABI, no network
+#   make node-async      check the node binding's fetch(): gate, threads, error shape
 #   make docs-check      the package READMEs still document the whole ABI
 #   make types-check     typecheck the node binding's index.d.ts as a consumer would
 #   make check           host build + go tests + smoke + every binding with a runtime here
@@ -60,7 +61,7 @@ endif
 # Native toolchain on Linux, musl cross elsewhere.
 LINUX_NATIVE := $(filter linux,$(HOST_OS))
 
-.PHONY: host test lint docs-check types-check smoke node-smoke check all docker package installers \
+.PHONY: host test lint docs-check types-check smoke node-smoke node-async check all docker package installers \
         python-check node-check csharp-check clean help
 .PHONY: darwin darwin-amd64 darwin-arm64 linux linux-amd64 linux-arm64 \
         windows windows-amd64 windows-386
@@ -78,7 +79,7 @@ host:
 	@$(MAKE) --no-print-directory $(HOST_OS)-$(HOST_ARCH)
 endif
 
-check: host test smoke node-smoke docs-check types-check python-check node-check csharp-check
+check: host test smoke node-smoke node-async docs-check types-check python-check node-check csharp-check
 
 test:
 	go test -count=1 ./...
@@ -97,6 +98,15 @@ node-smoke:
 	@command -v node >/dev/null 2>&1 || { echo "node missing; skipping" >&2; exit 0; }
 	@test -f $(HOST_LIB) || { echo "$(HOST_LIB) is missing - run 'make host' first" >&2; exit 1; }
 	cd bindings/node && { test -d node_modules/koffi || npm install --no-audit --no-fund; } && node smoke.js ../../$(HOST_LIB)
+
+# The async half of the node binding cannot be checked by loading a library: what has to
+# hold is that a fetch() does not stop the event loop, that the concurrency gate caps and
+# releases, and that a failure keeps the synchronous error's shape. bindings/node/
+# test-async.js answers all three against a handler on 127.0.0.1, so it stays offline.
+node-async:
+	@command -v node >/dev/null 2>&1 || { echo "node missing; skipping" >&2; exit 0; }
+	@test -f $(HOST_LIB) || { echo "$(HOST_LIB) is missing - run 'make host' first" >&2; exit 1; }
+	cd bindings/node && { test -d node_modules/koffi || npm install --no-audit --no-fund; } && node test-async.js ../../$(HOST_LIB)
 
 # The npm/PyPI/NuGet pages strip relative links, so each package README carries the
 # whole API itself - which means it can drift from ffi.go without anybody noticing.

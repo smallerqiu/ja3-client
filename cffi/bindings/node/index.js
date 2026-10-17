@@ -13,10 +13,15 @@
  *     session.get('https://example.com/');       // same pool + cookie jar
  *     session.close();
  *
+ *     const pages = await Promise.all(                            // non-blocking siblings
+ *       urls.map((url) => ja3.fetch(url, { impersonate: 'chrome_133' })));
+ *
  * The ABI contract (payload keys, response envelope, error codes) lives in
  * cffi/README.md. Every call returns a malloc'd C string, so the functions are
  * wrapped in a koffi disposable type that calls ja3_free after conversion; using a
- * plain 'str' return type would leak one allocation per call.
+ * plain 'str' return type would leak one allocation per call. The same disposable
+ * serves the async path: `fn.async(...)` converts and frees on the way back, which
+ * is why the binding never hands a raw pointer to JavaScript.
  */
 
 'use strict';
@@ -52,6 +57,62 @@ const ERROR_CODES = {
   7: 'MARSHAL',
   8: 'PANIC',
 };
+
+/**
+ * Default ceiling on `fetch()` calls in flight or waiting. koffi itself runs async calls
+ * on worker threads and queues the rest, but its queue is hard-capped
+ * (`max_async_calls`, 256 by default, 4096 absolute maximum) and it *rejects* past that
+ * with "Too many asynchronous calls are running". A binding that hands you an exception
+ * because 257 promises were created is not a useful API, so `fetch` waits for a slot
+ * instead of asking koffi to hold the whole set. Measured on this library: 256 issued in
+ * one synchronous burst all complete; 600 return 256 responses and 344 errors.
+ */
+const DEFAULT_MAX_CONCURRENCY = 256;
+
+/**
+ * A counting semaphore. One instance per process (module level), because the limit it
+ * protects - koffi's async queue - is process-wide too: two `Ja3` objects with private
+ * gates of 256 would still overflow it together.
+ */
+class Gate {
+  constructor(limit) {
+    this.limit = limit;
+    this.active = 0;
+    this.waiters = [];
+  }
+
+  setLimit(value) {
+    if (!Number.isInteger(value) || value < 1) {
+      throw new Ja3Error(`maxConcurrency must be a positive integer, got ${value}`, 1);
+    }
+
+    this.limit = value;
+    this.drain();
+  }
+
+  acquire() {
+    if (this.active < this.limit) {
+      this.active += 1;
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => this.waiters.push(resolve));
+  }
+
+  release() {
+    this.active -= 1;
+    this.drain();
+  }
+
+  drain() {
+    while (this.active < this.limit && this.waiters.length > 0) {
+      this.active += 1;
+      this.waiters.shift()();
+    }
+  }
+}
+
+const asyncGate = new Gate(DEFAULT_MAX_CONCURRENCY);
 
 /** Options the library only reads while building the client. */
 const CLIENT_ONLY_KEYS = [
@@ -274,10 +335,17 @@ class Session {
   request(url, options) {
     if (this.closed) throw new Ja3Error('session is closed', 4);
 
-    const payload = buildPayload(url, options);
-    for (const key of CLIENT_ONLY_KEYS) delete payload[key];
+    return new Response(this._ja3._sessionRequest(this.handle, sessionPayload(url, options)));
+  }
 
-    return new Response(this._ja3._sessionRequest(this.handle, payload));
+  // The non-blocking sibling of `request`, on the same session: same pool, same cookie
+  // jar, same client-level options ignored. Concurrent calls on one session are the
+  // library's problem to serialize, not yours - the Go client guards its own state.
+  fetch(url, options) {
+    if (this.closed) return Promise.reject(new Ja3Error('session is closed', 4));
+
+    return this._ja3._sessionFetch(this.handle, sessionPayload(url, options))
+      .then((envelope) => new Response(envelope));
   }
 
   get(url, options) {
@@ -296,9 +364,20 @@ class Session {
   }
 }
 
+// A session has already built its client, so the client-level keys are dropped here - on
+// the wire they would be silently ignored by the library, and the binding would be the
+// only place that could tell you you wrote one by mistake.
+function sessionPayload(url, options) {
+  const payload = buildPayload(url, options);
+
+  for (const key of CLIENT_ONLY_KEYS) delete payload[key];
+
+  return payload;
+}
+
 class Ja3 {
   constructor(options = {}) {
-    const { libraryPath, checkAbi = true } = options;
+    const { libraryPath, checkAbi = true, maxConcurrency = undefined } = options;
 
     this.path = findLibrary(libraryPath);
     this._lib = koffi.load(this.path);
@@ -326,20 +405,36 @@ class Ja3 {
 
     this.libraryVersion = envelope.version || 'unknown';
     this.buildTime = envelope.build_time || '';
+
+    if (maxConcurrency !== undefined) asyncGate.setLimit(maxConcurrency);
   }
 
-  // _call runs one export. `extra` are the leading native arguments (the session
-  // handle); the JSON payload, when there is one, is always the last argument.
-  _call(fnName, payload, ...extra) {
-    const fn = this._fns[fnName];
+  // koffi's async queue is one resource for the whole process, so this is a process-wide
+  // number no matter which instance you read it from - and setting it on any instance
+  // moves the ceiling for every `fetch()` in the program.
+  get maxConcurrency() {
+    return asyncGate.limit;
+  }
+
+  set maxConcurrency(value) {
+    asyncGate.setLimit(value);
+  }
+
+  // _arguments builds the native argument list. `extra` are the leading arguments (the
+  // session handle); the JSON payload, when there is one, is always the last.
+  static _arguments(payload, extra) {
     const args = extra.map((value) => (typeof value === 'bigint' ? value : BigInt(value)));
 
     if (payload !== undefined) args.push(JSON.stringify(payload));
 
-    const text = fn(...args);
+    return args;
+  }
 
+  // _decode turns one envelope of text into an object or an exception - the same rules
+  // for the sync and the async path, so a library error never changes shape by thread.
+  static _decode(fnName, text) {
     if (typeof text !== 'string') {
-      throw new Ja3Error(`${fn.name || 'export'} returned no value`, 7);
+      throw new Ja3Error(`${fnName} returned no value`, 7);
     }
 
     let envelope;
@@ -354,6 +449,42 @@ class Ja3 {
     }
 
     return envelope;
+  }
+
+  // _call runs one export synchronously: the event loop stops until the library returns.
+  _call(fnName, payload, ...extra) {
+    const fn = this._fns[fnName];
+
+    return Ja3._decode(fnName, fn(...Ja3._arguments(payload, extra)));
+  }
+
+  // _fetch runs the same export on a koffi worker thread and resolves when it lands. The
+  // gate is what makes "issue 10k promises" a queue instead of koffi rejecting the calls
+  // past its own pool size.
+  _fetch(fnName, payload, ...extra) {
+    const fn = this._fns[fnName];
+    const args = Ja3._arguments(payload, extra);
+
+    return asyncGate.acquire().then(() => {
+      let pending;
+      try {
+        pending = new Promise((resolve, reject) => {
+          fn.async(...args, (err, text) => {
+            if (err) reject(new Error(`${fnName}: ${err}`));
+            else resolve(text);
+          });
+        });
+      } catch (err) {
+        // koffi throws here when its async queue is already full; release the slot so the
+        // gate does not leak capacity on a call that never started.
+        asyncGate.release();
+        return Promise.reject(err);
+      }
+
+      return pending
+        .then((text) => Ja3._decode(fnName, text))
+        .finally(() => asyncGate.release());
+    });
   }
 
   version() {
@@ -372,6 +503,19 @@ class Ja3 {
     return this.request(url, { ...options, method: 'POST', body });
   }
 
+  /**
+   * The non-blocking form of `request`: one call in flight on a koffi worker thread, the
+   * event loop free while it runs. Same payload, same `Response`, same `Ja3Error`; the
+   * only difference is that failures arrive as a rejected promise instead of a throw.
+   *
+   * It is named `fetch` and not `requestAsync` on purpose - `await ja3.request(...)` would
+   * resolve happily while blocking your loop for the whole request, and a name that cannot
+   * be confused with the sync one is the only guard against that.
+   */
+  fetch(url, options = {}) {
+    return this._fetch('request', buildPayload(url, options)).then((envelope) => new Response(envelope));
+  }
+
   session(options = {}) {
     const payload = {};
 
@@ -386,6 +530,10 @@ class Ja3 {
 
   _sessionRequest(handle, payload) {
     return this._call('sessionRequest', payload, BigInt(handle));
+  }
+
+  _sessionFetch(handle, payload) {
+    return this._fetch('sessionRequest', payload, BigInt(handle));
   }
 
   _sessionClose(handle) {

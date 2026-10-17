@@ -182,6 +182,14 @@ jobs:
         working-directory: cffi
         run: make node-smoke
 
+      # fetch() is the part of the Node binding that cannot be proven by loading a library:
+      # the gate has to cap and release, the call has to leave the event loop running, and a
+      # failure has to keep the synchronous error's shape. Offline against 127.0.0.1.
+      - name: Async API through Node
+        shell: bash
+        working-directory: cffi
+        run: make node-async
+
       # Build -> package -> unpack -> load, the same path a user follows after
       # downloading a release asset, minus the network.
       - name: Release archive is self-verifying

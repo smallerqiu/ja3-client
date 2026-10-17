@@ -32,14 +32,17 @@ import { Ja3, Ja3Error, ABI_VERSION, ERROR_CODES } from 'ja3-client';
 import ja3client from 'ja3-client';              // the same exports as an object
 
 const ja3 = new Ja3();
-const res = await ja3.request('https://tls.browserleaks.com/json', { impersonate: 'chrome_153' });
+const res = ja3.get('https://tls.browserleaks.com/json', { impersonate: 'chrome_153' });
+const page = await ja3.fetch('https://tls.browserleaks.com/json', { impersonate: 'chrome_153' });
 
-console.log(res.json().ja3n_hash, ABI_VERSION, ja3client.Ja3 === Ja3);   // true
+console.log(res.json().ja3n_hash, page.json().ja3n_hash, ABI_VERSION, ja3client.Ja3 === Ja3);
 ```
 
 Named imports are complete: `Ja3`, `Session`, `Response`, `Ja3Error`, `ABI_VERSION`,
-`ERROR_CODES`. Requests are synchronous, so `await` above is optional — a `Response` is
-returned, not a promise, and awaiting a non-promise just gives it back.
+`ERROR_CODES`. `get`/`request`/`post` are synchronous and return a `Response`; `fetch` is the
+one that answers a promise. See [Sync and async](#sync-and-async) — and no, `await`ing
+`request()` is not the async form: a `Response` is not a promise, so awaiting it hands the
+same object back after your loop has been stopped for the whole request.
 
 TypeScript resolves the declarations through the same map, under `node16`, `nodenext` and
 `bundler` module resolution alike, for `require` and `import` both; the repository
@@ -51,17 +54,110 @@ project needs `@types/node` (or `skipLibCheck`) like any other Node library.
 
 | call | returns | |
 | --- | --- | --- |
-| `new Ja3({ libraryPath, checkAbi })` | `Ja3` | loads the library; `checkAbi: false` skips the ABI mismatch guard |
-| `ja3.request(url, options)` | `Response` | one-shot request: builds a client, uses it once, drops idle connections |
+| `new Ja3({ libraryPath, checkAbi, maxConcurrency })` | `Ja3` | loads the library; `checkAbi: false` skips the ABI mismatch guard, `maxConcurrency` sets the async ceiling ([Sync and async](#sync-and-async)) |
+| `ja3.request(url, options)` | `Response` | one-shot request: builds a client, uses it once, drops idle connections. **Synchronous** — the event loop waits for it |
 | `ja3.get(url, options)` | `Response` | `request` with `method: 'GET'` |
 | `ja3.post(url, body, options)` | `Response` | `request` with `method: 'POST'`; `body` may be a string, `Buffer`, `Uint8Array`, object, array or number |
+| `ja3.fetch(url, options)` | `Promise<Response>` | the same call on a worker thread: identical options, identical `Response`, identical `Ja3Error` — it only rejects instead of throwing |
 | `ja3.session(options)` | `Session` | opens a client that keeps its connection pool and cookie jar |
+| `ja3.maxConcurrency` | number | read or move the async ceiling; a non-positive integer throws `Ja3Error` (`errorCode: 1`) |
 | `ja3.version()` / `ja3.libraryVersion` | `string` | version stamped into the library at build time |
 | `ja3.buildTime` | `string` | when that library was built (UTC, RFC 3339) |
 | `ja3.path` | `string` | the library file actually loaded |
 | `ja3.close()` | | for parity with the other bindings; releases nothing today, since `koffi` keeps its handle for the process. Close your sessions. |
 
 `ABI_VERSION` (a number) and `ERROR_CODES` (`{0: 'OK', …}`) are exported too.
+
+## Sync and async
+
+`request`, `get` and `post` are synchronous: the FFI call does not come back until the
+response is in, and nothing else in your process runs while it waits. `fetch` runs the same
+export on a worker thread — same options, same `Response`, same `Ja3Error`, but your event
+loop keeps turning:
+
+```js
+const pages = await Promise.all(
+  urls.map((url) => ja3.fetch(url, { impersonate: 'chrome_153' })));
+```
+
+Measured on one machine (8 cores, Node 25.8.2, koffi 3.3.3) against a handler that sleeps
+150 ms, counting how many times a `setInterval` in the same process fired while the calls
+were outstanding:
+
+| what | wall | loop ticks while waiting |
+| --- | --- | --- |
+| 4 × `request()`, sequential | 623 ms | 0 — the loop was stopped |
+| 4 × `fetch()`, concurrent | 154 ms | 8 |
+| 12 × `fetch()`, concurrent | 464 ms | 21 |
+
+Two ceilings decide how much of that third row overlaps, and they are not the same number:
+
+| knob | default | what it caps |
+| --- | --- | --- |
+| `ja3.maxConcurrency` | 256 | how many `fetch` calls may be outstanding or queued at once |
+| `UV_THREADPOOL_SIZE` | 4 | how many of them are actually in flight at the same instant |
+
+`maxConcurrency` exists because koffi's async queue is hard-capped (`max_async_calls`, 256
+by default, 4096 absolute) and it **rejects** past it: a 600-call burst on this library came
+back as 256 responses and 344 "Too many asynchronous calls are running". The binding waits
+for a slot instead, so `Promise.all` over 10 000 URLs resolves rather than failing — and a
+call that does get a slot and then fails gives it back, which is the whole reason the gate is
+in the binding rather than left to koffi:
+
+```js
+ja3.maxConcurrency;                    // 256
+ja3.maxConcurrency = 64;               // fewer calls issued, more of them waiting
+const other = new Ja3({ maxConcurrency: 512 });
+```
+
+The ceiling is process-wide, not per instance — it guards koffi's async queue, which every
+`Ja3` object in the process shares — and only `fetch` and `session.fetch` are counted, so a
+synchronous call neither waits for a slot nor takes one.
+
+`UV_THREADPOOL_SIZE` is the one people miss, and it is Node's knob, not the library's: koffi
+dispatches through libuv, so the default pool runs four requests at a time and the other
+eight in that 12-call row spent their time queued. The same 12 calls finished in 157 ms with
+`UV_THREADPOOL_SIZE=16`, and 24 concurrent calls went from four-at-a-time (3.6 s, peak 4 in
+flight) to all-at-once (0.6 s, peak 24) at 64. It tracks the pool in both directions — `=2`
+really does run two at a time, `=1` runs one — so this is the pool deciding, not the CPU
+count (koffi's own documentation says the worker threads follow the number of cores, which is
+not what this binding sees on Node). Set it in the environment before anything else in the
+process has used the pool:
+
+```sh
+UV_THREADPOOL_SIZE=32 node server.js
+```
+
+Raising it is not free: those threads are shared with `fs`, `zlib` and DNS lookups, each
+outstanding async call preallocates 128 KiB of stack and 128 KiB of heap inside koffi, and a
+call holds its thread for its full duration — so a `fetch` with no `timeout` you forgot is a
+worker you did not get back.
+
+What `fetch` is **not**: a Go-side pool or a licence to open a hundred thousand sockets from
+one Node process. It keeps your loop responsive while the library works. If the job is a
+crawl rather than a page, the batch belongs on the Go side (many requests per cross-language
+call, connections and profiles reused in one client), not in N promises.
+
+One last consequence of the sync path, because it bites people writing tests: if the server
+you are calling lives in the same process, `request()` stops the loop that would answer it.
+The pair deadlocks until the Go timeout fires (30 s by default) and you get `errorCode: 5`
+with `Client.Timeout exceeded while awaiting headers` — which reads like a server bug and is
+a stopped event loop. `fetch()` against that same in-process server returns 200.
+
+And one consequence of the async path, which bites people writing scripts: **a process that
+has used `fetch()` does not shut itself down.** The loop drains, `beforeExit` fires, and then
+the process just stays there, indefinitely. It is the Go runtime's thread handover during
+shutdown, not this binding's queue or a leaked socket — one `ja3_version()` call on a worker
+thread is enough to cause it, while the same async call into a plain C library through koffi
+exits by itself. Nothing is pending, and a server that never intends to exit will never notice.
+A program that reaches its last line has to say it means it:
+
+```js
+const pages = await Promise.all(urls.map((url) => ja3.fetch(url)));
+console.log(pages.length, 'done');
+
+process.exit(0);            // without this the process sits there, finished
+```
 
 ## Options
 
@@ -71,7 +167,7 @@ also accepted in `kebab-case` or Go/`PascalCase` form (`withHTTP3` reaches `with
 so a name copied from another language's docs still works. A key the library does not
 know is **not** dropped: it comes back in `response.warnings`.
 
-Client-level — only read while the client is being built, i.e. by `request()` and
+Client-level — only read while the client is being built, i.e. by `request()`, `fetch()` and
 `session()`. A session request ignores them and the binding drops them from the payload:
 
 | key | type | default | meaning |
@@ -180,11 +276,26 @@ session.get('https://example.com/');         // throws Ja3Error, errorCode 4
 | member | |
 | --- | --- |
 | `request(url, options)`, `get(url, options)`, `post(url, body, options)` | same per-call options as `ja3.request` |
+| `fetch(url, options)` | the non-blocking form, on the same handle: same pool, same cookie jar, answers a promise |
 | `close()` | idempotent; safe to call twice |
 
 `Session` is safe to use from any thread — the Go client pools connections and guards its
 cookie jar — but a handle you have closed is not: it reports `error_code: 4`
 (`INVALID_HANDLE`) rather than crashing your process.
+
+Concurrent `session.fetch()` calls are the normal way to use one: a page's requests, or a
+crawl of one host, over a single set of cookies.
+
+```js
+const session = ja3.session({ impersonate: 'chrome_153', headers: { 'x-app': 'demo' } });
+
+const [home, account] = await Promise.all([
+  session.fetch('https://example.com/'),
+  session.fetch('https://example.com/account'),
+]);
+
+session.close();
+```
 
 ## Errors
 
@@ -216,6 +327,11 @@ try {
 | 7 | `MARSHAL` | the envelope itself failed — should not happen |
 | 8 | `PANIC` | a Go panic was recovered so it could not abort your process |
 
+`fetch` changes nothing about the object, only about how it reaches you: the same `Ja3Error`
+with the same `errorCode` and `payload`, arriving as a rejected promise. An unhandled one is
+an unhandled rejection, so a `try` around the `await` or a `.catch()` is not optional in an
+app you want to stay up.
+
 Two of those depend on which call you made, because a one-shot builds the client inside the
 request while a session has already built it:
 
@@ -241,9 +357,9 @@ things follow, and both surprise people:
   Treat HTTP/3 as advertised, not impersonated; some hosts also end up as `errorCode: 5`
   with an `H3 error` or a timeout.
 
-Leave the default alone otherwise. At around a million concurrent requests against
-Cloudflare-fronted sites, the same Chrome profile with `h3` removed drew clearly more
-challenges and errors than with it on.
+Leave the default alone otherwise: under heavy concurrent traffic against Cloudflare-fronted
+sites, the same Chrome profile with `h3` removed drew clearly more challenges and errors than
+with it on.
 
 ## Where the library comes from
 
@@ -274,6 +390,7 @@ node lib/native.js ensure      # fetch now, print the path (do this before a con
 node lib/native.js print-url   # the archive this machine wants
 node lib/native.js status      # version, slug, cache dir, what is present
 node smoke.js                  # offline ABI check against a library path
+node test-async.js             # offline check of fetch(): the gate, the worker threads, the error shape
 ```
 
 ## Knobs
@@ -350,6 +467,41 @@ try {
 
 (httpbin's `/basic-auth` only answers `GET`; a `POST` to it is a 405 from the server, which
 `raiseForStatus()` would then turn into a `Ja3Error` with `errorCode: 5`.)
+
+Many URLs at once, over one session, without stopping the loop:
+
+```js
+// The pool that actually decides overlap is Node's: start with UV_THREADPOOL_SIZE=16 (or 32)
+// to run that many requests at a time. ja3.maxConcurrency (256) only decides when a call
+// waits for a slot instead of erroring, so leave it alone unless you are past a few hundred.
+const urls = ['https://httpbin.org/delay/1', 'https://httpbin.org/delay/2', 'https://example.com/'];
+
+const crawl = ja3.session({ impersonate: 'chrome_153', timeout: 15 });
+try {
+  const settled = await Promise.all(
+    urls.map((url) =>
+      crawl.fetch(url).then(
+        (res) => ({ url, status: res.statusCode, bytes: res.bodySize }),
+        // Each failure is a Ja3Error with the library's code; mapping it to a value keeps
+        // Promise.all from rejecting the whole batch over one bad host.
+        (error) => ({ url, error: error.codeName }),
+      ),
+    ),
+  );
+
+  console.log(settled);
+  // [{ url: '…', status: 200, bytes: <number> }, …] — or { url: '…', error: 'REQUEST' } for
+  // each host that did not answer. Nothing here threw.
+} finally {
+  crawl.close();
+}
+```
+
+The same three URLs with `ja3.request()` would cost the sum of their latencies, and the
+process would sit stopped through all of them; `Promise.all` over `fetch()` costs the longest
+one. Measured against `httpbin.org/delay/1` from this machine, where one call really does
+take about 2.6 s: four sequential `request()` calls 12.1 s, four concurrent `fetch()` calls
+3.4 s, four concurrent `session.fetch()` calls 2.9 s.
 
 Binary in, binary out:
 

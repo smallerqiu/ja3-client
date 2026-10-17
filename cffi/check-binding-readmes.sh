@@ -46,7 +46,8 @@ error_names=$(sed -n '/^ERROR_CODES = {/,/^}/p' bindings/python/ja3_client.py |
 # -- per-binding extras ----------------------------------------------------------------
 # Spelling each binding's own public surface has to state, beyond the shared contract.
 extras_node='ABI_VERSION ERROR_CODES libraryVersion buildTime checkAbi raiseForStatus
-  Ja3Error INVALID_HANDLE JA3_CLIENT_LIB JA3_CLIENT_STRICT setCookies body_base64'
+  Ja3Error INVALID_HANDLE JA3_CLIENT_LIB JA3_CLIENT_STRICT setCookies body_base64
+  ja3.fetch session.fetch maxConcurrency UV_THREADPOOL_SIZE'
 extras_python='ABI_VERSION ERROR_CODES check_abi raise_for_status Ja3Error body_base64
   ja3_client_binaries print-url'
 extras_csharp='AbiVersion Ja3Exception Ja3ErrorCode RaiseForStatus BodyBase64 SetCookies

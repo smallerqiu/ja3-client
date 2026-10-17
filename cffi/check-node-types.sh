@@ -168,6 +168,22 @@ session.post('https://example.com', Buffer.from([0, 1, 2]), { body_base64: 'aGk=
 const handle: number = session.handle;
 session.close();
 
+// The async half, in the same shape a consumer writes it. Declared rather than run: this
+// fixture is compiled, never executed.
+async function useAsync() {
+  const page: Response = await ja3.fetch('https://example.com', { impersonate: 'chrome_133', timeout: 10 });
+  const pages: Response[] = await Promise.all(
+    ['a', 'b'].map((part) => ja3.fetch(`https://example.com/${part}`, { method: 'POST', body: { part } })));
+  const viaSession: Response = await session.fetch('https://example.com', { headers: { 'x-n': '1' } });
+  const pending: Promise<Response> = session.fetch('https://example.com');
+  const ceiling: number = ja3.maxConcurrency;
+  ja3.maxConcurrency = 64;
+  const configured = new Ja3({ maxConcurrency: 128 });
+  configured.close();
+
+  return [page, pages, viaSession, pending, ceiling];
+}
+
 const version: string = ja3.version();
 const libraryVersion: string = ja3.libraryVersion;
 const buildTime: string = ja3.buildTime;
@@ -203,6 +219,12 @@ ja3.request('https://example.com', { timeout: '10s' });
 ja3.request('https://example.com', { impersonate_: 'chrome_133' });
 // @ts-expect-error the body is bytes; text() is the call that decodes it
 const bodyAsText: string = res.body;
+// Only `fetch` answers a promise. An `await ja3.request(...)` looks right and blocks the
+// event loop for the whole request, so the declarations have to reject the shape.
+// @ts-expect-error request() returns a Response, not something awaitable
+const notAPromise: Promise<Response> = ja3.request('https://example.com');
+// @ts-expect-error the ceiling counts calls, so it is not a string
+ja3.maxConcurrency = '128';
 FIXTURE
 cp "$tests/surface.ts" "$tests/surface.mts"
 

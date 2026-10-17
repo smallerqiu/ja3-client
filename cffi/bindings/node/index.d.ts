@@ -63,6 +63,8 @@ export declare class Session {
   readonly handle: number;
   closed: boolean;
   request(url: string, options?: RequestOptions): Response;
+  /** The non-blocking `request`: same handle, same pool and cookie jar, answers a promise. */
+  fetch(url: string, options?: RequestOptions): Promise<Response>;
   get(url: string, options?: Omit<RequestOptions, 'method'>): Response;
   post(url: string, body?: RequestOptions['body'], options?: Omit<RequestOptions, 'method' | 'body'>): Response;
   close(): void;
@@ -77,12 +79,30 @@ export declare class Ja3Error extends Error {
 }
 
 export declare class Ja3 {
-  constructor(options?: { libraryPath?: string; checkAbi?: boolean });
+  constructor(options?: {
+    libraryPath?: string;
+    checkAbi?: boolean;
+    /**
+     * Ceiling on `fetch()` calls in flight or queued, process-wide because koffi's async
+     * queue is. Default 256, which is koffi's own `max_async_calls`; calls past the ceiling
+     * wait instead of failing.
+     */
+    maxConcurrency?: number;
+  });
   readonly path: string;
   readonly libraryVersion: string;
   readonly buildTime: string;
+  /** Read or move the process-wide `fetch()` ceiling; a non-positive integer throws `Ja3Error` 1. */
+  maxConcurrency: number;
   version(): string;
   request(url: string, options?: RequestOptions): Response;
+  /**
+   * The non-blocking `request`: the call runs on a koffi worker thread and the event loop
+   * stays free. Same options and `Response`; failures reject with `Ja3Error` instead of
+   * throwing. Named `fetch` so it cannot be confused with `request`, which blocks the loop
+   * for its whole duration even when you await it.
+   */
+  fetch(url: string, options?: RequestOptions): Promise<Response>;
   get(url: string, options?: Omit<RequestOptions, 'method'>): Response;
   post(url: string, body?: RequestOptions['body'], options?: Omit<RequestOptions, 'method' | 'body'>): Response;
   session(options?: ClientOptions): Session;
