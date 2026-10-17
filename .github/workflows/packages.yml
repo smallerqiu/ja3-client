@@ -131,6 +131,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
           PUBLISH: ${{ steps.version.outputs.publish }}
         run: |
           if ! gh release view "$TAG" --json assets > assets.json 2>/dev/null; then
@@ -151,7 +152,10 @@ jobs:
 
           for slug in darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 linux-armv7 linux-386 \
                       windows-amd64 windows-386; do
-            grep -qx "ja3-client-$TAG-$slug.zip" have.txt || missing="$missing $slug"
+            # The archive is named after the version, the release is addressed by its
+            # tag: ja3-client-1.2.5-darwin-arm64.zip lives under refs/tags/v1.2.5. Using
+            # the tag here looks for ja3-client-v1.2.5-* and reports all eight missing.
+            grep -qx "ja3-client-$VERSION-$slug.zip" have.txt || missing="$missing $slug"
           done
 
           grep -qx 'SHA256SUMS.txt' have.txt || missing="$missing sums"
