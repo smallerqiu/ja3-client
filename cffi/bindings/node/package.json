@@ -1,6 +1,6 @@
 {
   "name": "ja3-client",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Node.js binding for the ja3-client TLS-impersonation shared library",
   "main": "index.js",
   "types": "index.d.ts",

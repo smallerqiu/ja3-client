@@ -239,17 +239,18 @@ Every release archive ships `smoke.py` next to the library, so a download can pr
 itself before it reaches your code:
 
 ```sh
-unzip ja3-client-1.2.6-linux-amd64.zip
-cd ja3-client-1.2.6-linux-amd64 && python3 smoke.py
+unzip ja3-client-1.2.7-linux-amd64.zip
+cd ja3-client-1.2.7-linux-amd64 && python3 smoke.py
 ```
 
 ### CI and releases
 
 * [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on pushes and pull
   requests: module hygiene (gofmt, `go mod tidy -diff`, and the two opposite `replace`
-  rules that keep `go get` working while keeping the artifacts honest), the Go tests on
-  Linux/macOS/Windows, then the library build, both smokes, and a
-  package → unpack → load round trip.
+  rules that keep `go get` working while keeping the artifacts honest), the package README
+  gate (`make docs-check`), the consumer-side typecheck of the Node declarations
+  (`make types-check`), the Go tests on Linux/macOS/Windows, then the library build, both
+  smokes, and a package → unpack → load round trip.
 * [`.github/workflows/release.yml`](../.github/workflows/release.yml) runs on a tag push
   or a published release. It calls the same scripts this folder does —
   `./build-docker.sh <version> --only <target>` for Linux and Windows, `make darwin` on a
