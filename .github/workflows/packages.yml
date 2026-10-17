@@ -253,19 +253,21 @@ jobs:
         run: |
           mkdir -p out
 
+          # Each leg runs in its own subshell: a bare "cd" here would leave the step
+          # standing in the binding directory, and the "ls -l out" below - like every
+          # later step, which starts at the repository root - would then be looking at
+          # cffi/bindings/<leg>/out and fail the pack over a listing of a directory that
+          # was never meant to exist.
           case "${{ matrix.package }}" in
             node)
-              cd cffi/bindings/node
-              npm pack --pack-destination ../../../out
+              (cd cffi/bindings/node && npm pack --pack-destination ../../../out)
               ;;
             python)
-              cd cffi/bindings/python
               python3 -m pip install --quiet build
-              python3 -m build --outdir ../../../out
+              (cd cffi/bindings/python && python3 -m build --outdir ../../../out)
               ;;
             csharp)
-              cd cffi/bindings/csharp
-              dotnet pack -c Release -o ../../../out
+              (cd cffi/bindings/csharp && dotnet pack -c Release -o ../../../out)
               ;;
           esac
 
