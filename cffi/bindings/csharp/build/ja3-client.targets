@@ -10,7 +10,8 @@
 
   Properties (all optional; the environment spellings match cffi/PACKAGING.md):
 
-    Ja3ClientVersion       library version to fetch, else $JA3_CLIENT_VERSION, else 1.2.4
+    Ja3ClientVersion       library version to fetch, else $JA3_CLIENT_VERSION,
+                           else the version this package was installed as
     Ja3ClientBaseUrl       download root, else $JA3_CLIENT_BASE_URL, else github.com
     Ja3ClientRepo          owner/repo, else $JA3_CLIENT_REPO
     Ja3ClientCacheDir      cache root, else $JA3_CLIENT_CACHE_DIR, else ~/.cache/ja3-client
@@ -36,12 +37,27 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- The package's own version is the directory NuGet unpacked it into: this file
+         lives at <packagesRoot>/ja3-client/<version>/build/, so reading the name above
+         it gives the resolver the number the consumer installed, with nothing to bump
+         at release time. A literal fallback here would silently pair ja3-client@1.2.5
+         with v1.2.4's library, which is the drift PACKAGING.md says cannot happen.
+         In a checkout the parent directory is `csharp`, so the shape test is what keeps
+         the dev tree from asking for ja3-client-csharp-<slug>.zip: an unmatched version
+         leaves the property empty, and the resolve target says so instead of fetching. -->
+    <_Ja3BuildDir>$([System.IO.Path]::GetDirectoryName('$(MSBuildThisFileDirectory)'))</_Ja3BuildDir>
+    <_Ja3PkgDir>$([System.IO.Path]::GetDirectoryName('$(_Ja3BuildDir)'))</_Ja3PkgDir>
+    <_Ja3PkgName>$([System.IO.Path]::GetFileName('$(_Ja3PkgDir)'))</_Ja3PkgName>
+    <_Ja3PkgIsVersion Condition="'$(_Ja3PkgName)' != ''">$([System.Text.RegularExpressions.Regex]::IsMatch('$(_Ja3PkgName)', '^[0-9]+\.[0-9]+\.[0-9]+$'))</_Ja3PkgIsVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- A bare version number: the tag is v + version and the asset is
          ja3-client-<version>-<slug>.zip. A leading v is stripped by Replace rather than
          compared, because no semver contains the letter. -->
     <Ja3ClientVersion Condition="'$(Ja3ClientVersion)' == ''">$([System.String]::Copy('$(_Ja3VersionEnv)').Replace('v', ''))</Ja3ClientVersion>
-    <Ja3ClientVersion Condition="'$(Ja3ClientVersion)' == ''">1.2.4</Ja3ClientVersion>
-    <_Ja3Tag>v$([System.String]::Copy('$(Ja3ClientVersion)').Replace('v', ''))</_Ja3Tag>
+    <Ja3ClientVersion Condition="'$(Ja3ClientVersion)' == '' AND '$(_Ja3PkgIsVersion)' == 'True'">$(_Ja3PkgName)</Ja3ClientVersion>
+    <_Ja3Tag Condition="'$(Ja3ClientVersion)' != ''">v$([System.String]::Copy('$(Ja3ClientVersion)').Replace('v', ''))</_Ja3Tag>
 
     <Ja3ClientRepo Condition="'$(Ja3ClientRepo)' == ''">$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_REPO'))</Ja3ClientRepo>
     <Ja3ClientRepo Condition="'$(Ja3ClientRepo)' == ''">smallerqiu/ja3-client</Ja3ClientRepo>
@@ -87,17 +103,17 @@
     <_Ja3LibName Condition="'$(_Ja3OsName)' == 'windows'">ja3_client_$(_Ja3Arch).dll</_Ja3LibName>
     <_Ja3LibName Condition="'$(_Ja3LibName)' == '' AND '$(_Ja3Arch)' != ''">ja3_client_$(_Ja3Arch).dylib</_Ja3LibName>
 
-    <_Ja3Asset Condition="'$(_Ja3Slug)' != ''">ja3-client-$(Ja3ClientVersion)-$(_Ja3Slug).zip</_Ja3Asset>
-    <_Ja3AssetUrl Condition="'$(_Ja3Slug)' != ''">$(Ja3ClientBaseUrl)/$(_Ja3Tag)/$(_Ja3Asset)</_Ja3AssetUrl>
-    <_Ja3SumsUrl Condition="'$(_Ja3Slug)' != ''">$(Ja3ClientBaseUrl)/$(_Ja3Tag)/SHA256SUMS.txt</_Ja3SumsUrl>
-    <_Ja3CachedPath Condition="'$(_Ja3Slug)' != ''">$([MSBuild]::NormalizePath('$(Ja3ClientCacheDir)', '$(Ja3ClientVersion)', '$(_Ja3Slug)', '$(_Ja3LibName)'))</_Ja3CachedPath>
+    <_Ja3Asset Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' != ''">ja3-client-$(Ja3ClientVersion)-$(_Ja3Slug).zip</_Ja3Asset>
+    <_Ja3AssetUrl Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' != ''">$(Ja3ClientBaseUrl)/$(_Ja3Tag)/$(_Ja3Asset)</_Ja3AssetUrl>
+    <_Ja3SumsUrl Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' != ''">$(Ja3ClientBaseUrl)/$(_Ja3Tag)/SHA256SUMS.txt</_Ja3SumsUrl>
+    <_Ja3CachedPath Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' != ''">$([MSBuild]::NormalizePath('$(Ja3ClientCacheDir)', '$(Ja3ClientVersion)', '$(_Ja3Slug)', '$(_Ja3LibName)'))</_Ja3CachedPath>
     <_Ja3CachedDir Condition="'$(_Ja3CachedPath)' != ''">$([System.IO.Path]::GetDirectoryName('$(_Ja3CachedPath)'))</_Ja3CachedDir>
 
     <!-- Staging lives under obj/, one directory per slug: two projects sharing a
          unpacked/ would overwrite each other mid-build. -->
     <_Ja3Staging Condition="'$(_Ja3Slug)' != '' AND '$(IntermediateOutputPath)' != ''">$([MSBuild]::NormalizePath('$(IntermediateOutputPath)', 'ja3-client-$(_Ja3Slug)'))</_Ja3Staging>
 
-    <_Ja3Wanted Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientOffline)' != 'true' AND '$(_Ja3LibEnv)' == '' AND '$(Ja3ClientSkipNativeFetch)' != 'true'">true</_Ja3Wanted>
+    <_Ja3Wanted Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' != '' AND '$(Ja3ClientOffline)' != 'true' AND '$(_Ja3LibEnv)' == '' AND '$(Ja3ClientSkipNativeFetch)' != 'true'">true</_Ja3Wanted>
   </PropertyGroup>
 
   <!-- ============================ resolve ================================ -->
@@ -114,7 +130,10 @@
     <Warning Condition="'$(_Ja3Slug)' == ''"
              Text="ja3-client: no release archive for SDK RID '$(_Ja3Rid)'. Build the library (make -C cffi host) and set JA3_CLIENT_LIB, or pass -p:Ja3ClientSkipNativeFetch=true." />
 
-    <Warning Condition="'$(_Ja3Wanted)' != 'true' AND '$(_Ja3Cached)' != 'true' AND '$(_Ja3Slug)' != ''"
+    <Warning Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' == '' AND '$(_Ja3LibEnv)' == '' AND '$(Ja3ClientSkipNativeFetch)' != 'true'"
+             Text="ja3-client: cannot work out which library version to fetch - this file is not inside a NuGet package directory, so there is no version in its own path. Set -p:Ja3ClientVersion=X.Y.Z (or JA3_CLIENT_VERSION), or build the library with 'make -C cffi host' and set JA3_CLIENT_LIB, or pass -p:Ja3ClientSkipNativeFetch=true." />
+
+    <Warning Condition="'$(_Ja3Wanted)' != 'true' AND '$(_Ja3Cached)' != 'true' AND '$(_Ja3Slug)' != '' AND '$(Ja3ClientVersion)' != ''"
              Text="ja3-client: $(_Ja3CachedPath) is missing and no download was attempted (Ja3ClientOffline or JA3_CLIENT_LIB). Unzip $(_Ja3AssetUrl) by hand, or build the library with 'make -C cffi host'." />
 
     <RemoveDir Directories="$(_Ja3Staging)" Condition="'$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true'" />

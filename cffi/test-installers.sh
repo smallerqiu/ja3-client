@@ -96,8 +96,10 @@ TAG="v$VERSION"
 
 step "Package versions agree on $VERSION"
 PY_VERSION=$(sed -n 's/^PACKAGE_VERSION = "\(.*\)"/\1/p' "$ROOT/bindings/python/ja3_client_binaries.py")
+PYPROJECT_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT/bindings/python/pyproject.toml")
 CS_VERSION=$(sed -n 's| *<Version>\(.*\)</Version>|\1|p' "$ROOT/bindings/csharp/Ja3Client.csproj")
 [ "$PY_VERSION" = "$VERSION" ] && ok "python $PY_VERSION" || fail "python says $PY_VERSION, node says $VERSION"
+[ "$PYPROJECT_VERSION" = "$VERSION" ] && ok "pyproject $PYPROJECT_VERSION" || fail "pyproject says $PYPROJECT_VERSION, node says $VERSION"
 [ "$CS_VERSION" = "$VERSION" ] && ok "csharp $CS_VERSION" || fail "csharp says $CS_VERSION, node says $VERSION"
 
 # The ABI number is written down in five places, and four of them are what a user

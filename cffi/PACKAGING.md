@@ -36,6 +36,14 @@ of them equal the tag: `package.json` (`"version"`), `ja3_client_binaries.py`
 first is a download target, the second is package metadata, and only the gate keeps
 them in step.
 
+What each binding then asks to download is self-located, not copied out of a constant
+that a release has to remember: npm reads its own `package.json`, and the MSBuild
+targets reads the version from the directory NuGet unpacked it into
+(`<packagesRoot>/ja3-client/<version>/build/`). The C# resolver had a literal `1.2.4`
+there until 1.2.5, which is exactly the silent drift this document promises cannot
+happen; if that path cannot be read (a checkout, not a package) the targets says so
+and fetches nothing rather than guessing a version.
+
 ## The release asset contract
 
 ```
@@ -132,9 +140,12 @@ ja3-client: could not fetch the native library for linux-arm64 (v1.2.5).
 
 `cffi/test-installers.sh` is the offline end-to-end test (`make installers`). It
 
-* asserts the five places the version and the ABI number are written down agree
-  (`main.go`, the three bindings' resolvers, and the MSBuild targets) - a drift there
-  makes a binding reject a library it should accept;
+* asserts the ABI number agrees everywhere it is written (`main.go`, the three
+  bindings' resolvers, the MSBuild targets) and that the four version strings
+  (`package.json`, `PACKAGE_VERSION`, `pyproject.toml`, `<Version>`) say the same
+  number - a drift there makes a binding reject a library it should accept. The
+  C# resolver's own version is not among them: it reads it from the directory
+  NuGet unpacked it into, so a release has nothing to remember to bump;
 * builds the host library with `make host`, packages it with `package-release.sh`,
   and serves it from four local HTTP sites laid out like a GitHub Release: the good
   one, one whose archive no longer matches `SHA256SUMS.txt`, one with no sums file,
