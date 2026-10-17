@@ -477,6 +477,12 @@ jobs:
     # The gate: a human has to approve this environment before any registry sees
     # these bytes. Configure it under Settings -> Environments -> release.
     environment: release
+    # id-token: write is what lets this job mint the GitHub OIDC token that NuGet's
+    # trusted publishing exchanges for a one-hour API key, so no long-lived NuGet
+    # secret has to exist. Job level because the workflow only asks for contents: read.
+    permissions:
+      contents: read
+      id-token: write
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
@@ -543,9 +549,24 @@ jobs:
           # files arrive in two separate uploads.
           twine upload --non-interactive pkgs/*.whl pkgs/*.tar.gz
 
+      # NuGet's trusted publishing is the default here: NuGet/login trades this job's
+      # OIDC token for a key that dies after an hour, and the policy on nuget.org -
+      # owner smallerqiu, repository ja3-client, workflow file packages.yml, environment
+      # release - is what says this run may push. So no long-lived NuGet secret has to
+      # live in this repository. "user" is the nuget.org profile name, never the email;
+      # set the repository variable NUGET_USER if that name differs from the GitHub
+      # login. A classic API key in NUGET_API_KEY still works and wins, for the day the
+      # policy needs bypassing.
+      - name: NuGet login
+        if: ${{ secrets.NUGET_API_KEY == '' }}
+        id: nuget_login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER || github.actor }}
+
       - name: NuGet
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY || steps.nuget_login.outputs.NUGET_API_KEY }}
         run: |
           nupkg="$(ls pkgs/*.nupkg)"
 
@@ -555,7 +576,12 @@ jobs:
             exit 0
           fi
 
-          [ -n "$NUGET_API_KEY" ] || { echo "NUGET_API_KEY is not set"; exit 1; }
+          [ -n "$NUGET_API_KEY" ] || {
+            echo "no NuGet key: NuGet/login returned nothing and NUGET_API_KEY is empty."
+            echo "Check the trusted publishing policy on nuget.org (owner, repository,"
+            echo "workflow file packages.yml, environment release) and the NUGET_USER variable."
+            exit 1
+          }
 
           dotnet nuget push "$nupkg" --api-key "$NUGET_API_KEY" \
             --source https://api.nuget.org/v3/index.json --skip-duplicate

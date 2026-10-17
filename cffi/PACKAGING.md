@@ -183,11 +183,25 @@ postinstall and the file Python and .NET load afterwards are the same record. A
 package that resolves on the author's machine because of a stray `cffi/build` cannot
 pass that job, which is the point of it.
 
-The registry tokens are repository secrets (`NPM_TOKEN`, `PYPI_API_TOKEN`,
-`NUGET_API_KEY`). Publishing order matters only for the notes: the GitHub release
-first, then the three registries. The three names were checked on 2026-10-15 and
-`ja3-client` was free on npm, PyPI and NuGet; re-check before the first real
-publish, because a squatted name forces a rename of all three.
+npm and PyPI take repository secrets (`NPM_TOKEN`, `PYPI_API_TOKEN`). NuGet does not:
+the publish job asks GitHub for an OIDC token and trades it at nuget.org for a key that
+expires in an hour, against a trusted publishing policy that names this owner, this
+repository, `packages.yml` and the `release` environment - which is a weaker credential
+to leak than a key sitting in settings, and one that needs no rotation. `NUGET_USER`
+(a repository variable, not a secret) carries the nuget.org profile name when it differs
+from the GitHub login, and a classic API key in `NUGET_API_KEY` still overrides the
+whole route.
+
+npm cannot work that way for a package that does not exist yet: its trusted publisher is
+configured on the package's own settings page, so the first version has to arrive with a
+token. That token should be a granular one with a short expiry, and it should be revoked
+and replaced by a trusted publisher (workflow file `packages.yml`, environment `release`,
+`id-token: write` already on the job) once `ja3-client` has a first version to point at.
+
+Publishing order matters only for the notes: the GitHub release first, then the three
+registries. The three names were checked on 2026-10-15 and `ja3-client` was free on npm,
+PyPI and NuGet; re-check before the first real publish, because a squatted name forces a
+rename of all three.
 
 ```sh
 npm view ja3-client                                                 # 404 = still free
