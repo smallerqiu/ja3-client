@@ -469,7 +469,12 @@ run_dotnet() {
   # in how it spells $pkg would make a full-path grep miss a build that worked.
   expect_contains "the package built clean" "ja3-client.$VERSION.nupkg" "$WORK/c0.log"
 
-  tfm="net$(dotnet --version | cut -d. -f1)"
+  # The revision is not decoration. Up to .NET 9 the SDK also accepts the bare short
+  # name (net9 builds as net9), which is why this passed on a laptop; "net10" is already
+  # taken as the legacy spelling of .NET Framework 1.0, so on an SDK 10 runner the
+  # consumer died with MSB3644 - reference assemblies for .NETFramework,Version=v1.0 not
+  # found. net10.0 is .NET 10 and means the same thing on every SDK.
+  tfm="net$(dotnet --version | cut -d. -f1).0"
   app="$WORK/consumer"
   rm -rf "$app"
   mkdir -p "$app"
