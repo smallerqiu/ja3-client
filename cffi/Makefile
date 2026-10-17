@@ -3,6 +3,7 @@
 #   make host            build for the machine you are on (default)
 #   make test            go test for the FFI contract (offline, httptest based)
 #   make smoke           load the host library and check the ABI, no network
+#   make docs-check      the package READMEs still document the whole ABI
 #   make check           host build + go tests + smoke + every binding with a runtime here
 #   make darwin          both macOS arches;  make linux / make windows likewise
 #   make all             everything this machine can reach
@@ -58,7 +59,7 @@ endif
 # Native toolchain on Linux, musl cross elsewhere.
 LINUX_NATIVE := $(filter linux,$(HOST_OS))
 
-.PHONY: host test lint smoke node-smoke check all docker package installers \
+.PHONY: host test lint docs-check smoke node-smoke check all docker package installers \
         python-check node-check csharp-check clean help
 .PHONY: darwin darwin-amd64 darwin-arm64 linux linux-amd64 linux-arm64 \
         windows windows-amd64 windows-386
@@ -76,7 +77,7 @@ host:
 	@$(MAKE) --no-print-directory $(HOST_OS)-$(HOST_ARCH)
 endif
 
-check: host test smoke node-smoke python-check node-check csharp-check
+check: host test smoke node-smoke docs-check python-check node-check csharp-check
 
 test:
 	go test -count=1 ./...
@@ -95,6 +96,14 @@ node-smoke:
 	@command -v node >/dev/null 2>&1 || { echo "node missing; skipping" >&2; exit 0; }
 	@test -f $(HOST_LIB) || { echo "$(HOST_LIB) is missing - run 'make host' first" >&2; exit 1; }
 	cd bindings/node && { test -d node_modules/koffi || npm install --no-audit --no-fund; } && node smoke.js ../../$(HOST_LIB)
+
+# The npm/PyPI/NuGet pages strip relative links, so each package README carries the
+# whole API itself - which means it can drift from ffi.go without anybody noticing.
+# docs-check compares the three READMEs against the json tags in ffi.go and fails on
+# the first field, error code or knob that is missing. It needs no toolchain and no
+# network, so CI runs it on every push.
+docs-check:
+	./check-binding-readmes.sh
 
 lint:
 	@test -z "$(shell gofmt -l .)" || (echo "run gofmt on:" && gofmt -l . && exit 1)

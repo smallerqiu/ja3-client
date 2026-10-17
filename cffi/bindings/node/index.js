@@ -1,9 +1,9 @@
 /**
  * Node.js bindings for the ja3-client shared library, built on koffi.
  *
- *     npm install @smallqiu/ja3-client-ffi   // or link the local folder
+ *     npm install ja3-client   // or link this folder from a checkout
  *
- *     const { Ja3 } = require('@smallqiu/ja3-client-ffi');
+ *     const { Ja3 } = require('ja3-client');
  *
  *     const ja3 = new Ja3();
  *     const res = ja3.request('https://tls.browserleaks.com/json', { impersonate: 'chrome_133' });
