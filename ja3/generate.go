@@ -195,9 +195,17 @@ func BuildClientHelloSpec(impersonate string, withHttp3 *bool) (profile ClientPr
 	return BuildClientHelloSpecWithCP(config)
 }
 
-func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err error) {
+// extSlot pins one position of a profile's extension list: either a grease slot or
+// the id of an extension to take from the freshly built extMap.
+type extSlot struct {
+	grease bool
+	id     uint16
+}
 
-	var clientHelloSpec tls.ClientHelloSpec
+// buildHelloSpec builds one ClientHelloSpec out of config. pinned replays the
+// extension order an earlier build chose instead of taking the map's random one, so a
+// profile keeps one wire order across the specs it rebuilds per handshake.
+func buildHelloSpec(config ClientData, pinned []extSlot) (clientHelloSpec tls.ClientHelloSpec, order []extSlot, err error) {
 	// ciphers part 1
 	var ciphers = []uint16{}
 	// if grease is true, so the extension is to use grease twice.
@@ -209,7 +217,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		if ok {
 			ciphers = append(ciphers, cipherId)
 		} else {
-			return profile, fmt.Errorf("cipher not found: %s", cipher)
+			return clientHelloSpec, order, fmt.Errorf("cipher not found: %s", cipher)
 		}
 	}
 	clientHelloSpec.CipherSuites = ciphers
@@ -243,7 +251,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 				supportedDelegatedCredentialsAlgorithmAsUint, err := strconv.ParseUint(del, 16, 16)
 
 				if err != nil {
-					return profile, fmt.Errorf("%s is not a valid supportedDelegatedCredentialsAlgorithm", del)
+					return clientHelloSpec, order, fmt.Errorf("%s is not a valid supportedDelegatedCredentialsAlgorithm", del)
 				}
 
 				mappedDelegatedCredentialsAlgorithms = append(mappedDelegatedCredentialsAlgorithms, tls.SignatureScheme(uint16(supportedDelegatedCredentialsAlgorithmAsUint)))
@@ -313,7 +321,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 			tls.VersionTLS10,
 		}
 	default:
-		return profile, fmt.Errorf("ja3Str tls version error")
+		return clientHelloSpec, order, fmt.Errorf("ja3Str tls version error")
 	}
 	extMap[tls.ExtensionSupportedVersions] = &tlsExtensionVersion
 
@@ -328,14 +336,14 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		keyShareLimit = config.TlsKeySharesLimit
 	}
 	if keyShareLimit > len(curvesParts) {
-		return profile, fmt.Errorf("keyShareLimit is too large")
+		return clientHelloSpec, order, fmt.Errorf("keyShareLimit is too large")
 	}
 
 	var keyShareCurvesParts = curvesParts[:keyShareLimit-1]
 	for _, c := range keyShareCurvesParts {
 		cid, ok := curves[c]
 		if !ok {
-			return profile, fmt.Errorf("don't support this curve: %s ", c)
+			return clientHelloSpec, order, fmt.Errorf("don't support this curve: %s ", c)
 		}
 		keyShareCurves = append(keyShareCurves, tls.KeyShare{Group: cid})
 	}
@@ -349,7 +357,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	for _, c := range curvesParts {
 		cid, ok := curves[c]
 		if !ok {
-			return profile, fmt.Errorf("don't support this curve: %s ", c)
+			return clientHelloSpec, order, fmt.Errorf("don't support this curve: %s ", c)
 		}
 		// cid, err := strconv.ParseUint(id, 10, 16)
 		// if err != nil {
@@ -365,7 +373,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 		for _, e := range strings.Split(config.CertCompression, ",") {
 			cert, ok := certCompression[e]
 			if !ok {
-				return profile, fmt.Errorf("don't support this certCompression: %s ", e)
+				return clientHelloSpec, order, fmt.Errorf("don't support this certCompression: %s ", e)
 			}
 			certCompressionAlgo = append(certCompressionAlgo, cert)
 		}
@@ -414,14 +422,14 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 			supportedSignatureAlgorithmAsUint, err := strconv.ParseUint(supportedSignatureAlgorithm, 16, 16)
 
 			if err != nil {
-				return profile, fmt.Errorf("%s is not a valid supportedSignatureAlgorithm", supportedSignatureAlgorithm)
+				return clientHelloSpec, order, fmt.Errorf("%s is not a valid supportedSignatureAlgorithm", supportedSignatureAlgorithm)
 			}
 
 			mapSignatureAlgorithms = append(mapSignatureAlgorithms, tls.SignatureScheme(uint16(supportedSignatureAlgorithmAsUint)))
 		}
 	}
 	if len(mapSignatureAlgorithms) == 0 {
-		return profile, fmt.Errorf("no supportedSignatureAlgorithm")
+		return clientHelloSpec, order, fmt.Errorf("no supportedSignatureAlgorithm")
 	}
 	extMap[tls.ExtensionSignatureAlgorithms] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: mapSignatureAlgorithms}
 
@@ -429,7 +437,7 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	var targetPointFormats []byte
 	pid, err := strconv.ParseUint("0", 10, 8)
 	if err != nil {
-		return profile, err
+		return clientHelloSpec, order, err
 	}
 	targetPointFormats = append(targetPointFormats, byte(pid))
 	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
@@ -437,25 +445,45 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	// the end of extMap
 	//
 	// ext part 2
+	//
+	// The order is decided once per profile and replayed on every rebuild: without
+	// config.TlsExtensionOrder the list comes out of a Go map, whose iteration order is
+	// random, and the wire order is part of the fingerprint.
 	var exts []tls.TLSExtension
-	if config.TlsExtensionOrder != "" {
+	if pinned != nil {
+		order = pinned
+		for _, slot := range pinned {
+			if slot.grease {
+				exts = append(exts, &tls.UtlsGREASEExtension{})
+				continue
+			}
+			te, ok := extMap[slot.id]
+			if !ok {
+				return clientHelloSpec, order, fmt.Errorf("don't support this ext: %d ", slot.id)
+			}
+			exts = append(exts, te)
+		}
+	} else if config.TlsExtensionOrder != "" {
 		for _, e := range strings.Split(config.TlsExtensionOrder, "-") {
 			eId, err := strconv.ParseUint(e, 10, 16)
 			if err != nil {
-				return profile, err
+				return clientHelloSpec, order, err
 			}
 			te, ok := extMap[uint16(eId)]
 			if !ok {
-				return profile, fmt.Errorf("don't support this ext: %s ", e)
+				return clientHelloSpec, order, fmt.Errorf("don't support this ext: %s ", e)
 			}
-
+			order = append(order, extSlot{id: uint16(eId)})
 			exts = append(exts, te)
 		}
 	} else {
-		for _, e := range extMap {
+		for id, e := range extMap {
+			order = append(order, extSlot{id: id})
 			exts = append(exts, e)
 		}
 		if config.TlsGrease {
+			order = append([]extSlot{{grease: true}}, order...)
+			order = append(order, extSlot{grease: true})
 			exts = append([]tls.TLSExtension{&tls.UtlsGREASEExtension{}}, exts...)
 			exts = append(exts, &tls.UtlsGREASEExtension{})
 		}
@@ -464,13 +492,39 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	clientHelloSpec.Extensions = exts
 	clientHelloSpec.GetSessionID = sha256.Sum256
 
+	return clientHelloSpec, order, nil
+}
+
+// BuildClientHelloSpecWithCP turns one ClientData into a profile whose every handshake
+// gets its own ClientHelloSpec.
+//
+// Rebuilding per handshake is what keeps a client usable for more than one request:
+// utls writes into the extension instances it is handed. ApplyPreset fills a
+// *KeyShareExtension's public keys, a *UtlsGREASEExtension's grease value and the
+// grease placeholders inside supported_versions and supported_groups, and a resumption
+// handshake initializes the *SessionTicketExtension in place. Handing the same
+// instances to a second handshake makes it skip key generation (u_parrots.go:
+// `if len(ext.KeyShares[i].Data) > 1 { continue }`), so KeyShareKeys stays empty and
+// the client aborts with "local error: tls: internal error" as soon as the server picks
+// X25519MLKEM768 - after putting the first handshake's key share bytes on the wire
+// again. ApplyPreset documents the constraint itself: "Fields of TLSExtensions that are
+// slices/pointers are shared across different connections with same ClientHelloSpec. It
+// is advised to use different specs and avoid any shared state."
+func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err error) {
+	// The first build validates config and pins the extension order the profile keeps.
+	_, order, err := buildHelloSpec(config, nil)
+	if err != nil {
+		return profile, err
+	}
+
 	clientHelloId := tls.ClientHelloID{
 		Client:               config.Client,
 		RandomExtensionOrder: config.RandomExtensionOrder,
 		Version:              config.Version,
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
-			return clientHelloSpec, nil
+			spec, _, err := buildHelloSpec(config, order)
+			return spec, err
 		},
 	}
 	akamaiMap := []string{}
@@ -523,17 +577,16 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	}, nil
 }
 
-// ja3key as the tls finger , akamai_text as the http2 finger
-// In theory, it’s not possible to reverse-infer solely from the JA3 key,
-// because the information is not complete — it can only be roughly reconstructed.
-func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3 *bool) (profile ClientProfile, err error) {
+// buildHelloSpecFromJa3Key builds one ClientHelloSpec out of a ja3 string. The
+// extension order comes out of the ja3 string itself, so every rebuild yields the same
+// order with fresh instances - see BuildClientHelloSpecWithCP for why fresh matters.
+func buildHelloSpecFromJa3Key(ja3key string, withHttp3 *bool) (clientHelloSpec tls.ClientHelloSpec, err error) {
 	ja3StringParts := strings.Split(ja3key, ",")
 	if len(ja3StringParts) < 4 {
-		return profile, errors.New("ja3 format error")
+		return clientHelloSpec, errors.New("ja3 format error")
 	}
 	extMap := getExtBaseMap(withHttp3)
 
-	var clientHelloSpec tls.ClientHelloSpec
 	// tls version part 0
 
 	// password part 1
@@ -544,7 +597,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3
 	for _, c := range ciphers {
 		cid, err := strconv.ParseUint(c, 10, 16)
 		if err != nil {
-			return profile, err
+			return clientHelloSpec, err
 		}
 		cipherSuite = append(cipherSuite, uint16(cid))
 	}
@@ -571,7 +624,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3
 	for _, c := range mapCurves {
 		cid, err := strconv.ParseUint(c, 10, 16)
 		if err != nil {
-			return profile, err
+			return clientHelloSpec, err
 		}
 		if limit < 2 {
 			keyShareCurves = append(keyShareCurves, tls.KeyShare{Group: tls.CurveID(cid)})
@@ -586,7 +639,7 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3
 	var targetPointFormats []byte
 	pid, err := strconv.ParseUint("0", 10, 8)
 	if err != nil {
-		return profile, err
+		return clientHelloSpec, err
 	}
 	targetPointFormats = append(targetPointFormats, byte(pid))
 	extMap[tls.ExtensionSupportedPoints] = &tls.SupportedPointsExtension{SupportedPoints: targetPointFormats}
@@ -604,11 +657,11 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3
 	for _, e := range extensions {
 		eId, err := strconv.ParseUint(e, 10, 16)
 		if err != nil {
-			return ClientProfile{}, err
+			return clientHelloSpec, err
 		}
 		te, ok := extMap[uint16(eId)]
 		if !ok {
-			return ClientProfile{}, fmt.Errorf("don't support this ext: %s ", e)
+			return clientHelloSpec, fmt.Errorf("don't support this ext: %s ", e)
 		}
 
 		exts = append(exts, te)
@@ -621,12 +674,29 @@ func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3
 	clientHelloSpec.GetSessionID = sha256.Sum256
 	clientHelloSpec.TLSVersMax = tls.VersionTLS13
 	clientHelloSpec.TLSVersMin = tls.VersionTLS12
+	return clientHelloSpec, nil
+}
+
+// ja3key as the tls finger , akamai_text as the http2 finger
+// In theory, it’s not possible to reverse-infer solely from the JA3 key,
+// because the information is not complete — it can only be roughly reconstructed.
+//
+// BuildClientHelloSpecFromJa3Key rebuilds the spec for every handshake, for the same
+// reason BuildClientHelloSpecWithCP does: utls mutates the extension instances of the
+// spec it is given, and a second handshake on shared instances goes out with the first
+// one's key shares and then aborts with "local error: tls: internal error".
+func BuildClientHelloSpecFromJa3Key(ja3key string, akamai_text string, withHttp3 *bool) (profile ClientProfile, err error) {
+	// The first build is what reports a malformed ja3 string to the caller.
+	if _, err := buildHelloSpecFromJa3Key(ja3key, withHttp3); err != nil {
+		return profile, err
+	}
+
 	// latest part 0
 	clientHelloId := tls.ClientHelloID{
 		RandomExtensionOrder: false,
 		Seed:                 nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
-			return clientHelloSpec, nil
+			return buildHelloSpecFromJa3Key(ja3key, withHttp3)
 		},
 	}
 
