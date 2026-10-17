@@ -210,6 +210,13 @@ know why before you call it done:
   happens to print `h2` for the same hello. Send `with_http3: false` to compare like
   for like (that is what the §6 command line above is really testing). See
   "HTTP/3 is advertised, not implemented" below for why the flag exists at all.
+  That the capture disagrees is **not** a bug to fix, and the default is not up for
+  grabs: measured in production at around a million concurrent requests, the same
+  Chrome profile without `h3` in the ALPN drew visibly more Cloudflare challenges,
+  more often, and the anomalies looked like ordinary noise until `h3` went back on
+  for the low versions — at which point the intercepts and error rate fell to almost
+  nothing. So Cloudflare reads that claim, and the flag's real use is offline
+  comparison against a capture, not shipping `false`.
 * **Header order and `sec-ch-ua`.** The library sets only `user-agent` plus
   whatever you pass in `Headers`; it does not synthesize a browser's header set or
   order. A profile id is not a request; if the site checks `sec-ch-ua`, that is
@@ -344,17 +351,17 @@ the hashes the captures reported; read `ja3/ja4_golden_test.go` before adding a 
 * A typo in `impersonate` is not an error: `BuildClientHelloSpec` logs
   `the input client … don't support, so use default` and falls back to
   `DefaultClient`. Check the log or `WithDebug` when a capture disagrees.
-* **`Headers` forces `accept-encoding: identity`.** `session.go:88-93` overwrites
-  the value whenever a request carries headers at all (even one the caller set),
-  while `cffi/sessions.go:63-80` pins it only *unless the caller chose it*. The
-  reason is real but narrower than the code: on HTTP/2 this fork decompresses
-  whatever comes back (`http/h2_bundle.go:9275-9277` calls `DecompressBody`
+* **`accept-encoding` defaults to `identity`, it no longer overwrites yours.**
+  `session.go:101-103` pins `identity` only when the caller left the header empty;
+  a value you wrote survives. That is the Chrome-like behaviour people were losing,
+  and it moves the risk to the caller: the transport does not decompress everything
+  on every protocol — HTTP/2 always (`http/h2_bundle.go` calls `DecompressBody`
   regardless of who asked; gzip/br/deflate/zstd readers exist at
-  `http/transport.go:2873-2983`), on HTTP/1 only when the caller's header says gzip
-  (`http/transport.go:2569-2572` widens the stock rule), and on HTTP/3 the stock
-  gzip-only rule again (`http3/stream.go:286-288`). So `br`/`deflate`/`zstd` over
-  HTTP/1 arrive as compressed bytes that the FFI can only return as base64 — which
-  is what the blanket `identity` is protecting.
+  `http/transport.go:2873-2983`), HTTP/1 only when the caller's header says gzip
+  (`http/transport.go:2569-2572` widens the stock rule), HTTP/3 only the gzip it
+  injects itself (`http3/stream.go:286-288`). So asking for `br`/`deflate`/`zstd`
+  over HTTP/1 gets compressed bytes back, and the FFI can only hand those over as
+  base64. `cffi/sessions.go` pins the same default the same way.
 * Multi-value headers are joined with `", "` into one value, and Go's `http.Header`
   is a map: HTTP/1.1 header order is not controllable from this API.
 

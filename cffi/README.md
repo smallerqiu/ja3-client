@@ -177,9 +177,13 @@ Consequences worth knowing before you compare a fingerprint against browserleaks
   impersonated. That path is also not uniformly reliable: some hosts end up as
   `error_code: 5` with an `H3 error` or a timeout.
 * `"with_http3": false` removes `h3` from the ALPN list and puts browserleaks'
-  `ja4` back to `h2`; it is the switch to try first when a fingerprint or an
-  HTTP/3 test behaves oddly, and the only way to compare like for like. Omit it to
-  keep the profile default.
+  `ja4` back to `h2`. Use it to compare like for like against a browser capture, and
+  leave the default alone otherwise: `h3` on is what was measured in production. At
+  roughly a million concurrent requests against Cloudflare-fronted sites, the same
+  Chrome profile with `h3` removed drew clearly more challenges and errors, and they
+  dropped to almost none as soon as `h3` went back on — including on the versions
+  whose own captures do not list `h3`. A fingerprint site disagreeing with you is
+  not the same thing as a site blocking you.
 
 ## Building
 
