@@ -527,7 +527,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      # Trusted publishing is a client feature: the CLI is what trades this job's OIDC
+      # token for the one-shot publish credential, and only npm 11 knows to ask for it.
+      # The npm 10.x that ships with Node 20 can attach a provenance attestation to a
+      # publish it already has a token for; with no token it stops at
+      # "npm error code ENEEDAUTH" and never reaches GitHub, so the upgrade belongs here,
+      # before the npm step below.
+      - name: npm CLI that can publish over OIDC
+        run: |
+          npm install -g npm@11
+          npm --version
 
       - uses: actions/setup-python@v5
         with:
@@ -549,8 +560,10 @@ jobs:
       # registry authenticates, against the publisher bound on the package page (owner
       # smallerqiu, repository ja3-client, workflow file packages.yml, environment
       # release). No NPM_TOKEN has to exist, and --provenance is what makes npm ask for
-      # the token at all - so the job must NOT carry an auth token, and setup-node above
-      # must not write one into an .npmrc either.
+      # the token at all - so the job must NOT carry an auth token, setup-node above must
+      # not write one into an .npmrc either, and the CLI has to be the npm 11 installed
+      # above: npm 10 treats --provenance as an extra flag on a token-authenticated
+      # publish and answers ENEEDAUTH instead of reaching for the OIDC token.
       - name: npm
         run: |
           tgz="$(ls pkgs/*.tgz)"
