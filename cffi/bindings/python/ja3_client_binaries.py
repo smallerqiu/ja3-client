@@ -56,7 +56,7 @@ TIMEOUT_SECONDS = 60
 #: Version of the library this package installs. CI stamps it from the release tag at
 #: build time; a hand-built wheel keeps the last published number so the resolver asks
 #: for an archive that actually exists.
-PACKAGE_VERSION = "1.2.5"
+PACKAGE_VERSION = "1.2.6"
 
 _SUPPORTED_SLUGS = (
     "darwin-amd64", "darwin-arm64",

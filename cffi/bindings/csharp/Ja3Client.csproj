@@ -19,7 +19,7 @@
          version is the library version (build/ja3-client.targets fetches the release
          archive for it). CI stamps Version from the git tag. -->
     <PackageId>ja3-client</PackageId>
-    <Version>1.2.5</Version>
+    <Version>1.2.6</Version>
     <Authors>smallerqiu</Authors>
     <Description>P-Invoke binding for the ja3-client TLS-impersonation shared library. The package ships the binding; the native library is fetched from the matching GitHub Release at build time.</Description>
     <PackageTags>ja3;ja4;tls;impersonate;fingerprint;ffi;pinvoke</PackageTags>
