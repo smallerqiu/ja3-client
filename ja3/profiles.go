@@ -1,6 +1,142 @@
 package ja3
 
 var withHttp3 = true
+
+// Chrome 142 through 149 send Chrome_136's ClientHello and HTTP/2 frames
+// unchanged: same cipher suites, same sixteen extensions, same groups, key shares
+// and signature algorithms, same settings and window update. Only the User-Agent
+// and the header list move, and the header list is not something this API can pin
+// (HTTP/2 goes through Go's map-backed header), so these stay UA-only.
+// Measured 2026-10-15/16 against tls.browserleaks.com: 142, 143, 144, 145, 146,
+// 147, 148 and 149 all read ja3n 8e19337e75… and akamai 52d84b11737d…, sixteen
+// non-GREASE extensions, signature_algorithms opening on ecdsa_secp256r1_sha256
+// (no ML-DSA) and no trust_anchors. Live through the library (2026-10-16, tls.peet.ws
+// with with_http3=false) chrome_143 and chrome_148 answer ja4
+// t13d1516h2_8daaf6152771_d8a2da3f94cd - the captures' own ja4 - and akamai
+// 52d84b11737d….
+// Re-measured 2026-10-17 against a second round of tls.peet.ws captures (135, 136,
+// 143 through 152): peetprint, ja3, the decoded extension content and the akamai
+// string are identical across 136 through 151, so the band holds. The only
+// cross-version difference in that whole set is peet's ja4 for 135 and 136, which
+// additionally lists extension 21 (padding) - a field peet's own extension array and
+// ja3 contradict, and a shape BoringSSL only pads into when the hello is 256 to 511
+// bytes, while these hellos are about 1.8 KB (136 and 148 measure the same 1768
+// bytes, and only the 136 one carries the flag). See
+// TestPaddingIsTheOnlyChrome136Delta before treating that as a 136 change.
+var Chrome_149 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+}
+
+var Chrome_148 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+}
+
+var Chrome_147 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+}
+
+var Chrome_146 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+}
+
+var Chrome_145 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+}
+
+var Chrome_144 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+}
+
+var Chrome_143 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+}
+
+var Chrome_142 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+}
+
+// Chrome_150 is the next anchor after Chrome_136: signature_algorithms grew the
+// three ML-DSA schemes (0x0904, 0x0905, 0x0906) ahead of the ECDSA/RSA list, so
+// the extension content changed even though the extension set did not. Everything
+// else is still Chrome_136's bytes, and Chrome 151 sends exactly these. Measured
+// 2026-10-15/16 against tls.browserleaks.com (150 and 151 agree on every field)
+// and tls.peet.ws, which both read sixteen extensions and the 0904,0905,0906 lead.
+var Chrome_150 = ClientData{
+	UserAgent:            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+	WithHttp3:            &withHttp3,
+	Client:               "chrome",
+	Version:              "150",
+	CipherSuites:         "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA",
+	Curves:               "X25519MLKEM768:X25519:P256:P384",
+	SignatureHashed:      "MLDSA44,MLDSA65,MLDSA87,ECDSAWithP256AndSHA256,PSSWithSHA256,PKCS1WithSHA256,ECDSAWithP384AndSHA384,PSSWithSHA384,PKCS1WithSHA384,PSSWithSHA512,PKCS1WithSHA512",
+	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
+	Http2WindowUpdate:    15663105,
+	Http2StreamWight:     255,
+	Http2StreamExclusive: 1,
+	CertCompression:      "brotli",
+	TlsVersion:           "1.3",
+	TlsGrease:            true,
+	ALPS:                 true,
+	Ech:                  true,
+	RandomExtensionOrder: true,
+}
+
+// Chrome_152 is the anchor after Chrome_150: the trust_anchors extension
+// (0xca34 / 51764) appears on every connection. The capture from tls.peet.ws
+// lists 28 identifier/length pairs in it, because that machine had trust-anchor
+// hints; a browser without them sends the same extension with an empty list, two
+// length bytes - that is the shape TlsTrustAnchors produces and the one to
+// impersonate. The extension count, not the content, is what ja4 and peetprint
+// hash, so ja4 still matches. Measured 2026-10-15/16: seventeen non-GREASE
+// extensions and ja3n bd4930bd9b… on 152, and the same set on 153, 154 and 155.
+// Chrome 151 does not have it, so 152 - not 153 - is where this line starts.
+// signature_algorithms opens on a random GREASE scheme from here too (0x8aaa on
+// the 152 capture, 0x6a6a, 0x1a1a and 0xeaea on 153/154/155) - 150 and 151 have no
+// GREASE in front, which is what dates this as a 152 change rather than a 150 one.
+// That scheme is something this library cannot imitate - see "Known deviations" in
+// CONTRIBUTING.md. Live through the library (2026-10-16, tls.peet.ws with
+// with_http3=false) chrome_152 answers ja4 t13d1517h2_8daaf6152771_cb7bf5808d99 and
+// akamai 52d84b11737d…, the pair the 152, 153 and 155 captures all report.
+var Chrome_152 = ClientData{
+	UserAgent:            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+	WithHttp3:            &withHttp3,
+	Client:               "chrome",
+	Version:              "152",
+	CipherSuites:         "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA",
+	Curves:               "X25519MLKEM768:X25519:P256:P384",
+	SignatureHashed:      "MLDSA44,MLDSA65,MLDSA87,ECDSAWithP256AndSHA256,PSSWithSHA256,PKCS1WithSHA256,ECDSAWithP384AndSHA384,PSSWithSHA384,PKCS1WithSHA384,PSSWithSHA512,PKCS1WithSHA512",
+	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
+	Http2WindowUpdate:    15663105,
+	Http2StreamWight:     255,
+	Http2StreamExclusive: 1,
+	CertCompression:      "brotli",
+	TlsVersion:           "1.3",
+	TlsGrease:            true,
+	TlsTrustAnchors:      true,
+	ALPS:                 true,
+	Ech:                  true,
+	RandomExtensionOrder: true,
+}
+
+// Chrome 153, 154 and 155 send Chrome_152's bytes. The one difference seen in the
+// captures is a pre_shared_key extension on 154, which is that session having a
+// stored ticket - a resumption hello, not a new version of the fingerprint.
+var Chrome_153 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+}
+
+var Chrome_154 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+}
+
+var Chrome_155 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+}
+
+var Chrome_151 = ClientData{
+	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+}
+
 var Chrome_141 = ClientData{
 	UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
 }
@@ -30,7 +166,7 @@ var Chrome_137_ios = ClientData{
 	Http2PseudoHeaderOrder: "mspa",
 	Http2Setting:           "4:2097152;3:100",
 	Http2WindowUpdate:      10485760,
-	Http2StreamWight:       256,
+	Http2StreamWight:       255,
 	Http2StreamExclusive:   1,
 	CertCompression:        "zlib",
 	TlsVersion:             "1.3",
@@ -48,7 +184,7 @@ var Chrome_136 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	CertCompression:      "brotli",
 	TlsVersion:           "1.3",
@@ -78,7 +214,7 @@ var Chrome_132 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPS:                 true,
 	CertCompression:      "brotli",
@@ -98,7 +234,7 @@ var Chrome_131_android = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -118,7 +254,7 @@ var Chrome_99_android = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;3:1000;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -136,7 +272,7 @@ var Chrome_131 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -172,7 +308,7 @@ var Chrome_124 = ClientData{
 	Curves:               "X25519Kyber768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -202,7 +338,7 @@ var Chrome_119 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -220,7 +356,7 @@ var Chrome_117 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -251,7 +387,7 @@ var Edge_136 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	CertCompression:      "brotli",
 	TlsVersion:           "1.3",
@@ -280,7 +416,7 @@ var Edge_131 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	CertCompression:      "brotli",
 	TlsVersion:           "1.3",
@@ -297,7 +433,7 @@ var Edge_101 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;3:1000;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	CertCompression:      "brotli",
 	TlsVersion:           "1.3",
@@ -461,7 +597,7 @@ var Opera_120 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPS:                 true,
 	CertCompression:      "brotli",
@@ -481,7 +617,7 @@ var Opera_117 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	CertCompression:      "brotli",
 	TlsVersion:           "1.3",
@@ -606,7 +742,7 @@ var Safari_18_5 = ClientData{
 	Http2PseudoHeaderOrder: "msap",
 	Http2Setting:           "2:0;3:100;4:2097152;9:1",
 	Http2WindowUpdate:      10420225,
-	Http2StreamWight:       256,
+	Http2StreamWight:       255,
 	Http2StreamExclusive:   0,
 	CertCompression:        "zlib",
 	TlsVersion:             "any",
@@ -644,7 +780,7 @@ var Safari_ios_17_0 = ClientData{
 	Http2PseudoHeaderOrder: "mspa",
 	Http2Setting:           "2:0;4:2097152;3:100",
 	Http2WindowUpdate:      10485760,
-	Http2StreamWight:       256,
+	Http2StreamWight:       255,
 	Http2StreamExclusive:   1,
 	CertCompression:        "zlib",
 	TlsVersion:             "any",
@@ -683,7 +819,7 @@ var Safari_ios_18_5 = ClientData{
 	Http2PseudoHeaderOrder: "msap",
 	Http2Setting:           "2:0;3:100;4:2097152;9:1",
 	Http2WindowUpdate:      10420225,
-	Http2StreamWight:       256,
+	Http2StreamWight:       255,
 	Http2StreamExclusive:   0,
 	CertCompression:        "zlib",
 	TlsVersion:             "any",
@@ -702,7 +838,7 @@ var Safari_ios_26_0 = ClientData{
 	Http2PseudoHeaderOrder: "msap",
 	Http2Setting:           "2:0;3:100;4:2097152;9:1",
 	Http2WindowUpdate:      10420225,
-	Http2StreamWight:       256,
+	Http2StreamWight:       255,
 	Http2StreamExclusive:   0,
 	CertCompression:        "zlib",
 	TlsVersion:             "any",
@@ -743,7 +879,7 @@ var Brave_1_8 = ClientData{
 	Curves:               "X25519MLKEM768:X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPS:                 true,
 	CertCompression:      "brotli",
@@ -764,7 +900,7 @@ var QQ_19_4 = ClientData{
 	Compressed:           true,
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -785,7 +921,7 @@ var QH360_16_0 = ClientData{
 	Compressed:           true,
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -805,7 +941,7 @@ var QH360_5_5_ios = ClientData{
 	Curves:                 "X25519:P256:P384:P521",
 	Http2Setting:           "4:2097152;3:100",
 	Http2WindowUpdate:      10485760,
-	Http2StreamWight:       256,
+	Http2StreamWight:       255,
 	Http2StreamExclusive:   1,
 	CertCompression:        "zlib",
 	TlsVersion:             "any",
@@ -828,7 +964,7 @@ var UC_110_9 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;3:1000;4:6291456;6:262144;43706:3053153145",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	TlsKeySharesLimit:    2,
 	ALPSO:                true,
@@ -848,7 +984,7 @@ var UC_17_9 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;3:1000;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	ALPSS:                true,
@@ -869,7 +1005,7 @@ var Samsung_27_1 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	ALPSO:                true,
 	CertCompression:      "brotli",
@@ -888,7 +1024,7 @@ var Xiaomi_15_9 = ClientData{
 	Curves:               "X25519:P256:P384",
 	Http2Setting:         "1:65536;3:1000;4:6291456;6:262144",
 	Http2WindowUpdate:    15663105,
-	Http2StreamWight:     256,
+	Http2StreamWight:     255,
 	Http2StreamExclusive: 1,
 	CertCompression:      "brotli",
 	TlsVersion:           "1.3",

@@ -22,7 +22,7 @@ func TestClientData(t *testing.T) {
 		Curves:               "X25519Kyber768:X25519:P256:P384",
 		Http2Setting:         "1:65536;2:0;4:6291456;6:262144",
 		Http2WindowUpdate:    15663105,
-		Http2StreamWight:     256,
+		Http2StreamWight:     255,
 		Http2StreamExclusive: 1,
 		ALPSO:                true,
 		CertCompression:      "brotli",

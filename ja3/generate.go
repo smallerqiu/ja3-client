@@ -261,6 +261,21 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 			Limit: uint16(config.TlsRecordSizeLimit),
 		}
 	}
+	// trust_anchors: Chrome 152 and up offer this extension on every connection,
+	// with an empty identifier list when the origin's HTTPS DNS record carries no
+	// trust-anchor hint - which is the shape a normal browser produces and the one
+	// to impersonate. The id is BoringSSL's 0xca34 (51764), from the 0xca0a-0xcafa
+	// range BoringSSL reserves for extensions it is testing rather than an IANA
+	// assignment; utls exports the id as ExtensionTrustAnchors but has no extension
+	// type for it yet, so the two length bytes of an empty list go out as a generic
+	// extension. It joins extMap rather than a pinned position, so it shuffles with
+	// the rest of the extensions the way Chrome shuffles it.
+	if config.TlsTrustAnchors {
+		extMap[tls.ExtensionTrustAnchors] = &tls.GenericExtension{
+			Id:   tls.ExtensionTrustAnchors,
+			Data: []byte{0x00, 0x00},
+		}
+	}
 	// tls version
 	var tlsExtensionVersion = tls.SupportedVersionsExtension{}
 	switch config.TlsVersion {
@@ -481,6 +496,14 @@ func BuildClientHelloSpecWithCP(config ClientData) (profile ClientProfile, err e
 	StreamDep := 0
 	if config.Http2StreamDep > 0 {
 		StreamDep = config.Http2StreamDep
+	}
+	// Http2StreamWight is the weight byte as it goes on the wire, which counts from
+	// zero: a browser that reports weight 256 sends 255. Anything above 255 cannot
+	// be expressed in the byte, so it fails here instead of silently truncating -
+	// uint8(256) is 0, which is how a profile ends up declaring the lightest stream
+	// in HTTP/2 while reading like Chrome.
+	if config.Http2StreamWight > 255 {
+		return profile, fmt.Errorf("http2StreamWight %d does not fit the priority weight byte; use 255 for the browser-reported 256", config.Http2StreamWight)
 	}
 	headerPriority := &http2.PriorityParam{
 		StreamDep: uint32(StreamDep),

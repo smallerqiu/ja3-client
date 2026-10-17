@@ -3,7 +3,7 @@ module github.com/smallerqiu/ja3-client
 go 1.26.0
 
 require (
-	github.com/smallerqiu/utls v1.2.1
+	github.com/smallerqiu/utls v1.2.2
 	golang.org/x/net v0.61.0
 )
 

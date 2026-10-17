@@ -29,10 +29,15 @@ type ClientData struct {
 	ALPSO                   bool
 	ALPSS                   bool
 	CertCompression         string
-	Client                  string
-	NoTlsSessionTicket      bool
-	Version                 string
-	TlsPadding              bool
-	WithHttp3               *bool
-	RandomExtensionOrder    bool
+	// TlsTrustAnchors sends the trust_anchors extension (0xca34) with an empty
+	// identifier list. Chrome enables it by default from 152; earlier channels
+	// only send it when the origin's HTTPS DNS record hints at trusted anchor
+	// ids, which is why a plain capture of Chrome 136-151 has no 0xca34.
+	TlsTrustAnchors      bool
+	Client               string
+	NoTlsSessionTicket   bool
+	Version              string
+	TlsPadding           bool
+	WithHttp3            *bool
+	RandomExtensionOrder bool
 }

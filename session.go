@@ -89,7 +89,18 @@ func CreateSession(request *ja3.Ja3Request) (HttpClient, error) {
 		for k, v := range request.Headers {
 			header.Set(k, strings.Join(v, ", "))
 		}
-		header.Set("accept-encoding", "identity")
+
+		// The transport does not decompress everything on every protocol: HTTP/2
+		// always does (http/h2_bundle.go calls DecompressBody), HTTP/1 only for
+		// gzip, HTTP/3 for the gzip it injects itself. So a request that asks for
+		// br on HTTP/1 would get compressed bytes back. Pinning identity is the
+		// safe default - but only when the caller did not choose, because a caller
+		// who wrote `accept-encoding: gzip, deflate, br, zstd` to look like Chrome
+		// had it silently replaced by identity, which is the one header no browser
+		// sends.
+		if header.Get("accept-encoding") == "" {
+			header.Set("accept-encoding", "identity")
+		}
 	}
 
 	options = append(options, WithDefaultHeaders(header))

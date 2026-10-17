@@ -24,3 +24,18 @@ cffi/dist/
 cffi/cffi
 
 .DS_Store
+
+# Local browser captures used to build the profiles (chrome 142-155 ja4/ja3/peet
+# dumps). They are someone's machine and network fingerprint: keep them out of
+# the repository and out of any release archive.
+client_data/
+data_peet/
+
+# `pip wheel .` / `python -m build` output next to the sources.
+cffi/bindings/python/build/
+cffi/bindings/python/*.egg-info/
+
+# `dotnet pack` output for the binding project itself. csharp/build/ is NOT output -
+# that is the NuGet content directory holding ja3-client.targets.
+cffi/bindings/csharp/bin/
+cffi/bindings/csharp/obj/

@@ -75,6 +75,12 @@ var tlsVersions = map[string]uint16{
 	"1.0":    tls.VersionTLS10,
 }
 
+// Names a ClientData may use in SignatureHashed; anything else is read as a hex
+// code point. ML-DSA (FIPS 204, advertised by Chrome from 150) is named from the
+// utls constants added in v1.2.2, which is what go.mod requires, so a profile can
+// write `MLDSA44` instead of `0904`. Keep the require and this file in step: a
+// numeric token in SignatureHashed is hexadecimal, and the decimal id a fingerprint
+// site prints for the same scheme (2308) parses quietly into the wrong code point.
 var signatureAlgorithms = map[string]tls.SignatureScheme{
 	"PKCS1WithSHA256":        tls.PKCS1WithSHA256,
 	"DSAWithSHA256":          tls.DSAWithSHA256,
@@ -94,6 +100,9 @@ var signatureAlgorithms = map[string]tls.SignatureScheme{
 	"ECDSAWithSHA1":          tls.ECDSAWithSHA1,
 	"Ed25519":                tls.Ed25519,
 	"FAKEEd25519":            tls.FAKEEd25519,
+	"MLDSA44":                tls.MLDSA44,
+	"MLDSA65":                tls.MLDSA65,
+	"MLDSA87":                tls.MLDSA87,
 	"SHA224_RSA":             tls.SHA224_RSA,
 	"SHA224_ECDSA":           tls.SHA224_ECDSA,
 	"DSAWithSHA224":          tls.DSAWithSHA224,
