@@ -81,6 +81,14 @@ jobs:
           go vet ./...
           cd cffi && go vet ./...
 
+      - name: package READMEs document the whole ABI
+        run: |
+          # The npm/PyPI/NuGet pages drop relative links, so each binding's README
+          # repeats the field list, the response shape and the error codes itself.
+          # That copy has to be checked against ffi.go or it rots quietly, and the
+          # only place anybody sees the rot is a registry page.
+          bash cffi/check-binding-readmes.sh
+
   test:
     name: go tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

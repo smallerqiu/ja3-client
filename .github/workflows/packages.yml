@@ -87,7 +87,7 @@ jobs:
           # `ja3-client@1.2.5` would ask for ja3-client-1.2.5-*.zip forever, even after
           # a fix release. All four spellings have to say the tag - including
           # pyproject.toml, which is not the version the binding downloads with but the
-          # one `python -m build` puts in the wheel filename and the one twine uploads,
+          # one `python -m build` puts in the wheel filename and the one PyPI receives,
           # so a stale number there ships a 1.2.4 release that asks for 1.2.5 archives
           # (and is rejected by PyPI as soon as a real 1.2.4 exists).
           node_version="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' cffi/bindings/node/package.json | head -1)"
@@ -127,6 +127,13 @@ jobs:
       # The installers download from this release, so a publish needs it complete.
       # An artifacts-only run may legitimately come first - that is how you review
       # a packaging change before cutting the release.
+      - name: Package READMEs document the whole ABI
+        run: |
+          # What the registry page is the only documentation most installers read, and a
+          # registry strips relative links - so each README repeats the ABI, and this
+          # checks that copy against ffi.go instead of trusting it.
+          bash cffi/check-binding-readmes.sh
+
       - name: The release this version points at
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -488,9 +495,11 @@ jobs:
     # The gate: a human has to approve this environment before any registry sees
     # these bytes. Configure it under Settings -> Environments -> release.
     environment: release
-    # id-token: write is what lets this job mint the GitHub OIDC token that NuGet's
-    # trusted publishing exchanges for a one-hour API key, so no long-lived NuGet
-    # secret has to exist. Job level because the workflow only asks for contents: read.
+    # All three registries take a GitHub OIDC token instead of a stored secret: npm and
+    # PyPI verify the provenance attestation against their bound publisher (owner
+    # smallerqiu, repository ja3-client, workflow packages.yml, environment release), and
+    # NuGet/login trades the token for a key that dies after an hour. Job level because
+    # the workflow only asks for contents: read.
     permissions:
       contents: read
       id-token: write
@@ -510,7 +519,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org
 
       - uses: actions/setup-python@v5
         with:
@@ -528,9 +536,13 @@ jobs:
       # Re-publishing a version is rejected by all three registries, and a partial
       # publish is worse than a stopped one: each step checks its own registry first
       # so a rerun skips what already landed instead of failing halfway.
+      # npm's trusted publishing, like NuGet's below: this job's OIDC token is what the
+      # registry authenticates, against the publisher bound on the package page (owner
+      # smallerqiu, repository ja3-client, workflow file packages.yml, environment
+      # release). No NPM_TOKEN has to exist, and --provenance is what makes npm ask for
+      # the token at all - so the job must NOT carry an auth token, and setup-node above
+      # must not write one into an .npmrc either.
       - name: npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           tgz="$(ls pkgs/*.tgz)"
 
@@ -539,30 +551,37 @@ jobs:
             exit 0
           fi
 
-          [ -n "$NODE_AUTH_TOKEN" ] || { echo "NPM_TOKEN is not set"; exit 1; }
-
           rm -rf /tmp/npm && mkdir -p /tmp/npm && tar -xzf "$tgz" -C /tmp/npm
-          (cd /tmp/npm/package && npm publish --access public)
+          (cd /tmp/npm/package && npm publish --access public --provenance \
+            --registry https://registry.npmjs.org)
 
+      # PyPI trusted publishing: pypa/gh-action-pypi-publish trades this job's OIDC token
+      # for a short-lived upload credential. The publisher on pypi.org names the same
+      # quadruple as npm's - owner, repository, packages.yml, environment release - and
+      # the action only uploads the wheel and the sdist, so the npm tarball and the nupkg
+      # sitting in pkgs/ are staged aside first.
       - name: PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          python3 -m pip install --quiet twine
-
           if pip download --no-deps --dest /tmp/probe --index-url https://pypi.org/simple \
                "ja3-client==$VERSION" >/dev/null 2>&1; then
             echo "ja3-client==$VERSION is already on PyPI; skipping"
-            exit 0
+            echo "skip-pypi=true" >> "$GITHUB_OUTPUT"
           fi
+        id: pypi_check
 
-          [ -n "$TWINE_PASSWORD" ] || { echo "PYPI_API_TOKEN is not set"; exit 1; }
+      - name: Stage the Python distributions
+        if: ${{ steps.pypi_check.outputs.skip-pypi != 'true' }}
+        run: |
+          mkdir -p dist-pypi
+          cp pkgs/*.whl pkgs/*.tar.gz dist-pypi/
+          ls -l dist-pypi
 
-          # The wheel is what installs; the sdist is what people build from when the
-          # wheel does not match their platform, and PyPI rejects a version whose
-          # files arrive in two separate uploads.
-          twine upload --non-interactive pkgs/*.whl pkgs/*.tar.gz
+      - name: Upload to PyPI
+        if: ${{ steps.pypi_check.outputs.skip-pypi != 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-pypi
+          print-sha256: true
 
       # NuGet's trusted publishing is the default here: NuGet/login trades this job's
       # OIDC token for a key that dies after an hour, and the policy on nuget.org -
