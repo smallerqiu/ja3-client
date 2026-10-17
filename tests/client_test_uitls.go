@@ -624,7 +624,7 @@ var TlsInfoMap = map[string]map[string]string{
 		"ja4":         "t13d1515h1_8daaf6152771_cc38aef784ae",
 		"akamai_hash": "03dfc0b8b1f063a9cccea3e5cdd7a044",
 	},
-	"uc_17_9": {
+	"uc_ios_17_9": {
 		"ja3_hash":    "59344d8667ab05f835008b36153e5c0e",
 		"ja3_text":    "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-51-18-16-5-0-23-43-10-27-35-13-17513-65281-11-21,29-23-24,0",
 		"ja3n_hash":   "aa56c057ad164ec4fdcb7a5a283be9fc",

@@ -33,7 +33,7 @@
 | Edge       | edge_140,edge_139, edge_138, edge_137, edge_136, edge_135, edge_134, edge_133, edge_132, edge_131, edge_101                                                                                                                                                                                                                          |
 | Opera      | opera_120, opera_119, opera_117                                                                                                                                                                                                                                                                                                      |
 | 360        | qh360_16_0, qh360_5_5_ios |
-| UC         | uc_17_9                                                                                                                                                                                                                                                                                                                              |
+| UC         | uc_ios_17_9                                                                                                                                                                                                                                                                                                                          |
 | Xiaomi     | xiaomi_15_9                                                                                                                                                                                                                                                                                                                          |
 | Samsung    | samsung_27_1                                                                                                                                                                                                                                                                                                                         |
 | Tor        | tor_14_5                                                                                                                                                                                                                                                                                                                             |
@@ -42,7 +42,7 @@
 共 81 个标识。[`ja3/mapper_profiles.go`](ja3/mapper_profiles.go) 是唯一权威的列表，键名区分大小写。
 
 注意：`Impersonate` 写错不会返回错误。`BuildClientHelloSpec` 会打印
-`the input client ... don't support, so use default`，然后悄悄退回到 `chrome_141`——所以拼错的值
+`the input client ... don't support, so use default`，然后悄悄退回到 `chrome_155`——所以拼错的值
 看起来像是生效了，而你实际发出的是 Chrome 的指纹。如果指纹检测网站和你的判断不一致，先去看这行日志
 （或者打开 `WithDebug`）。
 
@@ -66,7 +66,7 @@ go get github.com/smallerqiu/ja3-client
 
 ### 基本用法
 
-默认模拟 `chrome_141`（`ja3.DefaultImpersonate`），你也可以设置自定义的 ja3 字符串，或者换一个浏览器及版本。
+默认模拟 `chrome_155`（`ja3.DefaultImpersonate`），你也可以设置自定义的 ja3 字符串，或者换一个浏览器及版本。
 
 ```go
 package main
@@ -105,7 +105,7 @@ func main() {
 `Ja3Request` 在 `ja3` 子包里——根包没有重新导出它，所以两个 import 都要写。
 
 profile 的选取顺序是：`Ja3`（自定义 JA3 字符串）→ `ClientData`（完全自定义指纹）→
-`Impersonate`（内置浏览器，默认 `chrome_141`）。
+`Impersonate`（内置浏览器，默认 `chrome_155`）。
 
 ```go
 package main
@@ -239,7 +239,7 @@ func main() {
 | Body        | 请求体                                                                          | []byte      | -               | 是       | `[]byte("{\"a\": 1}")`   |
 | Proxy       | 代理地址                                                                        | string      | -               | 是       | `http://198.168.1.55:7890` |
 | SourceIP    | 服务器有多个 IP 时，可以指定其中一个作为源 IP。                                 | string      | -               | 是       | 193.189.xx.xx            |
-| Impersonate | 模拟哪一种浏览器                                                                | string      | chrome_141      | 是       | chrome_137               |
+| Impersonate | 模拟哪一种浏览器                                                                | string      | chrome_155      | 是       | chrome_137               |
 | Ja3         | 自定义 ja3 key                                                                  | string      | -               | 是       | 771,4867-4865-....        |
 | Akamai      | 自定义 akamai key                                                               | string      | chrome 的 akamai | 是      | 1:65535;2:0;4:...        |
 | Timeout     | 请求超时时间。                                                                  | int         | 30(秒)          | 是       | 60                       |

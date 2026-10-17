@@ -205,8 +205,8 @@ func TestOthers(t *testing.T) {
 	// t.Log("testing qq_19_4")
 	// MatchTlsInfo(t, "qq_19_4")
 
-	t.Log("testing uc_17_9")
-	MatchTlsInfo(t, "uc_17_9")
+	t.Log("testing uc_ios_17_9")
+	MatchTlsInfo(t, "uc_ios_17_9")
 
 	// t.Log("testing uc_110_9")// soon
 	// // MatchTlsInfo(t, "uc_110_9")

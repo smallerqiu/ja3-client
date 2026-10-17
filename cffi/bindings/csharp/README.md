@@ -51,7 +51,7 @@ them:
 
 | property | JSON key | type | default | meaning |
 | --- | --- | --- | --- | --- |
-| `Impersonate` | `impersonate` | string | `chrome_141` | profile id: `chrome_133`, `chrome_153`, `firefox_135`, `safari_170`, … |
+| `Impersonate` | `impersonate` | string | `chrome_155` | profile id: `chrome_133`, `chrome_153`, `firefox_135`, `safari_170`, … |
 | `Ja3` | `ja3` | string | | raw JA3 string; wins over `Impersonate` |
 | `Akamai` | `akamai` | string | | Akamai HTTP/2 settings string, used together with `ja3` |
 | `ClientData` | `client_data` | `JsonNode` | | hand-built fingerprint (see below); wins over `ja3` |

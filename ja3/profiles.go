@@ -975,7 +975,7 @@ var UC_110_9 = ClientData{
 	Ech:                  true,
 	RandomExtensionOrder: true,
 }
-var UC_17_9 = ClientData{
+var UC_ios_17_9 = ClientData{
 	UserAgent:            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_2 like Mac OS X; zh-CN) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/20H115 UCBrowser/17.7.8.2650 Mobile  AliApp(TUnionSDK/0.1.20.4)",
 	Client:               "uc",
 	Version:              "17.9",

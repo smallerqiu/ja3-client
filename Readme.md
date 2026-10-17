@@ -33,7 +33,7 @@ The following browsers can be impersonated.
 | Edge       | edge_140,edge_139, edge_138, edge_137, edge_136, edge_135, edge_134, edge_133, edge_132, edge_131, edge_101                                                                                                                                                                                                                          |
 | Opera      | opera_120, opera_119, opera_117                                                                                                                                                                                                                                                                                                      |
 | 360        | qh360_16_0, qh360_5_5_ios |
-| UC         | uc_17_9                                                                                                                                                                                                                                                                                                                              |
+| UC         | uc_ios_17_9                                                                                                                                                                                                                                                                                                                          |
 | Xiaomi     | xiaomi_15_9                                                                                                                                                                                                                                                                                                                          |
 | Samsung    | samsung_27_1                                                                                                                                                                                                                                                                                                                         |
 | Tor        | tor_14_5                                                                                                                                                                                                                                                                                                                             |
@@ -41,7 +41,7 @@ The following browsers can be impersonated.
 
 81 identifiers in total. [`ja3/mapper_profiles.go`](ja3/mapper_profiles.go) is the authoritative list, and the keys are case-sensitive.
 
-Heads-up: a typo in `Impersonate` does not return an error. `BuildClientHelloSpec` logs `the input client ... don't support, so use default` and quietly falls back to `chrome_141`, so a mis-cased value looks like it worked while you are sending Chrome's fingerprint. Check that log line (or `WithDebug`) if the fingerprint site disagrees with you.
+Heads-up: a typo in `Impersonate` does not return an error. `BuildClientHelloSpec` logs `the input client ... don't support, so use default` and quietly falls back to `chrome_155`, so a mis-cased value looks like it worked while you are sending Chrome's fingerprint. Check that log line (or `WithDebug`) if the fingerprint site disagrees with you.
 
 ## Dependencies
 
@@ -61,7 +61,7 @@ go get github.com/smallerqiu/ja3-client
 
 ### Basic Usage
 
-default impersonate `chrome_141` (`ja3.DefaultImpersonate`), but you can set your customized ja3 string or another browser and version.
+default impersonate `chrome_155` (`ja3.DefaultImpersonate`), but you can set your customized ja3 string or another browser and version.
 
 ```go
 package main
@@ -99,7 +99,7 @@ If you're going to use a customized JA3 , you'd better know the browser type.  O
 
 `Ja3Request` lives in the `ja3` subpackage — the root package does not re-export it, so both imports are needed.
 
-The profile is picked in this order: `Ja3` (custom JA3 string) → `ClientData` (fully custom fingerprint) → `Impersonate` (built-in browser, default `chrome_141`).
+The profile is picked in this order: `Ja3` (custom JA3 string) → `ClientData` (fully custom fingerprint) → `Impersonate` (built-in browser, default `chrome_155`).
 
 ```go
 package main
@@ -232,7 +232,7 @@ func main() {
 | Body        | request body                                                                    | []byte      | -               | Yes      | `[]byte("{\"a\": 1}")`   |
 | Proxy       | request proxy url                                                               | string      | -               | Yes      | `http://198.168.1.55:7890` |
 | SourceIP    | if your server has multiple IPs,you can decide on one of them as the source IP. | string      | -               | Yes      | 193.189.xx.xx            |
-| Impersonate | which type of browser to impersonate                                            | string      | chrome_141      | Yes      | chrome_137               |
+| Impersonate | which type of browser to impersonate                                            | string      | chrome_155      | Yes      | chrome_137               |
 | Ja3         | customized ja3 key                                                              | string      | -               | Yes      | 771,4867-4865-....        |
 | Akamai      | customized akamai key                                                           | string      | chrome's akamai | Yes      | 1:65535;2:0;4:...        |
 | Timeout     | the timeout for the request.                                                    | int         | 30(s)           | Yes      | 60                       |

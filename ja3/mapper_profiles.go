@@ -1,11 +1,14 @@
 package ja3
 
-var DefaultImpersonate = "chrome_141"
+var DefaultImpersonate = "chrome_155"
 
 // c() only swaps the User-Agent, so DefaultClient stays byte-identical to the
-// "chrome_141" mapping below - which is what the fallback log in
-// BuildClientHelloSpec promises when it names DefaultImpersonate.
-var DefaultClient = c(Chrome_141, Chrome_136)
+// "chrome_155" mapping below - which is what the fallback log in
+// BuildClientHelloSpec promises when it names DefaultImpersonate. Moving this
+// default moves every caller who sets nothing: chrome_155 rides the Chrome_152
+// anchor, so the default hello gained trust_anchors and the ML-DSA signature
+// schemes that chrome_141 (a Chrome_136-band line) never sent.
+var DefaultClient = c(Chrome_155, Chrome_152)
 
 var DefaultClientProfile, _ = BuildClientHelloSpec(DefaultImpersonate, nil)
 
@@ -107,7 +110,7 @@ var MappedTLSClients = map[string]ClientData{
 	// "qq_19_4":            QQ_19_4, // soon
 	"qh360_16_0":    QH360_16_0,
 	"qh360_5_5_ios": QH360_5_5_ios,
-	"uc_17_9":       UC_17_9,
+	"uc_ios_17_9":   UC_ios_17_9,
 	// "uc_110_9":           UC_110_9, // discarded
 	"samsung_27_1": Samsung_27_1,
 	"xiaomi_15_9":  Xiaomi_15_9,

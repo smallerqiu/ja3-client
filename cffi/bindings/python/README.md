@@ -61,7 +61,7 @@ Client-level — only read while the client is being built, i.e. by `request()` 
 
 | keyword | type | default | meaning |
 | --- | --- | --- | --- |
-| `impersonate` | str | `chrome_141` | profile id: `chrome_133`, `chrome_153`, `firefox_135`, `safari_170`, … |
+| `impersonate` | str | `chrome_155` | profile id: `chrome_133`, `chrome_153`, `firefox_135`, `safari_170`, … |
 | `ja3` | str | | raw JA3 string; wins over `impersonate` |
 | `akamai` | str | | Akamai HTTP/2 settings string, used together with `ja3` |
 | `client_data` | dict | | hand-built fingerprint (see below); wins over `ja3` |
