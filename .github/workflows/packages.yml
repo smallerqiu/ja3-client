@@ -485,6 +485,10 @@ jobs:
       id-token: write
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      # Read the secret into a variable: the secrets context is not available to a
+      # step's if:, and using it there kills the run with "Unrecognized named-value:
+      # 'secrets'" before a single job starts. env holds the same value and is allowed.
+      NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -558,7 +562,7 @@ jobs:
       # login. A classic API key in NUGET_API_KEY still works and wins, for the day the
       # policy needs bypassing.
       - name: NuGet login
-        if: ${{ secrets.NUGET_API_KEY == '' }}
+        if: ${{ env.NUGET_KEY == '' }}
         id: nuget_login
         uses: NuGet/login@v1
         with:
@@ -566,7 +570,7 @@ jobs:
 
       - name: NuGet
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY || steps.nuget_login.outputs.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ env.NUGET_KEY || steps.nuget_login.outputs.NUGET_API_KEY }}
         run: |
           nupkg="$(ls pkgs/*.nupkg)"
 
