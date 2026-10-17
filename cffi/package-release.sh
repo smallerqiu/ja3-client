@@ -15,6 +15,9 @@
 #
 # CI runs this once per build job, so a packaging change is a one-line review
 # instead of a diff inside a workflow YAML.
+#
+# dist/ also gets SHA256SUMS.txt over every archive it holds: the installers under
+# bindings/ check a download against it before unpacking (see PACKAGING.md).
 set -euo pipefail
 
 CFFI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -109,4 +112,11 @@ if [ "$PACKAGED" = "0" ]; then
   exit 1
 fi
 
-echo "==> ${PACKAGED} archive(s) in ${DIST}"
+# The installers under bindings/ verify every download against this file, so it is
+# part of the release, not a CI convenience. It always covers *all* archives in
+# DIST: a local `make host && make package` gets a one-line sums file, and a CI job
+# that builds two targets gets a two-line one. The publish job regenerates it from
+# the complete set before uploading, so partial files never reach a release.
+(cd "$DIST" && sha256sum *.zip > SHA256SUMS.txt)
+
+echo "==> ${PACKAGED} archive(s) in ${DIST}, plus SHA256SUMS.txt"

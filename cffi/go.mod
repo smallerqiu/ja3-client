@@ -14,7 +14,7 @@ require (
 	github.com/andybalholm/brotli v1.2.6 // indirect
 	github.com/cloudflare/circl v1.6.5 // indirect
 	github.com/klauspost/compress v1.20.3 // indirect
-	github.com/smallerqiu/utls v1.2.1 // indirect
+	github.com/smallerqiu/utls v1.2.2 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect

@@ -1,0 +1,262 @@
+<!--
+  ja3-client: put the native library next to your executable.
+
+  The NuGet package ships binding code only; this file resolves and copies the Go
+  shared library, downloading it from the GitHub Release that matches the package
+  version into the cache the npm and PyPI packages use too, so one download serves
+  every binding on the machine. It is pure MSBuild - DownloadFile, GetFileHash, Unzip -
+  because a build-time fetch must not depend on a toolchain being installed, and an
+  inline C# task fails in ways only the MSBuild log can explain.
+
+  Properties (all optional; the environment spellings match cffi/PACKAGING.md):
+
+    Ja3ClientVersion       library version to fetch, else $JA3_CLIENT_VERSION, else 1.2.4
+    Ja3ClientBaseUrl       download root, else $JA3_CLIENT_BASE_URL, else github.com
+    Ja3ClientRepo          owner/repo, else $JA3_CLIENT_REPO
+    Ja3ClientCacheDir      cache root, else $JA3_CLIENT_CACHE_DIR, else ~/.cache/ja3-client
+    Ja3ClientAbi=2         the ABI number recorded in install.json (cffi/main.go owns it)
+    Ja3ClientOffline=true  never touch the network, else $JA3_CLIENT_OFFLINE=1|true
+    Ja3ClientStrictFetch   fail the build when the fetch fails; default: warn and continue
+    Ja3ClientSkipNativeFetch=true  do nothing at all (you ship your own library)
+
+  $JA3_CLIENT_LIB also disables this: the binding reads that variable itself, and a
+  library copied next to the executable would compete with it.
+-->
+<Project>
+
+  <PropertyGroup>
+    <_Ja3EnvCache>$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_CACHE_DIR'))</_Ja3EnvCache>
+    <_Ja3EnvXdg>$([System.Environment]::GetEnvironmentVariable('XDG_CACHE_HOME'))</_Ja3EnvXdg>
+    <_Ja3EnvHome>$([System.Environment]::GetFolderPath(SpecialFolder.UserProfile))</_Ja3EnvHome>
+    <_Ja3EnvAppData>$([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData))</_Ja3EnvAppData>
+    <_Ja3OfflineEnv>$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_OFFLINE'))</_Ja3OfflineEnv>
+    <_Ja3StrictEnv>$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_STRICT'))</_Ja3StrictEnv>
+    <_Ja3LibEnv>$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_LIB'))</_Ja3LibEnv>
+    <_Ja3VersionEnv>$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_VERSION'))</_Ja3VersionEnv>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- A bare version number: the tag is v + version and the asset is
+         ja3-client-<version>-<slug>.zip. A leading v is stripped by Replace rather than
+         compared, because no semver contains the letter. -->
+    <Ja3ClientVersion Condition="'$(Ja3ClientVersion)' == ''">$([System.String]::Copy('$(_Ja3VersionEnv)').Replace('v', ''))</Ja3ClientVersion>
+    <Ja3ClientVersion Condition="'$(Ja3ClientVersion)' == ''">1.2.4</Ja3ClientVersion>
+    <_Ja3Tag>v$([System.String]::Copy('$(Ja3ClientVersion)').Replace('v', ''))</_Ja3Tag>
+
+    <Ja3ClientRepo Condition="'$(Ja3ClientRepo)' == ''">$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_REPO'))</Ja3ClientRepo>
+    <Ja3ClientRepo Condition="'$(Ja3ClientRepo)' == ''">smallerqiu/ja3-client</Ja3ClientRepo>
+
+    <Ja3ClientBaseUrl Condition="'$(Ja3ClientBaseUrl)' == ''">$([System.Environment]::GetEnvironmentVariable('JA3_CLIENT_BASE_URL'))</Ja3ClientBaseUrl>
+    <Ja3ClientBaseUrl Condition="'$(Ja3ClientBaseUrl)' == ''">https://github.com/$(Ja3ClientRepo)/releases/download</Ja3ClientBaseUrl>
+
+    <Ja3ClientCacheDir Condition="'$(Ja3ClientCacheDir)' == ''">$(_Ja3EnvCache)</Ja3ClientCacheDir>
+    <Ja3ClientCacheDir Condition="'$(Ja3ClientCacheDir)' == '' AND '$(_Ja3EnvXdg)' != ''">$([MSBuild]::NormalizePath('$(_Ja3EnvXdg)', 'ja3-client'))</Ja3ClientCacheDir>
+    <Ja3ClientCacheDir Condition="'$(Ja3ClientCacheDir)' == '' AND '$(OS)' == 'Windows_NT'">$([MSBuild]::NormalizePath('$(_Ja3EnvAppData)', 'ja3-client'))</Ja3ClientCacheDir>
+    <Ja3ClientCacheDir Condition="'$(Ja3ClientCacheDir)' == '' AND $([MSBuild]::IsOSPlatform('OSX'))">$([MSBuild]::NormalizePath('$(_Ja3EnvHome)', 'Library', 'Caches', 'ja3-client'))</Ja3ClientCacheDir>
+    <Ja3ClientCacheDir Condition="'$(Ja3ClientCacheDir)' == ''">$([MSBuild]::NormalizePath('$(_Ja3EnvHome)', '.cache', 'ja3-client'))</Ja3ClientCacheDir>
+
+    <Ja3ClientOffline Condition="'$(Ja3ClientOffline)' == '' AND ('$(_Ja3OfflineEnv)' == '1' OR '$(_Ja3OfflineEnv)' == 'true')">true</Ja3ClientOffline>
+    <Ja3ClientStrictFetch Condition="'$(Ja3ClientStrictFetch)' == '' AND ('$(_Ja3StrictEnv)' == '1' OR '$(_Ja3StrictEnv)' == 'true')">true</Ja3ClientStrictFetch>
+
+    <_Ja3Rid>$(NETCoreSdkPortableRuntimeIdentifier)</_Ja3Rid>
+
+    <!-- Recorded in install.json and checked again when the library loads. Keep it
+         equal to ABIVersion in cffi/main.go; the harness in test-installers.sh says so
+         when they drift. -->
+    <_Ja3Abi Condition="'$(Ja3ClientAbi)' == ''">2</_Ja3Abi>
+    <_Ja3Abi Condition="'$(Ja3ClientAbi)' != ''">$(Ja3ClientAbi)</_Ja3Abi>
+  </PropertyGroup>
+
+  <!-- The archive list, verbatim from cffi/PACKAGING.md. Anything else - musl, a
+       distribution the SDK reports under its own RID, a platform this repository has
+       never built for - has to say so up front instead of 404ing halfway through a
+       build. -->
+  <PropertyGroup>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'osx-arm64'">darwin-arm64</_Ja3Slug>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'osx-x64'">darwin-amd64</_Ja3Slug>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'linux-x64'">linux-amd64</_Ja3Slug>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'linux-arm64'">linux-arm64</_Ja3Slug>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'linux-arm'">linux-armv7</_Ja3Slug>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'win-x64'">windows-amd64</_Ja3Slug>
+    <_Ja3Slug Condition="'$(_Ja3Rid)' == 'win-x86'">windows-386</_Ja3Slug>
+
+    <_Ja3OsName Condition="'$(_Ja3Slug)' != ''">$([System.String]::Copy('$(_Ja3Slug)').Replace('-amd64', '').Replace('-arm64', '').Replace('-armv7', '').Replace('-386', ''))</_Ja3OsName>
+    <_Ja3Arch Condition="'$(_Ja3Slug)' != ''">$([System.String]::Copy('$(_Ja3Slug)').Replace('darwin-', '').Replace('linux-', '').Replace('windows-', ''))</_Ja3Arch>
+
+    <_Ja3LibName Condition="'$(_Ja3OsName)' == 'linux'">libja3_client_$(_Ja3Arch).so</_Ja3LibName>
+    <_Ja3LibName Condition="'$(_Ja3OsName)' == 'windows'">ja3_client_$(_Ja3Arch).dll</_Ja3LibName>
+    <_Ja3LibName Condition="'$(_Ja3LibName)' == '' AND '$(_Ja3Arch)' != ''">ja3_client_$(_Ja3Arch).dylib</_Ja3LibName>
+
+    <_Ja3Asset Condition="'$(_Ja3Slug)' != ''">ja3-client-$(Ja3ClientVersion)-$(_Ja3Slug).zip</_Ja3Asset>
+    <_Ja3AssetUrl Condition="'$(_Ja3Slug)' != ''">$(Ja3ClientBaseUrl)/$(_Ja3Tag)/$(_Ja3Asset)</_Ja3AssetUrl>
+    <_Ja3SumsUrl Condition="'$(_Ja3Slug)' != ''">$(Ja3ClientBaseUrl)/$(_Ja3Tag)/SHA256SUMS.txt</_Ja3SumsUrl>
+    <_Ja3CachedPath Condition="'$(_Ja3Slug)' != ''">$([MSBuild]::NormalizePath('$(Ja3ClientCacheDir)', '$(Ja3ClientVersion)', '$(_Ja3Slug)', '$(_Ja3LibName)'))</_Ja3CachedPath>
+    <_Ja3CachedDir Condition="'$(_Ja3CachedPath)' != ''">$([System.IO.Path]::GetDirectoryName('$(_Ja3CachedPath)'))</_Ja3CachedDir>
+
+    <!-- Staging lives under obj/, one directory per slug: two projects sharing a
+         unpacked/ would overwrite each other mid-build. -->
+    <_Ja3Staging Condition="'$(_Ja3Slug)' != '' AND '$(IntermediateOutputPath)' != ''">$([MSBuild]::NormalizePath('$(IntermediateOutputPath)', 'ja3-client-$(_Ja3Slug)'))</_Ja3Staging>
+
+    <_Ja3Wanted Condition="'$(_Ja3Slug)' != '' AND '$(Ja3ClientOffline)' != 'true' AND '$(_Ja3LibEnv)' == '' AND '$(Ja3ClientSkipNativeFetch)' != 'true'">true</_Ja3Wanted>
+  </PropertyGroup>
+
+  <!-- ============================ resolve ================================ -->
+
+  <Target Name="Ja3ClientResolveNative">
+    <PropertyGroup>
+      <_Ja3Cached Condition="'$(_Ja3CachedPath)' != '' AND Exists('$(_Ja3CachedPath)')">true</_Ja3Cached>
+    </PropertyGroup>
+
+    <Message Condition="'$(_Ja3Cached)' == 'true'"
+             Importance="low"
+             Text="ja3-client: cached $(_Ja3Slug) $(Ja3ClientVersion) at $(_Ja3CachedPath)" />
+
+    <Warning Condition="'$(_Ja3Slug)' == ''"
+             Text="ja3-client: no release archive for SDK RID '$(_Ja3Rid)'. Build the library (make -C cffi host) and set JA3_CLIENT_LIB, or pass -p:Ja3ClientSkipNativeFetch=true." />
+
+    <Warning Condition="'$(_Ja3Wanted)' != 'true' AND '$(_Ja3Cached)' != 'true' AND '$(_Ja3Slug)' != ''"
+             Text="ja3-client: $(_Ja3CachedPath) is missing and no download was attempted (Ja3ClientOffline or JA3_CLIENT_LIB). Unzip $(_Ja3AssetUrl) by hand, or build the library with 'make -C cffi host'." />
+
+    <RemoveDir Directories="$(_Ja3Staging)" Condition="'$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true'" />
+    <MakeDir Directories="$(_Ja3Staging)" Condition="'$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true'" />
+
+    <PropertyGroup>
+      <!-- DownloadFile keeps the URL's file name inside DestinationFolder, and this SDK
+           version gives the task no DestinationPath output to read back, so the expected
+           paths are computed here instead of from a task result. -->
+      <_Ja3SumsPath Condition="'$(_Ja3Staging)' != ''">$([MSBuild]::NormalizePath('$(_Ja3Staging)', 'SHA256SUMS.txt'))</_Ja3SumsPath>
+      <_Ja3ZipPath Condition="'$(_Ja3Asset)' != '' AND '$(_Ja3Staging)' != ''">$([MSBuild]::NormalizePath('$(_Ja3Staging)', '$(_Ja3Asset)'))</_Ja3ZipPath>
+    </PropertyGroup>
+
+    <DownloadFile Condition="'$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true'"
+                  SourceUrl="$(_Ja3SumsUrl)"
+                  DestinationFolder="$(_Ja3Staging)"
+                  Retries="1"
+                  ContinueOnError="WarnAndContinue" />
+
+    <!-- Match on " <asset>" - the two spaces of sha256sum's format plus the name - so
+         linux-arm64 cannot be matched by linux-armv7's line, and take the first 64
+         characters as the expected hash. -->
+    <!-- ReadAllLines is not an allowed MSBuild property function, so the sums file is
+         read with the task built for exactly that and each line arrives as an item. -->
+    <ReadLinesFromFile File="$(_Ja3SumsPath)"
+                       Condition="'$(_Ja3SumsPath)' != '' AND Exists('$(_Ja3SumsPath)')">
+      <Output TaskParameter="Lines" ItemName="_Ja3SumLine" />
+    </ReadLinesFromFile>
+
+    <ItemGroup>
+      <_Ja3SumHit Include="@(_Ja3SumLine)"
+                  Condition="$([System.String]::Copy('%(Identity)').Contains(' $(_Ja3Asset)'))" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'@(_Ja3SumHit)' != ''">
+      <_Ja3Hit>@(_Ja3SumHit)</_Ja3Hit>
+      <_Ja3Expected>$([System.String]::Copy('$(_Ja3Hit)').Substring(0, 64).ToLowerInvariant())</_Ja3Expected>
+    </PropertyGroup>
+
+    <Error Condition="'$(Ja3ClientStrictFetch)' == 'true' AND '$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true' AND '$(_Ja3SumsPath)' != '' AND Exists('$(_Ja3SumsPath)') AND '$(_Ja3Expected)' == ''"
+           Text="ja3-client: SHA256SUMS.txt has no line for $(_Ja3Asset) - that release is incomplete." />
+
+    <DownloadFile Condition="'$(_Ja3Expected)' != '' AND '$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true'"
+                  SourceUrl="$(_Ja3AssetUrl)"
+                  DestinationFolder="$(_Ja3Staging)"
+                  Retries="1"
+                  ContinueOnError="WarnAndContinue" />
+
+    <GetFileHash Condition="Exists('$(_Ja3ZipPath)')"
+                 Files="$(_Ja3ZipPath)"
+                 Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_Ja3ActualRaw" />
+    </GetFileHash>
+
+    <PropertyGroup Condition="'$(_Ja3ActualRaw)' != ''">
+      <_Ja3Actual>$([System.String]::Copy('$(_Ja3ActualRaw)').ToLowerInvariant())</_Ja3Actual>
+      <_Ja3HashOk Condition="'$(_Ja3Actual)' == '$(_Ja3Expected)'">true</_Ja3HashOk>
+    </PropertyGroup>
+
+    <!-- Verified before anything is unpacked. A mismatch is a warning by default:
+         breaking every consumer build because somebody re-uploaded a release is not the
+         binding's call to make, and -p:Ja3ClientStrictFetch=true hands you that call. -->
+    <Warning Condition="'$(_Ja3Actual)' != '' AND '$(_Ja3HashOk)' != 'true'"
+             Text="ja3-client: SHA256 of $(_Ja3Asset) is $(_Ja3Actual) but SHA256SUMS.txt says $(_Ja3Expected). The archive was not unpacked." />
+
+    <Error Condition="'$(Ja3ClientStrictFetch)' == 'true' AND '$(_Ja3Actual)' != '' AND '$(_Ja3HashOk)' != 'true'"
+           Text="ja3-client: checksum mismatch and Ja3ClientStrictFetch is set." />
+
+    <!-- Unzip has no Overwrite parameter; the staging directory was removed at the top of
+         this target, so the extraction always starts empty. A broken archive warns instead
+         of failing the build - the _Ja3Library check below decides what that means. -->
+    <Unzip Condition="'$(_Ja3HashOk)' == 'true'"
+           SourceFiles="$(_Ja3ZipPath)"
+           DestinationFolder="$([MSBuild]::NormalizePath('$(_Ja3Staging)', 'unpacked'))"
+           ContinueOnError="WarnAndContinue" />
+
+    <ItemGroup Condition="'$(_Ja3HashOk)' == 'true'">
+      <_Ja3Library Include="$([MSBuild]::NormalizePath('$(_Ja3Staging)', 'unpacked'))/**/$(_Ja3LibName)" />
+    </ItemGroup>
+
+    <Error Condition="'$(Ja3ClientStrictFetch)' == 'true' AND '$(_Ja3Wanted)' == 'true' AND '$(_Ja3Cached)' != 'true' AND '@(_Ja3Library)' == ''"
+           Text="ja3-client: could not place $(_Ja3LibName) from $(_Ja3AssetUrl). The warnings above say why." />
+
+    <!-- Into the shared cache first, so a later `pip install ja3-client` of the same
+         version on this machine reuses it, and so the copy next to the executable is a
+         plain file copy in both hook targets. -->
+    <MakeDir Directories="$(_Ja3CachedDir)" Condition="'@(_Ja3Library)' != ''" />
+
+    <Copy Condition="'@(_Ja3Library)' != ''"
+          SourceFiles="@(_Ja3Library)"
+          DestinationFolder="$(_Ja3CachedDir)"
+          SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="_Ja3IntoCache" />
+    </Copy>
+
+    <!-- The timestamp is computed outside the attribute: MSBuild property functions
+         take their arguments in single quotes, and this whole Lines= attribute is
+         already single-quoted, so writing ToString('...') inline is invalid XML. -->
+    <PropertyGroup Condition="'@(_Ja3IntoCache)' != ''">
+      <_Ja3Now>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</_Ja3Now>
+    </PropertyGroup>
+
+    <!-- Same record the npm and PyPI installers write, so one `cat install.json`
+         explains any cache directory on this machine. abi is the number from
+         cffi/main.go's ABIVersion - the binding re-checks it when it loads. -->
+    <WriteLinesToFile Condition="'@(_Ja3IntoCache)' != ''"
+                      File="$([MSBuild]::NormalizePath('$(_Ja3CachedDir)', 'install.json'))"
+                      Lines='{"version":"$(Ja3ClientVersion)","asset":"$(_Ja3Asset)","url":"$(_Ja3AssetUrl)","sha256":"$(_Ja3Expected)","abi":$(_Ja3Abi),"installed_at":"$(_Ja3Now)","installed_by":"msbuild"}'
+                      Overwrite="true" />
+
+    <PropertyGroup Condition="'@(_Ja3IntoCache)' != ''">
+      <_Ja3Cached>true</_Ja3Cached>
+    </PropertyGroup>
+
+    <RemoveDir Directories="$(_Ja3Staging)" Condition="'@(_Ja3IntoCache)' != ''" />
+
+    <Message Condition="'$(_Ja3Cached)' == 'true'"
+             Text="ja3-client: $(_Ja3LibName) ($(_Ja3Slug) $(Ja3ClientVersion)) resolved at $(_Ja3CachedPath)" />
+  </Target>
+
+  <!-- ============================== copy ================================ -->
+
+  <Target Name="Ja3ClientCopyToOutput" AfterTargets="Build" DependsOnTargets="Ja3ClientResolveNative"
+          Condition="'$(Ja3ClientSkipNativeFetch)' != 'true' AND '$(_Ja3LibEnv)' == '' AND '$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_Ja3OutDir Condition="'$(_Ja3Cached)' == 'true'">$([MSBuild]::EnsureTrailingSlash('$(OutDir)'))</_Ja3OutDir>
+    </PropertyGroup>
+
+    <!-- Next to the executable is the first directory Ja3.cs probes, which is what makes
+         `dotnet run` and `dotnet test` work with no environment variables set. -->
+    <Copy Condition="'$(_Ja3OutDir)' != '' AND Exists('$(_Ja3CachedPath)')"
+          SourceFiles="$(_Ja3CachedPath)"
+          DestinationFolder="$(_Ja3OutDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="Ja3ClientCopyToPublish" AfterTargets="Publish" DependsOnTargets="Ja3ClientResolveNative"
+          Condition="'$(Ja3ClientSkipNativeFetch)' != 'true' AND '$(_Ja3LibEnv)' == '' AND '$(PublishDir)' != ''">
+    <Copy Condition="Exists('$(_Ja3CachedPath)')"
+          SourceFiles="$(_Ja3CachedPath)"
+          DestinationFolder="$([MSBuild]::EnsureTrailingSlash('$(PublishDir)'))"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

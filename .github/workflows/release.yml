@@ -297,7 +297,18 @@ jobs:
 
       - name: Checksums and release notes
         run: |
-          (cd dist && sha256sum *.zip > ../checksums.txt)
+          # This file is the contract the installers read (cffi/PACKAGING.md), so it
+          # is regenerated here from the complete set rather than merged from the
+          # per-job files, and uploaded as a release asset next to the archives.
+          (cd dist && sha256sum *.zip > SHA256SUMS.txt)
+
+          archives="$(ls dist/*.zip | wc -l | tr -d ' ')"
+          sums="$(wc -l < dist/SHA256SUMS.txt | tr -d ' ')"
+
+          if [ "$sums" != "$archives" ]; then
+            echo "::error::SHA256SUMS.txt lists $sums archives, dist has $archives"
+            exit 1
+          fi
 
           # One source of truth for the ABI number: cffi/main.go declares it.
           abi="$(grep -m1 'ABIVersion = ' cffi/main.go | awk '{print $NF}')"
@@ -319,11 +330,13 @@ jobs:
             printf 'Go: `go get github.com/smallerqiu/ja3-client@%s`.\n\n' "$TAG"
             printf 'File names are the contract: `libja3_client_<arch>.so`,\n'
             printf '`ja3_client_<arch>.dll` / `.lib`, `ja3_client_<arch>.dylib`.\n\n'
+            printf '`SHA256SUMS.txt` is what the npm/PyPI/NuGet installers check before\n'
+            printf 'unpacking, so it is part of the contract too - see `cffi/PACKAGING.md`.\n\n'
             printf '### Assets\n\n| archive | sha256 |\n| --- | --- |\n'
 
             while read -r sha name; do
               printf '| %s | `%s...` |\n' "$name" "${sha:0:16}"
-            done < checksums.txt
+            done < dist/SHA256SUMS.txt
 
             printf '\n### How much of this CI actually ran\n\n'
             printf '* Linux and Windows: cross-compiled in Debian bookworm containers, and\n'
@@ -344,5 +357,5 @@ jobs:
               --notes-file notes.md
           fi
 
-          gh release upload "$TAG" dist/*.zip checksums.txt --clobber
+          gh release upload "$TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
           gh release view "$TAG" --json name,assets --jq '.name, (.assets[] | "  " + .name)'

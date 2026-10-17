@@ -258,8 +258,18 @@ public sealed class Ja3 : IDisposable
     {
         lock (ResolveLock)
         {
-            LibraryPath = libraryPath ?? Environment.GetEnvironmentVariable("JA3_CLIENT_LIB")
-                ?? FindLibrary();
+            var fromEnv = Environment.GetEnvironmentVariable("JA3_CLIENT_LIB");
+
+            // JA3_CLIENT_LIB means "this file and nothing else" (cffi/PACKAGING.md): a
+            // typo must stop here rather than load some other version off disk, which
+            // would surface as a fingerprint nobody can explain.
+            if (!string.IsNullOrEmpty(fromEnv) && !File.Exists(fromEnv))
+            {
+                throw new Ja3Exception(Ja3ErrorCode.NilArgument,
+                    $"JA3_CLIENT_LIB points at {fromEnv}, which is not a file");
+            }
+
+            LibraryPath = libraryPath ?? fromEnv ?? FindLibrary();
 
             _resolvedPath = LibraryPath;
 
@@ -444,9 +454,86 @@ public sealed class Ja3 : IDisposable
             }
         }
 
+        var cached = CacheCandidates(names).FirstOrDefault();
+
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         throw new Ja3Exception(Ja3ErrorCode.NilArgument,
-            "libja3-client was not found. Build it with `make` in cffi/, or set JA3_CLIENT_LIB to the file path. " +
-            $"Searched: {string.Join(", ", roots)}");
+            "libja3-client was not found. Build it with `make` in cffi/, run the NuGet " +
+            "target (dotnet build fetches it), or set JA3_CLIENT_LIB to the file path. " +
+            $"Searched: {string.Join(", ", roots)} and {CacheRoot()}");
+    }
+
+    /// <summary>
+    /// The cache root from cffi/PACKAGING.md: JA3_CLIENT_CACHE_DIR, then
+    /// XDG_CACHE_HOME, then the per-platform default. Shared with the npm and PyPI
+    /// bindings so one download serves every language on the machine.
+    /// </summary>
+    private static string CacheRoot()
+    {
+        var explicitDir = Environment.GetEnvironmentVariable("JA3_CLIENT_CACHE_DIR");
+
+        if (!string.IsNullOrEmpty(explicitDir))
+        {
+            return explicitDir;
+        }
+
+        var xdg = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
+
+        if (!string.IsNullOrEmpty(xdg))
+        {
+            return Path.Combine(xdg, "ja3-client");
+        }
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        if (OperatingSystem.IsWindows())
+        {
+            var local = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+
+            return Path.Combine(string.IsNullOrEmpty(local) ? Path.Combine(home, "AppData", "Local") : local,
+                "ja3-client");
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return Path.Combine(home, "Library", "Caches", "ja3-client");
+        }
+
+        return Path.Combine(home, ".cache", "ja3-client");
+    }
+
+    private static IEnumerable<string> CacheCandidates(string[] names)
+    {
+        var root = CacheRoot();
+
+        if (!Directory.Exists(root))
+        {
+            yield break;
+        }
+
+        // Newest version directory first: a 1.2.5 binding that quietly loads the 1.2.3
+        // library its predecessor left behind produces a mismatch nobody blames on the
+        // cache. Ordinal sort is enough for the version and slug names.
+        foreach (var version in Directory.EnumerateDirectories(root).OrderByDescending(d => d, StringComparer.Ordinal))
+        {
+            foreach (var slug in Directory.EnumerateDirectories(version).OrderByDescending(d => d, StringComparer.Ordinal))
+            {
+                foreach (var name in names)
+                {
+                    var candidate = Path.Combine(slug, name);
+
+                    if (File.Exists(candidate))
+                    {
+                        yield return candidate;
+                        yield break;
+                    }
+                }
+            }
+        }
     }
 
     private static string FindCffiRoot()

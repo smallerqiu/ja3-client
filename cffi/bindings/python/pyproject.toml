@@ -1,0 +1,45 @@
+[build-system]
+# SPDX license strings in [project] need PEP 639, i.e. setuptools 77+; pip's build
+# isolation installs this, so an old system setuptools cannot break a wheel build.
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ja3-client"
+version = "1.2.5"
+description = "Python binding for the ja3-client TLS-impersonation shared library"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "smallerqiu" }]
+keywords = ["ja3", "ja4", "tls", "impersonate", "fingerprint", "ffi", "ctypes"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries",
+]
+# Zero dependencies on purpose: the binding is ctypes, and a package that needs a
+# download helper to fetch its own library would be the joke.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/smallerqiu/ja3-client"
+Repository = "https://github.com/smallerqiu/ja3-client"
+Issues = "https://github.com/smallerqiu/ja3-client/issues"
+Documentation = "https://github.com/smallerqiu/ja3-client/blob/master/cffi/README.md"
+
+[project.scripts]
+# `ja3-client fetch` puts the library on disk before any process imports the binding,
+# because a wheel cannot run code at install time (see cffi/PACKAGING.md).
+ja3-client = "ja3_client_binaries:main"
+
+[tool.setuptools]
+# Flat modules, not a package directory: ja3_client.py stays the single file that the
+# GitHub release archives ship and that `python3 ja3_client.py`-style vendoring works.
+py-modules = ["ja3_client", "ja3_client_binaries"]

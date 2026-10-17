@@ -91,7 +91,7 @@ Per-call (`ja3_request`, `ja3_session_request`):
 `cipher_suites`, `curves`, `signature_hashed`, `tls_extension_order`,
 `http_2_setting`, `http_2_window_update`, `http_2_pseudo_header_order`,
 `http_2_priorities`, `tls_version`, `tls_grease`, `ech`, `alps`, `cert_compression`,
-`user_agent`, `with_http3`, … Unknown keys there are reported too
+`tls_trust_anchors`, `user_agent`, `with_http3`, … Unknown keys there are reported too
 (`unknown client_data option "..." ignored`).
 
 Two header defaults the FFI installs, because they decide whether the response is
@@ -156,22 +156,30 @@ status is data, not a failure. Bindings raise their typed error on non-zero
 
 ## HTTP/3
 
-`ja3/profiles.go` sets `var withHttp3 = true`, which puts `h3` first in the TLS
-ALPN list of **every** profile. Consequences worth knowing before you compare a
-fingerprint against browserleaks (measured 2026-10-15 with `chrome_141`):
+`h3` in the TLS ALPN list is **not** set by every profile: the anchors that set
+`WithHttp3` are `Chrome_132`, `Chrome_136`, `Chrome_137_ios`, `Chrome_150`,
+`Chrome_152`, `Edge_136`, `Opera_120` and `Brave_1_8` (and `c(new, anchor)` passes
+it down to their descendants), so the Chrome/Edge/Opera ids advertise
+`h3, h2, http/1.1` while Firefox, Safari and the rest send `h2, http/1.1`.
+Consequences worth knowing before you compare a fingerprint against browserleaks
+(measured 2026-10-15 with `chrome_141`):
 
 * The ALPN segment of `ja4` depends on who computes it: browserleaks reads the
   **first** protocol and reports `t13d1516h3`, while tls.peet.ws reports
-  `t13d1516h2` for the same ClientHello. A real Chrome, whose ALPN is
-  `h2, http/1.1`, reads `h2` on both — so the deviation shows up on browserleaks
-  as `h3` where the browser says `h2`. The cipher and extension hashes, the
-  normalized JA3 and the Akamai hash are unaffected.
-* When a server answers `h3` over TCP ALPN, the client opens a separate QUIC
-  connection. That path is not uniformly reliable yet — some hosts end up as
+  `t13d1516h2` for the same ClientHello. A real Chrome on TCP has ALPN
+  `h2, http/1.1` (its own captures say so), so the deviation shows up on
+  browserleaks as `h3` where the browser says `h2`. The cipher and extension
+  hashes, the normalized JA3 and the Akamai hash are unaffected.
+* When a server answers `h3` over TCP ALPN, the client opens a **separate QUIC
+  connection** (`roundtripper.go:287`), and that connection is built from a plain
+  `tls.Config` with no `ClientHelloID` in it — so its ClientHello is the library's
+  own, not the browser's you asked to impersonate. Treat HTTP/3 as advertised, not
+  impersonated. That path is also not uniformly reliable: some hosts end up as
   `error_code: 5` with an `H3 error` or a timeout.
 * `"with_http3": false` removes `h3` from the ALPN list and puts browserleaks'
   `ja4` back to `h2`; it is the switch to try first when a fingerprint or an
-  HTTP/3 test behaves oddly. Omit it to keep the profile default.
+  HTTP/3 test behaves oddly, and the only way to compare like for like. Omit it to
+  keep the profile default.
 
 ## Building
 

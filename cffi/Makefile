@@ -8,6 +8,7 @@
 #   make all             everything this machine can reach
 #   make docker          the full matrix through build-docker.sh (needs Docker)
 #   make package         zip build/ into dist/ the way the release workflow does
+#   make installers      test the npm/PyPI/NuGet installers against a local fake release
 #   make clean           remove build/ and dist/
 #
 # Cross-compiler requirements:
@@ -40,8 +41,10 @@ LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)
 export GOWORK := off
 export CGO_ENABLED := 1
 
-HOST_OS   := $(shell go env GOOS)
-HOST_ARCH := $(shell go env GOARCH)
+# Quiet on stderr: a missing toolchain has to look like one message from the `host`
+# guard below, not two "Command not found" lines in front of it.
+HOST_OS   := $(shell go env GOOS 2>/dev/null)
+HOST_ARCH := $(shell go env GOARCH 2>/dev/null)
 
 # The one library this machine can dlopen, for `make smoke`.
 ifeq ($(HOST_OS),darwin)
@@ -55,13 +58,23 @@ endif
 # Native toolchain on Linux, musl cross elsewhere.
 LINUX_NATIVE := $(filter linux,$(HOST_OS))
 
-.PHONY: host test lint smoke node-smoke check all docker package \
+.PHONY: host test lint smoke node-smoke check all docker package installers \
         python-check node-check csharp-check clean help
 .PHONY: darwin darwin-amd64 darwin-arm64 linux linux-amd64 linux-arm64 \
         windows windows-amd64 windows-386
 
+# `go env` answers empty when the toolchain is not on PATH - likely from a GUI shell or
+# a CI step that forgot setup-go. Then `$(HOST_OS)-$(HOST_ARCH)` is "-", which matches no
+# rule, so `make host` would fall back to its own default goal and recurse until the
+# output buries the actual problem. Say it here instead.
+ifeq ($(HOST_OS)-$(HOST_ARCH),-)
+host:
+	@echo "make host: 'go' is not on PATH. Install Go, or build a known platform directly ('make darwin-arm64')." >&2
+	@exit 1
+else
 host:
 	@$(MAKE) --no-print-directory $(HOST_OS)-$(HOST_ARCH)
+endif
 
 check: host test smoke node-smoke python-check node-check csharp-check
 
@@ -155,6 +168,12 @@ docker:
 # `make docker && make package` produces the same archives as a GitHub release.
 package:
 	./package-release.sh dist $(VERSION)
+
+# The three installers against a fake release served on 127.0.0.1: real downloads,
+# real checksums, real cache, and every failure path. Skips the bindings whose
+# toolchain is missing, so it is safe to run anywhere.
+installers:
+	./test-installers.sh
 
 # --- bindings ------------------------------------------------------------
 # Each binding locates the library on its own, so these also exercise the search

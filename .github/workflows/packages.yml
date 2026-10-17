@@ -1,0 +1,568 @@
+name: Packages
+
+# Builds and checks the three language packages under cffi/bindings/.
+#
+#   workflow_dispatch               -> test the installers, assemble the packages,
+#                                      upload them as workflow artifacts
+#   ... with "Publish" checked      -> also upload to npm / PyPI / NuGet, after an
+#                                      environment approval
+#
+# Publishing is manual by design (cffi/PACKAGING.md): a package whose install step
+# downloads a release asset is only meaningful once that asset exists, so this run
+# refuses to publish unless the version is already a GitHub Release carrying its
+# archives and SHA256SUMS.txt.
+#
+# Same commands, on a laptop:
+#
+#   cd cffi && make installers        # the offline installer test below
+#   cd cffi/bindings/node   && npm pack
+#   cd cffi/bindings/python && python3 -m build
+#   cd cffi/bindings/csharp && dotnet pack -c Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to build"
+        type: string
+        default: master
+      tag:
+        description: "Release tag the packages point at (empty = newest tag)"
+        type: string
+        required: false
+      publish:
+        description: "Publish to npm, PyPI and NuGet"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GOWORK: off
+
+jobs:
+  prepare:
+    name: version and release check
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      ref: ${{ steps.version.outputs.ref }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Resolve the version
+        id: version
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          PUBLISH_INPUT: ${{ inputs.publish }}
+        run: |
+          tag="${INPUT_TAG:-}"
+          [ -n "$tag" ] || tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [ -z "$tag" ]; then
+            echo "::error::no tag to build from: tag this repository or pass the tag input"
+            exit 1
+          fi
+
+          printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$' || {
+            echo "::error::'$tag' is not vX.Y.Z - a prerelease suffix would make the"
+            echo "::error::installers ask for an asset name this repo never builds"
+            exit 1
+          }
+
+          version="${tag#v}"
+
+          # The packages hard-code the version they download, so a package published
+          # under a different number than the release it fetches is broken by name:
+          # `ja3-client@1.2.5` would ask for ja3-client-1.2.5-*.zip forever, even after
+          # a fix release. All four spellings have to say the tag - including
+          # pyproject.toml, which is not the version the binding downloads with but the
+          # one `python -m build` puts in the wheel filename and the one twine uploads,
+          # so a stale number there ships a 1.2.4 release that asks for 1.2.5 archives
+          # (and is rejected by PyPI as soon as a real 1.2.4 exists).
+          node_version="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' cffi/bindings/node/package.json | head -1)"
+          py_version="$(sed -n 's/^PACKAGE_VERSION = "\(.*\)"/\1/p' cffi/bindings/python/ja3_client_binaries.py)"
+          pyproject_version="$(sed -n 's/^version = "\(.*\)"/\1/p' cffi/bindings/python/pyproject.toml)"
+          cs_version="$(sed -n 's| *<Version>\(.*\)</Version>|\1|p' cffi/bindings/csharp/Ja3Client.csproj)"
+
+          failed=0
+
+          for pair in "node=$node_version" "python=$py_version" "python-pyproject=$pyproject_version" "csharp=$cs_version"; do
+            name="${pair%%=*}"
+            got="${pair#*=}"
+
+            if [ "$got" != "$version" ]; then
+              echo "::error::cffi/bindings/$name still says $got, this run is $version"
+              failed=1
+            fi
+          done
+
+          [ "$failed" = 0 ] || {
+            echo "::error::bump the package versions (node, python x2, csharp) to $version before running this"
+            exit 1
+          }
+
+          publish=false
+          if [ "$PUBLISH_INPUT" = "true" ]; then publish=true; fi
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "ref=$(git rev-parse HEAD)"
+            echo "publish=$publish"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "==> $tag ($version) publish=$publish"
+
+      # The installers download from this release, so a publish needs it complete.
+      # An artifacts-only run may legitimately come first - that is how you review
+      # a packaging change before cutting the release.
+      - name: The release this version points at
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PUBLISH: ${{ steps.version.outputs.publish }}
+        run: |
+          if ! gh release view "$TAG" --json assets > assets.json 2>/dev/null; then
+            msg="release $TAG does not exist yet - the installers will have nothing to fetch"
+
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::error::$msg (publishing needs it)"
+              exit 1
+            fi
+
+            echo "::warning::$msg"
+            exit 0
+          fi
+
+          jq -r '.assets[].name' assets.json > have.txt
+
+          missing=""
+
+          for slug in darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 linux-armv7 linux-386 \
+                      windows-amd64 windows-386; do
+            grep -qx "ja3-client-$TAG-$slug.zip" have.txt || missing="$missing $slug"
+          done
+
+          grep -qx 'SHA256SUMS.txt' have.txt || missing="$missing sums"
+
+          if [ -n "$missing" ]; then
+            msg="release $TAG is missing:$missing"
+
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::error::$msg"
+              exit 1
+            fi
+
+            echo "::warning::$msg"
+          else
+            echo "==> release $TAG carries all 8 archives plus SHA256SUMS.txt"
+          fi
+
+  # The offline installer test: a fake release served on 127.0.0.1, real downloads,
+  # real checksums, and every failure path. Two runners because the harness needs to
+  # *build* the host library first (`make host`), which on Windows would want a local
+  # cgo toolchain - the Windows and 32-bit paths are covered by the Release workflow's
+  # cross-builds and by consumers, not here.
+  installers:
+    name: installers (${{ matrix.os }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Run the installer contract
+        working-directory: cffi
+        run: ./test-installers.sh
+
+  # Pack each binding exactly the way a human would, then read the archive back to
+  # make sure nothing that the installers depend on was left out of the package.
+  assemble:
+    name: ${{ matrix.package }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [node, python, csharp]
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - uses: actions/setup-node@v4
+        if: matrix.package == 'node'
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        if: matrix.package == 'python'
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        if: matrix.package == 'csharp'
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Pack
+        shell: bash
+        run: |
+          mkdir -p out
+
+          case "${{ matrix.package }}" in
+            node)
+              cd cffi/bindings/node
+              npm pack --pack-destination ../../../out
+              ;;
+            python)
+              cd cffi/bindings/python
+              python3 -m pip install --quiet build
+              python3 -m build --outdir ../../../out
+              ;;
+            csharp)
+              cd cffi/bindings/csharp
+              dotnet pack -c Release -o ../../../out
+              ;;
+          esac
+
+          ls -l out
+
+      - name: Contents
+        shell: bash
+        run: |
+          # Read each archive back and assert the parts the installers depend on are
+          # in it - and that no native library was accidentally packed, because the
+          # whole design is that the release asset carries those bytes.
+          #
+          # Match the native libraries by their contract name (cffi/PACKAGING.md), not by
+          # extension: the NuGet package carries its own managed assembly,
+          # lib/net8.0/ja3-client-ffi.dll, and a `\.dll$` test would fail a package that is
+          # correct. The names below are hyphenated; the release assets are underscored.
+          native='(^|/)(lib)?ja3_client_(amd64|arm64|armv7|386)\.(so|dll|dylib)$'
+
+          for pkg in out/*; do
+            echo "==> $pkg"
+
+            case "$pkg" in
+              *.tgz)
+                tar -tzf "$pkg" | sort
+
+                for want in package/lib/native.js package/scripts/postinstall.js package/index.js; do
+                  tar -tzf "$pkg" | grep -qx "$want" || {
+                    echo "::error::$want is missing from the npm package; its installer cannot run"
+                    exit 1
+                  }
+                done
+
+                if tar -tzf "$pkg" | grep -qE "$native"; then
+                  echo "::error::the npm package contains a native library"
+                  exit 1
+                fi
+                ;;
+              *.whl)
+                python3 -m zipfile -l "$pkg"
+
+                for want in ja3_client.py ja3_client_binaries.py; do
+                  python3 -m zipfile -l "$pkg" | grep -q "$want" || {
+                    echo "::error::$want is missing from the wheel"
+                    exit 1
+                  }
+                done
+
+                if python3 -m zipfile -l "$pkg" | grep -qE "$native"; then
+                  echo "::error::the wheel contains a native library"
+                  exit 1
+                fi
+                ;;
+              *.nupkg)
+                unzip -l "$pkg"
+
+                # The binding compiles into the dll; the targets file is what puts the
+                # native library next to the executable. Without the second one the
+                # package installs a binding that cannot find anything.
+                for want in lib/net8.0/ja3-client-ffi.dll build/ja3-client.targets README.md; do
+                  unzip -l "$pkg" | grep -q "$want" || {
+                    echo "::error::$want is missing from the nupkg"
+                    exit 1
+                  }
+                done
+
+                if unzip -l "$pkg" | grep -qE "$native"; then
+                  echo "::error::the nupkg contains a native library"
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "(sdist - not inspected)"
+                ;;
+            esac
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.package }}
+          path: out/*
+          if-no-files-found: error
+
+  # The version that ships is the one that resolves: install the packed binding in a
+  # clean project, with JA3_CLIENT_BASE_URL pointed at a stand-in release, and load it.
+  # This is the closest CI gets to a stranger's machine.
+  smoke:
+    name: install from the package
+    needs: [prepare, assemble]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      # Set for the whole job, not per step: the postinstall, the build and the run all
+      # have to agree on where the library comes from and which cache they fill. One of
+      # them missing it would either reach for the real GitHub release - which a
+      # pre-publish run does not have - or resolve a library the step below did not
+      # download, and the test would prove nothing about the package.
+      JA3_CLIENT_BASE_URL: http://127.0.0.1:8745
+      JA3_CLIENT_CACHE_DIR: ${{ github.workspace }}/.ja3-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            cffi/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: pkgs
+
+      - name: Serve the release the packages will ask for
+        working-directory: cffi
+        run: |
+          # One real library, packaged under the version these packages declare,
+          # served with the release URL layout. `make host` is the ubuntu build,
+          # which is the one this runner is.
+          make host
+          ./package-release.sh /tmp/dist "$VERSION"
+          mkdir -p /tmp/release/v"$VERSION"
+          cp /tmp/dist/*.zip /tmp/dist/SHA256SUMS.txt /tmp/release/v"$VERSION"/
+          # --directory, not `cd && …`, and no subshell: this process has to outlive the
+          # step, because the three install steps below are separate shells that all ask
+          # it for the archive.
+          python3 -m http.server 8745 --bind 127.0.0.1 --directory /tmp/release \
+            >/tmp/server.log 2>&1 &
+
+          i=0
+          until curl -fsS -o /dev/null "http://127.0.0.1:8745/v$VERSION/SHA256SUMS.txt" 2>/dev/null; do
+            i=$((i + 1))
+            [ "$i" -lt 100 ] || { cat /tmp/server.log; exit 1; }
+            sleep 0.1
+          done
+
+      - name: npm
+        run: |
+          rm -rf /tmp/n && mkdir -p /tmp/n && cd /tmp/n
+          npm init -y >/dev/null
+          # JA3_CLIENT_STRICT turns postinstall's "warn and continue" into a failure,
+          # so this step proves the download happened instead of proving it is skipped.
+          JA3_CLIENT_STRICT=1 npm install --no-audit --no-fund /tmp/pkgs/*.tgz
+          # npm hides a lifecycle script's output unless it fails, so show what
+          # postinstall recorded before asking the binding to use it.
+          cat "$JA3_CLIENT_CACHE_DIR"/*/*/install.json 2>/dev/null || true
+          node -e '
+            const { Ja3 } = require("ja3-client");
+            const j = new Ja3();
+            console.log("node:", j.path);
+            j.close();
+          '
+
+      - name: PyPI
+        run: |
+          python3 -m venv /tmp/v
+          /tmp/v/bin/pip install --quiet "$(ls /tmp/pkgs/*.whl)"
+          # A wheel cannot run code at install time, so this import - not pip - is the
+          # step that has to fetch. `ja3-client status` then reports what it found.
+          /tmp/v/bin/python -c '
+          from ja3_client import Ja3
+          j = Ja3()
+          print("python:", j.path)
+          j.close()
+          '
+          /tmp/v/bin/ja3-client status
+
+      - name: NuGet
+        run: |
+          rm -rf /tmp/c && mkdir -p /tmp/c && cd /tmp/c
+          cat > NuGet.config <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="pkgs" value="/tmp/pkgs" />
+              <add key="nuget" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+          </configuration>
+          EOF
+          dotnet new console -o app --force >/dev/null
+          rm -f app/Program.cs
+          cat > app/Program.cs <<'EOF'
+          using Ja3Client;
+          using var ja3 = new Ja3();
+          Console.WriteLine($"csharp: {ja3.LibraryPath}");
+          EOF
+          dotnet add app package ja3-client --version "$VERSION" --source /tmp/pkgs >/dev/null
+          # The MSBuild targets fetch during this build, from the stand-in release the
+          # job env points at, and put the library next to the executable.
+          cd app && dotnet run
+
+  publish:
+    name: publish
+    needs: [prepare, installers, assemble, smoke]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    # The gate: a human has to approve this environment before any registry sees
+    # these bytes. Configure it under Settings -> Environments -> release.
+    environment: release
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: pkgs
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: What is going out
+        run: |
+          ls -l pkgs
+          echo "==> $VERSION"
+
+      # Re-publishing a version is rejected by all three registries, and a partial
+      # publish is worse than a stopped one: each step checks its own registry first
+      # so a rerun skips what already landed instead of failing halfway.
+      - name: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          tgz="$(ls pkgs/*.tgz)"
+
+          if npm view "ja3-client@$VERSION" version >/dev/null 2>&1; then
+            echo "ja3-client@$VERSION is already on npm; skipping"
+            exit 0
+          fi
+
+          [ -n "$NODE_AUTH_TOKEN" ] || { echo "NPM_TOKEN is not set"; exit 1; }
+
+          rm -rf /tmp/npm && mkdir -p /tmp/npm && tar -xzf "$tgz" -C /tmp/npm
+          (cd /tmp/npm/package && npm publish --access public)
+
+      - name: PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python3 -m pip install --quiet twine
+
+          if pip download --no-deps --dest /tmp/probe --index-url https://pypi.org/simple \
+               "ja3-client==$VERSION" >/dev/null 2>&1; then
+            echo "ja3-client==$VERSION is already on PyPI; skipping"
+            exit 0
+          fi
+
+          [ -n "$TWINE_PASSWORD" ] || { echo "PYPI_API_TOKEN is not set"; exit 1; }
+
+          # The wheel is what installs; the sdist is what people build from when the
+          # wheel does not match their platform, and PyPI rejects a version whose
+          # files arrive in two separate uploads.
+          twine upload --non-interactive pkgs/*.whl pkgs/*.tar.gz
+
+      - name: NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          nupkg="$(ls pkgs/*.nupkg)"
+
+          if curl -fsS -o /dev/null \
+               "https://api.nuget.org/v3/registration5-semver1/ja3-client/$VERSION.json"; then
+            echo "ja3-client $VERSION is already on NuGet; skipping"
+            exit 0
+          fi
+
+          [ -n "$NUGET_API_KEY" ] || { echo "NUGET_API_KEY is not set"; exit 1; }
+
+          dotnet nuget push "$nupkg" --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Where to read about it
+        run: |
+          echo "### Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "* npm: https://www.npmjs.com/package/ja3-client/v/$VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "* PyPI: https://pypi.org/project/ja3-client/$VERSION/" >> "$GITHUB_STEP_SUMMARY"
+          echo "* NuGet: https://www.nuget.org/packages/ja3-client/$VERSION" >> "$GITHUB_STEP_SUMMARY"

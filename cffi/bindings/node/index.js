@@ -38,6 +38,9 @@ try {
 
 const ABI_VERSION = 2;
 
+// Cached result of the lazy require in loadInstaller(); undefined = not tried yet.
+let installer;
+
 const ERROR_CODES = {
   0: 'OK',
   1: 'NIL_ARGUMENT',
@@ -104,6 +107,13 @@ function findLibrary(explicit) {
   if (explicit) candidates.push(explicit);
   if (process.env.JA3_CLIENT_LIB) candidates.push(process.env.JA3_CLIENT_LIB);
 
+  // JA3_CLIENT_LIB means "this file and nothing else" (cffi/PACKAGING.md): a typo has
+  // to stop here instead of quietly loading some other version off disk, which would
+  // show up as a fingerprint nobody can explain.
+  if (process.env.JA3_CLIENT_LIB && !fs.existsSync(process.env.JA3_CLIENT_LIB)) {
+    throw new Ja3Error(`JA3_CLIENT_LIB points at ${process.env.JA3_CLIENT_LIB}, which is not a file`, 1);
+  }
+
   const here = __dirname;
   const root = path.resolve(here, '..', '..'); // bindings/node -> cffi
   const dirs = [
@@ -123,11 +133,64 @@ function findLibrary(explicit) {
     if (fs.existsSync(candidate)) return candidate;
   }
 
+  // Nothing local: hand over to the installer, which knows the shared cache
+  // (~/.cache/ja3-client/<version>/<os>-<arch>/) filled by `npm install`, and can
+  // fetch into it. Loading is synchronous, so the work happens in a child process
+  // running the same resolver the postinstall script uses - one implementation, and
+  // lib/native.js stays optional for anyone who vendored index.js alone.
+  const native = loadInstaller();
+
+  // JA3_CLIENT_LIB means "this file, and nothing else" (PACKAGING.md), so a missing
+  // path must become an error rather than quietly resolving to a cached library.
+  if (native && !process.env.JA3_CLIENT_LIB) {
+    const cached = native.findCachedLibrary(dirs, libraryNames());
+    if (cached) return cached;
+
+    const fetched = fetchThroughInstaller();
+    if (fetched) return fetched;
+  }
+
   throw new Ja3Error(
-    'libja3-client not found. Build it (make -C cffi) or set JA3_CLIENT_LIB. Looked at: ' +
+    'libja3-client not found. Build it (make -C cffi), run `node lib/native.js ensure`, ' +
+      'or set JA3_CLIENT_LIB. Looked at: ' +
       candidates.slice(0, 8).join(', '),
     1
   );
+}
+
+/** The installer module, or null when it is not next to this file. */
+function loadInstaller() {
+  if (installer === undefined) {
+    try {
+      // eslint-disable-next-line global-require
+      installer = require('./lib/native');
+    } catch {
+      installer = null;
+    }
+  }
+
+  return installer;
+}
+
+function fetchThroughInstaller() {
+  const { execFileSync } = require('child_process');
+
+  try {
+    const out = execFileSync(process.execPath, [path.join(__dirname, 'lib', 'native.js'), 'ensure'], {
+      encoding: 'utf8',
+      // The download itself times out at 60s per request; this is the outer bound on
+      // "npm install was interrupted by a hung resolver", and it inherits stderr so
+      // the installer's own three-line message reaches the user.
+      timeout: 180000,
+      stdio: ['ignore', 'pipe', 'inherit'],
+    });
+
+    const file = out.trim().split('\n').pop();
+
+    return file && fs.existsSync(file) ? file : null;
+  } catch {
+    return null;
+  }
 }
 
 /** base64 for anything that is not a plain string, matching the Go contract. */

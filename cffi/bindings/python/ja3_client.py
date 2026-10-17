@@ -83,6 +83,45 @@ def _default_library_names() -> Iterator[str]:
         yield "libja3-client.so"
 
 
+#: The installer module, or None when it is not installed. Undefined = not tried yet;
+#: release archives ship ja3_client.py alone, so its absence is normal, not an error.
+_installer: Any = None
+_installer_tried = False
+
+
+def _through_installer() -> str | None:
+    """Reuse the shared cache, then fetch, through ja3_client_binaries if installed.
+
+    A failed fetch raises with the installer's own three-line recipe: when the problem
+    is a 404 on a release asset, "I looked at these twelve paths" is not the message
+    that helps.
+    """
+    global _installer, _installer_tried
+
+    if not _installer_tried:
+        _installer_tried = True
+
+        try:
+            import ja3_client_binaries as module
+
+            _installer = module
+        except Exception:
+            _installer = None
+
+    if _installer is None:
+        return None
+
+    cached = _installer.find_cached_library(list(_default_library_names()))
+
+    if cached:
+        return cached
+
+    try:
+        return _installer.ensure_library()
+    except Exception as err:
+        raise Ja3Error(str(err), error_code=1) from err
+
+
 #: Options the library only reads when it builds the client. Re-sending them on a
 #: session request would be ignored, so the binding drops them there.
 _CLIENT_ONLY_KEYS = (
@@ -250,6 +289,15 @@ class Ja3:
             if explicit:
                 candidates.append(os.fspath(explicit))
 
+        # JA3_CLIENT_LIB means "this file and nothing else" (cffi/PACKAGING.md), so a
+        # path that is not there has to stop here: falling through to whatever else is on
+        # disk turns a typo in CI into a fingerprint that quietly comes from another
+        # version, and that is the worst kind of bug this library can have.
+        if env_path and not os.path.isfile(env_path):
+            raise Ja3Error(
+                f"JA3_CLIENT_LIB points at {env_path}, which is not a file", error_code=1
+            )
+
         here = os.path.dirname(os.path.abspath(__file__))
         root = os.path.dirname(os.path.dirname(here))  # bindings/python -> cffi
         build_dirs = [
@@ -279,6 +327,19 @@ class Ja3:
 
             if os.path.isfile(candidate):
                 return candidate
+
+        # Nothing on disk. Ask the installer module, which owns the shared cache
+        # (~/.cache/ja3-client/<version>/<os>-<arch>/) that the npm and NuGet packages
+        # fill, and can fetch this version's archive. The import is lazy and guarded:
+        # the release archives ship ja3_client.py alone, and there the module really is
+        # absent, so the error below is the right answer. An explicit JA3_CLIENT_LIB that
+        # does not exist must not fall through to some other library (cffi/PACKAGING.md),
+        # which is why this whole branch is skipped when one was set.
+        if not env_path:
+            found = _through_installer()
+
+            if found:
+                return found
 
         raise Ja3Error(
             "libja3-client not found. Build it with `make` in cffi/, then point "

@@ -1,6 +1,6 @@
 {
-  "name": "@smallqiu/ja3-client-ffi",
-  "version": "0.0.0",
+  "name": "ja3-client",
+  "version": "1.2.5",
   "description": "Node.js binding for the ja3-client TLS-impersonation shared library",
   "main": "index.js",
   "types": "index.d.ts",
@@ -9,17 +9,37 @@
       "require": "./index.js",
       "import": "./index.mjs",
       "types": "./index.d.ts"
-    }
+    },
+    "./native": "./lib/native.js"
   },
   "files": [
     "index.js",
     "index.mjs",
     "index.d.ts",
+    "lib/native.js",
+    "scripts/postinstall.js",
     "README.md"
   ],
-  "dependencies": {
-    "koffi": "^2.16.3"
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "smoke": "node smoke.js",
+    "example": "node example.js"
   },
+  "dependencies": {
+    "koffi": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smallerqiu/ja3-client.git",
+    "directory": "cffi/bindings/node"
+  },
+  "bugs": {
+    "url": "https://github.com/smallerqiu/ja3-client/issues"
+  },
+  "homepage": "https://github.com/smallerqiu/ja3-client/tree/master/cffi#readme",
   "keywords": [
     "ja3",
     "ja4",

@@ -9,22 +9,41 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Ja3Client</RootNamespace>
     <AssemblyName>ja3-client-ffi</AssemblyName>
-    <PackageId>Ja3Client.Ffi</PackageId>
-    <Description>P-Invoke binding for the ja3-client TLS-impersonation shared library</Description>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- The native library is not packaged here; set JA3_CLIENT_LIB or copy it
-         next to the executable. See cffi/README.md. -->
     <NoWarn>NU1701</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- The package id matches npm and PyPI: one name, three registries, and the
+         version is the library version (build/ja3-client.targets fetches the release
+         archive for it). CI stamps Version from the git tag. -->
+    <PackageId>ja3-client</PackageId>
+    <Version>1.2.5</Version>
+    <Authors>smallerqiu</Authors>
+    <Description>P-Invoke binding for the ja3-client TLS-impersonation shared library. The package ships the binding; the native library is fetched from the matching GitHub Release at build time.</Description>
+    <PackageTags>ja3;ja4;tls;impersonate;fingerprint;ffi;pinvoke</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/smallerqiu/ja3-client</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/smallerqiu/ja3-client</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <IncludeSymbols>false</IncludeSymbols>
+    <IncludeSource>false</IncludeSource>
+  </PropertyGroup>
+
   <ItemGroup>
-    <!-- The SDK globs **/*.cs below the project directory, which would otherwise
-         compile example/Program.cs into the library. Top-level statements are only
-         legal in an executable, so the binding project failed to build with
-         "Program using top-level statements must be an executable". The example is
-         its own project and includes ../Ja3.cs directly. -->
     <Compile Remove="example/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shipped inside the nupkg: NuGet imports build/*Targets.props/.targets into the
+         consuming project, which is where the native library gets resolved and copied
+         to the output directory. The path has to be the package-local one, so the
+         physical folder is also called build/. -->
+    <None Include="build/ja3-client.targets" Pack="true" PackagePath="build/" />
+    <None Include="README.md" Pack="true" PackagePath="/" Condition="Exists('README.md')" />
+    <None Include="LICENSE" Pack="true" PackagePath="/" Condition="Exists('LICENSE')" />
   </ItemGroup>
 
 </Project>
