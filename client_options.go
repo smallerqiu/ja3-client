@@ -246,14 +246,50 @@ func WithClientProfile(clientProfile ja3.ClientProfile) HttpClientOption {
 	}
 }
 
+// WithImpersonate configures a TLS client to build its ClientHello from the named
+// browser, for example "firefox_135" - the same selection WithClient makes, without the
+// second argument, because WithHttp3 is the option that says whether the hello offers
+// h3.
+//
+// The name used to be inert: it was stored on the config and nothing ever read it, so
+// passing it changed nothing and the client kept ja3.DefaultClientProfile - a caller
+// asking for Firefox got Chrome. It now resolves at option time and, since the ALPN list
+// is baked into the spec, it is rebuilt when WithHttp3 arrives afterwards.
+//
+// An id the library does not know falls back to ja3.DefaultImpersonate with a log line,
+// exactly like every other entry point; the built spec is kept only when building
+// succeeded, so a broken profile cannot overwrite an earlier choice.
 func WithImpersonate(impersonate string) HttpClientOption {
 	return func(config *httpClientConfig) {
+		if impersonate == "" {
+			return
+		}
 		config.impersonate = impersonate
+		if profile, err := ja3.BuildClientHelloSpec(impersonate, config.withHttp3); err == nil {
+			config.clientProfile = profile
+		}
 	}
 }
+
+// WithHttp3 decides whether the ClientHello offers h3.
+//
+// It only reaches the hello for a profile selected by name: the ALPN list is baked into
+// the ClientHelloSpec, and utls can strip an h3 that is there but cannot add one that is
+// not. So this option rebuilds a profile chosen with WithImpersonate, and for the
+// options-level default - and for every shipped browser profile since 1.3.0 - the
+// answer is h2 over TCP, which is what a real browser sends.
+//
+// Request-level WithHTTP3 on Ja3Request is the path that always works: it builds the
+// spec with the flag before the client exists.
 func WithHttp3(withHttp3 *bool) HttpClientOption {
 	return func(config *httpClientConfig) {
 		config.withHttp3 = withHttp3
+		if config.impersonate == "" {
+			return
+		}
+		if profile, err := ja3.BuildClientHelloSpec(config.impersonate, withHttp3); err == nil {
+			config.clientProfile = profile
+		}
 	}
 }
 
