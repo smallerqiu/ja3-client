@@ -74,6 +74,37 @@ try {
     `${err && err.name}: ${err && err.message}`);
 }
 
+// The koffi type this binding registers is process-global, so a second `Ja3` used to die
+// with "Duplicate type name" - which is what the README's `maxConcurrency` example and
+// any service that reopens the library (or test suite with a client per case) does.
+let second;
+try {
+  second = new Ja3({ libraryPath: process.argv[2], checkAbi: false });
+  expect('a second Ja3 instance loads', second.path === ja3.path, second.path);
+} catch (err) {
+  expect('a second Ja3 instance loads', false, `${err && err.name}: ${err && err.message}`);
+}
+
+if (second) {
+  // Reaching the answer means the registered disposable converted and freed this
+  // instance's string; a type bound to another library's ja3_free would have
+  // corrupted the heap instead.
+  const secondInfo = JSON.parse(second._fns.version());
+  expect('second instance answers through the registered disposable',
+    secondInfo.version === info.version, JSON.stringify(secondInfo).slice(0, 120));
+  second.close();
+}
+
+// And it still holds after the first one is closed, because close() does not unload.
+ja3.close();
+try {
+  const third = new Ja3({ libraryPath: process.argv[2], checkAbi: false });
+  expect('an instance created after close loads', third.path === ja3.path, third.path);
+  third.close();
+} catch (err) {
+  expect('an instance created after close loads', false, `${err && err.name}: ${err && err.message}`);
+}
+
 if (failures.length) {
   console.log(`\n${failures.length} check(s) failed: ${failures.join(', ')}`);
   process.exit(1);

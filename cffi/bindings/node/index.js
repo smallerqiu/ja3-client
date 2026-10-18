@@ -375,6 +375,27 @@ function sessionPayload(url, options) {
   return payload;
 }
 
+// koffi's type registry is process-wide and a second `koffi.disposable()` under the same
+// name throws `Duplicate type name`. Registering inside the constructor therefore limits
+// a process to one `Ja3` object - which contradicts the gate above and the README's
+// `maxConcurrency` example, both of which assume two objects coexist. One name per
+// resolved library path, reused by every later instance: `close()` never unloads the
+// handle, so the `ja3_free` captured by the first registration stays valid for the
+// process, and it is the free of the library that allocated the string.
+const heapStrings = new Map();
+
+function heapStringType(libraryPath, free) {
+  const registered = heapStrings.get(libraryPath);
+
+  if (registered) return registered;
+
+  const HeapStr = koffi.disposable(`HeapStr${heapStrings.size}`, 'str', free);
+
+  heapStrings.set(libraryPath, HeapStr);
+
+  return HeapStr;
+}
+
 class Ja3 {
   constructor(options = {}) {
     const { libraryPath, checkAbi = true, maxConcurrency = undefined } = options;
@@ -384,7 +405,7 @@ class Ja3 {
 
     const free = this._lib.func('ja3_free', 'void', ['void *']);
     // Conversion to JS string happens first, then ja3_free releases the C buffer.
-    const HeapStr = koffi.disposable('HeapStr', 'str', free);
+    const HeapStr = heapStringType(this.path, free);
 
     this._fns = {
       version: this._lib.func('ja3_version', HeapStr, []),
