@@ -175,10 +175,13 @@ func TestClient(t *testing.T) {
 	}
 	var response, err = tls.DoRequest(reqBody)
 
+	// Failing here used to log and then dereference a nil response: the SIGSEGV took the
+	// whole test binary with it, so every case after this one stopped running. The error
+	// is worth reading on its own — this key carries 25497, the pre-registration codepoint
+	// for X25519MLKEM768, and Go's tls refuses a CurvePreferences entry it does not know.
 	if err != nil {
-		log.Printf("Client Error: %v", err)
+		t.Fatalf("%s: %v", reqBody.URL, err)
 	}
-
 	defer response.Body.Close()
 
 	bytes, err := io.ReadAll(response.Body)
