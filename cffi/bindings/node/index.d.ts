@@ -7,7 +7,7 @@ export declare const ABI_VERSION: number;
 export declare const ERROR_CODES: Record<number, string>;
 
 export interface ClientOptions {
-  /** Profile id, e.g. `chrome_133`, `firefox_135`, `safari_170`. */
+  /** Profile id, e.g. `chrome_133`, `firefox_135`, `safari_17_0`. */
   impersonate?: string;
   /** Raw JA3 string; takes precedence over `impersonate`. */
   ja3?: string;

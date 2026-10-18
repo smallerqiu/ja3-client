@@ -61,7 +61,7 @@ Client-level — only read while the client is being built, i.e. by `request()` 
 
 | keyword | type | default | meaning |
 | --- | --- | --- | --- |
-| `impersonate` | str | `chrome_155` | profile id: `chrome_133`, `chrome_153`, `firefox_135`, `safari_170`, … |
+| `impersonate` | str | `chrome_155` | profile id: `chrome_133`, `chrome_153`, `firefox_135`, `safari_17_0`, … |
 | `ja3` | str | | raw JA3 string; wins over `impersonate` |
 | `akamai` | str | | Akamai HTTP/2 settings string, used together with `ja3` |
 | `client_data` | dict | | hand-built fingerprint (see below); wins over `ja3` |
@@ -218,7 +218,7 @@ Two things follow, and both surprise people:
   Treat HTTP/3 as advertised, not impersonated; some hosts also end up as `error_code: 5`
   with an `H3 error` or a timeout.
 
-Leave the default alone otherwise. At around a million concurrent requests against
+Leave the default alone otherwise. Under heavy concurrent traffic against
 Cloudflare-fronted sites, the same Chrome profile with `h3` removed drew clearly more
 challenges and errors than with it on.
 

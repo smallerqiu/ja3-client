@@ -73,7 +73,7 @@ Client-level (only read while the client is being built — `ja3_request`,
 
 | field | type | default | meaning |
 | --- | --- | --- | --- |
-| `impersonate` | string | `chrome_155` | profile id, e.g. `chrome_133`, `firefox_135`, `safari_170` |
+| `impersonate` | string | `chrome_155` | profile id, e.g. `chrome_133`, `firefox_135`, `safari_17_0` |
 | `ja3` | string | | raw JA3 string; wins over `impersonate` |
 | `akamai` | string | | Akamai HTTP/2 settings string, used with `ja3` |
 | `client_data` | object | | hand-built fingerprint (see below); wins over `ja3` |
@@ -190,10 +190,10 @@ Consequences worth knowing before you compare a fingerprint against browserleaks
   `error_code: 5` with an `H3 error` or a timeout.
 * `"with_http3": false` removes `h3` from the ALPN list and puts browserleaks'
   `ja4` back to `h2`. Use it to compare like for like against a browser capture, and
-  leave the default alone otherwise: `h3` on is what was measured in production. At
-  roughly a million concurrent requests against Cloudflare-fronted sites, the same
-  Chrome profile with `h3` removed drew clearly more challenges and errors, and they
-  dropped to almost none as soon as `h3` went back on — including on the versions
+  leave the default alone otherwise: `h3` on is what was measured in production. Under
+  heavy concurrent traffic against Cloudflare-fronted sites, the same Chrome profile
+  with `h3` removed drew clearly more challenges and errors, and they dropped to almost
+  none as soon as `h3` went back on — including on the versions
   whose own captures do not list `h3`. A fingerprint site disagreeing with you is
   not the same thing as a site blocking you.
 

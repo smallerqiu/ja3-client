@@ -126,8 +126,8 @@ came to exist next to `Chrome_136`.
 | supported groups | `Curves` | colon-separated (`X25519MLKEM768:X25519:P256:P384`) |
 | signature_algorithms | `SignatureHashed` | comma-separated (`ECDSAWithP256AndSHA256,PSSWithSHA256,`…); a scheme the library has no name for goes in as raw **hex** (`0904,0905,0906`, or `MLDSA44,MLDSA65,MLDSA87` — the ML-DSA codepoints Chrome 150 added, now named) |
 | TLS extension order | `TlsExtensionOrder` | **decimal ids, `-`-separated** (`0-23-65281-10-11-35-16-5-…`) |
-| supported_versions | `TlsVersion` | `"1.3"` |
-| key_share entries | `TlsKeySharesLimit` | int (default 3) |
+| supported_versions | `TlsVersion` | `"1.3"` or `"any"` — see the note below the table |
+| key_share entries | `TlsKeySharesLimit` | int (default 3); with `TlsGrease` the GREASE share takes one of those slots |
 | GREASE | `TlsGrease` | bool |
 | padding extension | `TlsPadding` | bool |
 | encrypted_client_hello | `Ech` | bool (boringssl codepoint) |
@@ -137,7 +137,7 @@ came to exist next to `Chrome_136`.
 | delegated_credentials | `TlsDelegatedCredentials` | comma-separated schemes |
 | record_size_limit | `TlsRecordSizeLimit` | int |
 | trust_anchors (0xca34 / 51764) | `TlsTrustAnchors` | bool; sends the extension with an **empty** identifier list (Chrome 152+) |
-| session_ticket absent | `NoTlsSessionTicket` | bool |
+| session_ticket absent | `NoTlsSessionTicket` | bool; it deletes the extension from the map, so a pinned `TlsExtensionOrder` must not name 35 |
 | SETTINGS frame | `Http2Setting` | `1:65536;2:0;4:6291456;6:262144` (order matters) |
 | WINDOW_UPDATE | `Http2WindowUpdate` | uint32 |
 | priority frames string | `Http2Priorities` | peet's `m,a,s,p` list; `0` when the browser sends none |
@@ -145,7 +145,23 @@ came to exist next to `Chrome_136`.
 | stream WEIGHT / dependency / exclusive | `Http2StreamWight`, `Http2StreamDep`, `Http2StreamExclusive` | numbers; note the typo in `Wight`, it is the field name. `Http2StreamWight` is the **wire byte**, which is zero-indexed: Chrome's reported `weight: 256` is written as `255`. Over 255 is a hard error, not a truncation (see the deviations below). |
 
 Anything the library cannot name fails loudly and tells you so: `don't support this
-curve: …`, `don't support this certCompression: …`, `don't support this ext: …`.
+curve: …`, `don't support this certCompression: …`, `don't support this ext: …`. The last
+one has a trap in it: `NoTlsSessionTicket` removes 35 from the extension map, so a profile
+that sets the flag and still names 35 in `TlsExtensionOrder` fails the build with
+`don't support this ext: 35` instead of silently sending it.
+
+`TlsVersion` is the field a capture most often contradicts, because the two values are not
+simply lists of different lengths: `"1.3"` writes `[GREASE, 772, 771]` — the shape every
+Chrome, Edge, Opera, Firefox and Safari 26.5 capture shows — while `"any"` writes
+`[772, 771, 770, 769]` with no GREASE in front, which is what the older Safari blocks send.
+A browser that stops at TLS 1.2 on the wire needs `"1.3"`, not a longer list.
+
+`TlsKeySharesLimit` counts the GREASE key share that `TlsGrease` prepends, so the default of
+three buys two real groups, and a capture whose `key_share` shows one real group (QQ 19.4,
+UC PC 1.1) needs `2`. That arithmetic is what `ja3/capture_facts_test.go` checks: it decodes
+`supported_versions`, `key_share`, the ALPN list and the presence of 35 out of the built
+spec and compares them to the capture's own values, so it is pinned to the data, not to the
+profile. Read it before assuming a field is inert.
 
 `SignatureHashed` is the one field where a silent mistake is possible, because the two
 id bases are mixed in this table. Unknown tokens are parsed as **hexadecimal**, so a raw
@@ -237,11 +253,20 @@ are asserting is that the **set** of ids and the decoded content equal the captu
 non-GREASE ones — that is what `ja4`'s extension count and hash segments see.
 `go test ./ja3/ -run TestGoldenJA4` does exactly that for the Chrome bands, against
 the hashes the captures reported; read `ja3/ja4_golden_test.go` before adding a band.
+`go test ./ja3/ -run TestCapturedHelloFacts` covers the four facts ja4 cannot see
+(`supported_versions`, the key_share groups, the ALPN order, whether 35 is offered) for
+every id that has a capture under `client_data/` — add a row there when a new capture
+turns a profile field on, and mutation-check that the row bites before you call it done.
 
 ### 7. Finish the change
 
-* add the id to the supported-browser table in `Readme.md` (and to `cffi/README.md`
-  if the row there is stale — it lists the same ids);
+* add the id to the supported-browser table in `Readme.md` **and** its mirror in
+  `Readme.zh-CN.md`, then the count line under them ("N identifiers in total" /
+  "共 N 个标识"). Both tables are held against `MappedTLSClients` after the change — the
+  sets must be equal, and `custom` is not one of the counted identifiers. The binding
+  READMEs (`cffi/README.md` and the three package ones) do not enumerate ids, they only
+  use them in examples; keep those examples real, because a typo in `impersonate` is not
+  an error (see the deviations below).
 * `DefaultImpersonate` and `DefaultClient` in `ja3/mapper_profiles.go` are a
   deliberate choice, not a chore: moving them changes what every caller who sets
   nothing gets, so do it in its own commit with its own reason;
@@ -338,6 +363,47 @@ the hashes the captures reported; read `ja3/ja4_golden_test.go` before adding a 
   `PriorityParam.IsZero()` only skips the priority field when *every* part is zero,
   so `FlagHeadersPriority` goes out. Same category as the point above: visible in
   `sent_frames`, invisible to the akamai string.
+* **`TlsKeySharesLimit` counts the GREASE key share, and Firefox is where that shows.**
+  With `TlsGrease` on, `generate.go` prepends a GREASE group to `key_share` and then takes
+  `curvesParts[:limit-1]`, so the default of three buys two real groups. Firefox 144 and
+  153 (`firefox/144.json`, `firefox/153.json`) send **three** real groups and no GREASE
+  entry there at all, so `firefox_135` … `firefox_153` are one group short of the browser.
+  The one-line version of the fix (`TlsKeySharesLimit: 4`) adds the third group but keeps a
+  GREASE share Firefox does not send, so a real fix has to separate "groups offered" from
+  "groups in `key_share`" — a `utls`/`ClientData` change, not a profile edit. What a
+  profile can express today is the other direction: `qq_19_4` and `uc_pc_1_1` set
+  `TlsKeySharesLimit: 2` because their captures show a single real group, and
+  `TestCapturedHelloFacts` pins that arithmetic. `uc_ios_17_9`, which was not re-derived in
+  this round, still sends two where its capture (`uc/ios_17.9.json`) sends one.
+* **`TlsRecordSizeLimit` is decimal, and two Firefox blocks write it as hex.**
+  `generate.go` writes `uint16(config.TlsRecordSizeLimit)`, so `4001` puts `0fa1` on the
+  wire while the browser sends `0x4001` — which is 16385 in decimal, the value
+  `Firefox_117/120/123` and `Tor_14_5` already write, and the value `ja3-utls` uses for its
+  own fake limit. `Firefox_132` and `Firefox_135` therefore advertise a 4001-byte record
+  limit, and every id built on `Firefox_135` (firefox_136 through firefox_144) inherits it.
+  No hash above looks inside an extension, so `ja3`, `ja4` and `akamai` are green either
+  way; the only reader is a server that splits its records to the advertised limit.
+  `Firefox_153` sends 16385 because it had no users when it was added on 2026-10-18;
+  changing the two shipped blocks is a fingerprint change and belongs in its own commit.
+* **`TlsVersion` cannot express GREASE in front of a four-version list.** `"1.3"` writes
+  `[GREASE, 772, 771]` and `"any"` writes `[772, 771, 770, 769]`, so the shape
+  `[GREASE, 772, 771, 770, 769]` — which is exactly what `uc/ios_17.9.json` and
+  `qh360/16.0.json` report — has no field for it yet. `uc_ios_17_9` and `qh360_16_0` send
+  `"1.3"` and are therefore two versions short of their captures, alongside the `uc_ios_17_9`
+  key-share and padding-21 diffs. Adding a third `TlsVersion` spelling (or letting `"any"`
+  GREASE when `TlsGrease` is set) is the fix, and it moves shipped ids, so it is a decision
+  rather than a cleanup.
+* **A pinned `TlsExtensionOrder` sends no extension-level GREASE, even with `TlsGrease`
+  on.** The leading and trailing `UtlsGREASEExtension` slots are inserted only on the
+  map-random branch of `generate.go`, so pinning the order opts out of them; `TlsGrease`
+  still covers `supported_versions`, `key_share` and the cipher/curve lists. That is right
+  for Firefox — its captures list 17 non-GREASE extensions with no slots — and wrong for
+  Safari and QQ 19.4, whose captures open and close with one (`safari/mac_26.5.json`:
+  `TLS_GREASE (0xeaea)` … `TLS_GREASE (0x8a8a)`; `qq/19.4.0.json` the same shape). ja4 and
+  peetprint drop GREASE before hashing, so every hash above stays green; the visible cost
+  is an extension list two entries shorter than the browser's. Expressing it needs a GREASE
+  marker inside `TlsExtensionOrder`, i.e. a `ClientData` shape change. `random_extension_order`
+  itself is deliberate and is not up for grabs — see the first two bullets of this section.
 * **HTTP/3 is advertised, not impersonated.** `roundtripper.go:145` always dials
   TCP, the transport is then chosen from the negotiated ALPN (`:188`), and real
   servers answer `h2` — so the `h3` in a Chrome profile's ALPN is only a claim. If a
