@@ -4,8 +4,14 @@ import (
 	"testing"
 )
 
+// The three lines that still send HTTP/2 priority frames, checked against peet. This is
+// where their canonical akamai_hash is pinned: browserleaks renders the priority section
+// as "stream:weight" and hashes that, so only an independent parser proves the declared
+// dependency and exclusive bit actually reach the wire.
 func TestOne(t *testing.T) {
 	MatchPeetInfo(t, "firefox_120")
+	MatchPeetInfo(t, "firefox_123")
+	MatchPeetInfo(t, "firefox_117")
 }
 func TestChrome(t *testing.T) {
 	t.Log("testing chrome 138")

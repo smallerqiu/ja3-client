@@ -113,3 +113,61 @@ func sortedUints(in []uint16) []uint16 {
 	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 	return out
 }
+
+// TestHttp2PrioritiesParse pins the HTTP/2 priority frames of the three Firefox lines
+// that still send them, because they are the only profiles whose akamai fingerprint
+// depends on more than SETTINGS - and because browserleaks stopped printing the
+// dependency: since 2026-10-18 it renders the priority section as "stream:weight" and
+// hashes that, so its akamai_hash can no longer tell a lost StreamDep from a correct
+// one. peet still prints the canonical four fields (tests/ TestOne asserts that hash),
+// and this is the offline half: the profile string is StreamID:StreamDep:Exclusive:
+// Weight, so a parser that drops or reorders a field fails here instead of only in a
+// live run.
+func TestHttp2PrioritiesParse(t *testing.T) {
+	type pri struct {
+		stream uint32
+		dep    uint32
+		excl   bool
+		weight uint8
+	}
+	want := []pri{
+		{3, 0, false, 200},
+		{5, 0, false, 100},
+		{7, 0, false, 0},
+		{9, 7, false, 0},
+		{11, 3, false, 0},
+		{13, 0, false, 240},
+	}
+
+	for _, id := range []string{"firefox_117", "firefox_120", "firefox_123"} {
+		profile, err := BuildClientHelloSpec(id, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := profile.GetPriorities()
+		if len(got) != len(want) {
+			t.Fatalf("%s: %d priority frames, want %d", id, len(got), len(want))
+		}
+		for i, w := range want {
+			p := got[i]
+			if p.StreamID != w.stream || p.PriorityParam.StreamDep != w.dep ||
+				p.PriorityParam.Exclusive != w.excl || p.PriorityParam.Weight != w.weight {
+				t.Errorf("%s priority %d = {stream %d dep %d excl %v weight %d}, want {stream %d dep %d excl %v weight %d}",
+					id, i, p.StreamID, p.PriorityParam.StreamDep, p.PriorityParam.Exclusive, p.PriorityParam.Weight,
+					w.stream, w.dep, w.excl, w.weight)
+			}
+		}
+	}
+
+	// Every other line must send none: Chrome dropped priority frames and Firefox did too
+	// after 129, so a profile that grew a set would score an akamai hash no browser does.
+	for _, id := range []string{"firefox_132", "firefox_135", "firefox_153", "chrome_155", "safari_26_5"} {
+		profile, err := BuildClientHelloSpec(id, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := profile.GetPriorities(); len(got) != 0 {
+			t.Errorf("%s: %d priority frames, want none", id, len(got))
+		}
+	}
+}
