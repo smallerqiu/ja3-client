@@ -234,8 +234,8 @@ Every release archive ships `smoke.py` next to the library, so a download can pr
 itself before it reaches your code:
 
 ```sh
-unzip ja3-client-1.3.0-linux-amd64.zip
-cd ja3-client-1.3.0-linux-amd64 && python3 smoke.py
+unzip ja3-client-1.3.1-linux-amd64.zip
+cd ja3-client-1.3.1-linux-amd64 && python3 smoke.py
 ```
 
 ### CI and releases
