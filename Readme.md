@@ -5,7 +5,7 @@
 ## Why
 
 If you're having trouble with the fucking “just a moment” or fucking http status code 429 in your project, you might want to try using this. It may help you .
-It has held up at 10 million concurrent requests in our own production use. It is safe to use.  
+It is used in our own production workloads. It is safe to use.  
 
 ## Features
 
