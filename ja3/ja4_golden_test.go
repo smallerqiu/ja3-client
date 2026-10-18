@@ -13,12 +13,13 @@ import (
 )
 
 // The captures under client_data/ and data_peet/ (gitignored: they are someone's
-// machine fingerprint) agree on one ja4 per Chrome band. Those hashes are pinned
+// machine fingerprint) agree on one ja4 per band. Those hashes are pinned
 // here so a profile edit that silently changes the extension set, the cipher list or
 // the signature_algorithms order fails a test instead of shipping.
 //
 // Measured 2026-10-15/17 against tls.peet.ws and tls.browserleaks.com, HTTP/2 (so
-// the ALPN tag is h2 and no h3 is offered).
+// the ALPN tag is h2 and no h3 is offered); the 2026-10-18 round added the Edge, Brave,
+// Opera, QQ, UC, Firefox and Safari lines.
 var goldenJA4 = map[string]string{
 	// Chrome 136 through 149: sixteen extensions, signature_algorithms opening on
 	// ecdsa_secp256r1_sha256. chrome_132 and chrome_141 land in the same band.
@@ -35,6 +36,42 @@ var goldenJA4 = map[string]string{
 	// Chrome 152 and up: trust_anchors (51764) joins the set, seventeen extensions.
 	"chrome_152": "8daaf6152771_cb7bf5808d99",
 	"chrome_155": "8daaf6152771_cb7bf5808d99",
+	// The Chromium forks are pinned for one reason: their whole claim is that they ride
+	// a particular Chrome band, so a mapping to the wrong anchor has to fail here.
+	"edge_143":   "8daaf6152771_d8a2da3f94cd",
+	"qq_22_1":    "8daaf6152771_d8a2da3f94cd",
+	"brave_1_97": "8daaf6152771_806a8c22fdea",
+	"edge_152":   "8daaf6152771_806a8c22fdea",
+	"opera_137":  "8daaf6152771_cb7bf5808d99",
+	// Firefox: seventeen extensions including delegated_credentials (34) and
+	// record_size_limit (28), with neither SNI-side GREASE nor padding. firefox_144 is
+	// the 135 anchor under a newer UA; firefox_153 is the new anchor, whose only byte
+	// move is the dropped TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA - which is exactly the
+	// half of the hash that changes.
+	"firefox_135": "5b57614c22b0_3cbfd9057e0d",
+	"firefox_144": "5b57614c22b0_3cbfd9057e0d",
+	"firefox_153": "86a278354501_3cbfd9057e0d",
+	// Safari 26.5: thirteen extensions - session_ticket is gone, and it is the only
+	// thing that left, since the cipher list still carries all twenty suites. The
+	// cipher half is therefore Safari_26_0's.
+	"safari_26_5": "a09f3c656075_7f0f34a4126d",
+	// UC PC 1.1.0.9: fifteen extensions, ALPN forced to http/1.1 + h2, which is why
+	// browserleaks reads the prefix as h1.
+	"uc_pc_1_1": "8daaf6152771_cc38aef784ae",
+}
+
+// goldenJA4Exts carries the extension count that ja4 puts in its prefix. The Chrome and
+// Chromium bands are all sixteen and are left out, so anything that is not in this map
+// is asserted at sixteen.
+var goldenJA4Exts = map[string]int{
+	"chrome_152":  17,
+	"chrome_155":  17,
+	"opera_137":   17,
+	"firefox_135": 17,
+	"firefox_144": 17,
+	"firefox_153": 17,
+	"safari_26_5": 13,
+	"uc_pc_1_1":   15,
 }
 
 func isGreaseCode(i uint16) bool { return i&0xff == i>>8 && i&0x0f == 0x0a }
@@ -163,9 +200,9 @@ func TestGoldenJA4(t *testing.T) {
 			}
 			// The extension count is part of the ja4 prefix, so a profile that gains
 			// or loses one has to be re-measured, not just re-pinned.
-			wantN := 16
-			if id == "chrome_152" || id == "chrome_155" {
-				wantN = 17
+			wantN, ok := goldenJA4Exts[id]
+			if !ok {
+				wantN = 16
 			}
 			if n != wantN {
 				t.Errorf("%s: %d extensions, want %d", id, n, wantN)
