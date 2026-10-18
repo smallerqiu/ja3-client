@@ -1,6 +1,18 @@
 package ja3
 
-var withHttp3 = true
+// withHttp3 is the default every Chromium profile carries. It is false because no
+// capture of a real browser has ever shown h3 in the TLS ALPN list: every
+// client_data/ hello of 2026-10-18 reads ALPN [h2, http/1.1] and
+// application_settings [h2], and utls' own canned Chrome specs do the same. HTTP/3 is
+// reached through AltSvc, not by advertising h3 over a TCP handshake, so advertising
+// it here only made us look like a browser that does not exist - JA4 vendors that take
+// the tag from the first ALPN value scored every Chromium profile as t13d..h3 while
+// the real browser scores t13d..h2.
+//
+// Callers who do want h3 in the hello (it changes which edge a Cloudflare-style
+// front door hands back) ask for it per request with with_http3=true, which
+// BuildClientHelloSpec honours in place of this default.
+var withHttp3 = false
 
 // Chrome 142 through 149 send Chrome_136's ClientHello and HTTP/2 frames
 // unchanged: same cipher suites, same sixteen extensions, same groups, key shares

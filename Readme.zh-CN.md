@@ -18,7 +18,7 @@
 - 自定义连接流程
 - 自定义请求头顺序
 - 自定义客户端标识（Chrome、Firefox、Opera、Safari、iOS、iPadOS、Android、Tor、Brave、360、UC……）
-- 支持 Http3 协议
+- 可按请求开启 HTTP/3 ALPN（`with_http3`，默认关闭）
 
 ## 支持的浏览器
 

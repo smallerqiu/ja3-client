@@ -18,7 +18,7 @@ It has held up at 10 million concurrent requests in our own production use. It i
 - Custom connection flow
 - Custom header order
 - Custom client identifier (Chrome, Firefox, Opera, Safari, iOS, iPadOS, Android, Tor, Brave ,360 ,UC...)
-- Supported Http3 protocols
+- HTTP/3 ALPN on request (`with_http3`, off by default)
 
 ## Supported browsers
 

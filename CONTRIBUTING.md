@@ -39,6 +39,27 @@ GOWORK=off go build ./...
 `tls.browserleaks.com` and a local proxy at `127.0.0.1:7890`. Run it by hand on
 release day.
 
+**The two services do not always agree, and usually the one that moved is the
+service, not the library.** Each parses the hello and the HTTP/2 frames in its own
+code and prints its own strings, so vendor drift looks exactly like a regression in
+`TlsInfoMap`. Before touching profile code, ask the other one. Two live cases:
+
+* **HTTP/2 priority rendering.** browserleaks collapsed its priority section from
+  the canonical `stream:exclusive:parent:weight` to `stream:weight` and hashes that
+  string, so on 2026-10-18 it scored `73d042072ceabaedacfd45e84dff1020` for the same
+  `firefox_117/120/123` hello it had scored `3d9132023bf26a71d40fe766e5c24c9d` for
+  before. peet still prints four fields and still scores the canonical hash, so
+  `akamai_hash` in `TlsInfoMap` stays canonical and the browserleaks number lives
+  beside it as `akamai_hash_bl`, which `MatchTlsInfo` prefers when present. A profile
+  edit that loses a `StreamDep` therefore fails `TestOne` (peet) while `TestFirefox`
+  (browserleaks) stays green - that is the split working, not a hole in it; verified
+  by mutation on 2026-10-18. A weight move fails both.
+* **`ja3n_hash` is gone from peet.** The key is simply absent from its json now, so
+  `MatchPeetInfo` does not compare ja3n at all; browserleaks pins it for every id.
+
+So: a hash that moved on one service and not the other means pin both values and
+write down which one is canonical. A hash that moved on both means the library moved.
+
 ## Adding a browser version
 
 ### 1. Get that exact browser, even if you do not have it
@@ -215,24 +236,31 @@ Compare the response against your capture and expect these to match: `ja3_hash`,
 **set**, the SETTINGS values. Then check the two things that will not match, and
 know why before you call it done:
 
-* **The `h3` ALPN.** Nine anchor blocks set `WithHttp3: &withHttp3` (`Chrome_132`,
-  `Chrome_136`, `Chrome_137_ios`, `Chrome_150`, `Chrome_152`, `Edge_136`,
-  `Opera_120`, `Brave_1_8` and the `var withHttp3 = true` they all point at), and
-  `c(new, anchor)` passes it down, so the Chrome/Edge/Opera lines advertise
-  `h3, h2, http/1.1` while Firefox, Safari and the rest send `h2, http/1.1`. A
-  browser on a TCP connection never offers `h3` first — your Chrome 142-155
-  captures all say `alpn: ["h2","http/1.1"]` — so browserleaks reads `ja4` as
-  `…h3…` for a Chrome profile where a real Chrome reads `…h2…`, while tls.peet.ws
-  happens to print `h2` for the same hello. Send `with_http3: false` to compare like
-  for like (that is what the §6 command line above is really testing). See
-  "HTTP/3 is advertised, not implemented" below for why the flag exists at all.
-  That the capture disagrees is **not** a bug to fix, and the default is not up for
-  grabs: measured in production at around a million concurrent requests, the same
-  Chrome profile without `h3` in the ALPN drew visibly more Cloudflare challenges,
-  more often, and the anomalies looked like ordinary noise until `h3` went back on
-  for the low versions — at which point the intercepts and error rate fell to almost
-  nothing. So Cloudflare reads that claim, and the flag's real use is offline
-  comparison against a capture, not shipping `false`.
+* **The `h3` ALPN.** This one is expected to *match* since 1.3.0, and it is worth
+  knowing why it used to. Every Chromium anchor points at one package-level
+  `var withHttp3` in `profiles.go` (`Chrome_132`, `Chrome_136`, `Chrome_137_ios`,
+  `Chrome_150`, `Chrome_152`, `Edge_136`, `Opera_120`, `Brave_1_8`), and `c(new,
+  anchor)` passes it down, so all of them used to advertise `h3, h2, http/1.1`
+  while Firefox, Safari and the rest sent `h2, http/1.1`. No capture of a real
+  browser has ever shown `h3` in a TLS ALPN over TCP: the whole 2026-10-18
+  `client_data/` set reads `alpn: ["h2","http/1.1"]` and `application_settings:
+  ["h2"]`, utls' own canned Chrome specs say the same, and the `ja3_text` stored
+  for chrome_133 in the network suite already carried an `h2` ALPN while its `ja4`
+  was pasted as `…h3…` — that half of the entry was copied off one of our own
+  runs. HTTP/3 is reached through `Alt-Svc`, not by claiming `h3` in a TCP
+  handshake (see "HTTP/3 is advertised, not implemented" below for what happens if
+  a server ever answers it), so the var is now `false` and browserleaks reads the
+  Chrome lines the way it reads a real Chrome.
+  If a profile you just added reads `…h3…` again, you did not follow the anchor,
+  you moved the var. Keep it `false`: it is what the captures show, and
+  `ja4_golden_test.go` / `capture_facts_test.go` pin it. The flag is still there
+  for callers who want the claim — `with_http3: true` per request, or
+  `BuildClientHelloSpec(id, &yes)` — because one production observation at ~1M
+  concurrent requests reported a Chrome profile *without* `h3` drawing visibly
+  more Cloudflare challenges, and dropping it back in making them almost vanish.
+  No documented ja4 rule explains that, so it is being re-measured against real
+  traffic before anything about it is written as settled; until then it is a
+  per-request opt-out of the browser-accurate hello, not the default.
 * **Header order and `sec-ch-ua`.** The library sets only `user-agent` plus
   whatever you pass in `Headers`; it does not synthesize a browser's header set or
   order. A profile id is not a request; if the site checks `sec-ch-ua`, that is
@@ -405,10 +433,12 @@ turns a profile field on, and mutation-check that the row bites before you call 
   marker inside `TlsExtensionOrder`, i.e. a `ClientData` shape change. `random_extension_order`
   itself is deliberate and is not up for grabs — see the first two bullets of this section.
 * **HTTP/3 is advertised, not impersonated.** `roundtripper.go:145` always dials
-  TCP, the transport is then chosen from the negotiated ALPN (`:188`), and real
-  servers answer `h2` — so the `h3` in a Chrome profile's ALPN is only a claim. If a
-  server ever does negotiate `h3` over TCP, `roundtripper.go:265-315` builds an
-  `http3.Transport` from a `tls.Config` that carries **no `ClientHelloID`** and then
+  TCP, the transport is then chosen from the negotiated ALPN (`:188`), and most
+  servers answer `h2` — so even with `with_http3: true` (off by default since 1.3.0,
+  see §6) the `h3` in a Chrome profile's ALPN is only a claim. One that does take it
+  is `http3.is` (Fastly): the client then follows the answer with a real QUIC
+  connection, and `tests/http3_test.go` pins both sides of it. That
+  connection is built from a `tls.Config` that carries **no `ClientHelloID`** (`:265-315`) and then
   dials a fresh UDP connection: the handshake is the library's own Go/utls hello,
   not the browser you asked for, and the profile's proxy and `disableIPV4/6` do not
   follow it (the `network == "tcp"` guard at `:141`). Nothing reads `Alt-Svc`, so an

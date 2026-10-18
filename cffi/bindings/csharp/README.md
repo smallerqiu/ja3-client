@@ -59,7 +59,7 @@ them:
 | `SourceIp` | `source_ip` | string | | local address to bind |
 | `Timeout` | `timeout` | int | 30 | seconds; `0` keeps the library default |
 | `ForceHttp1` | `force_http1` | bool | false | never negotiate HTTP/2 |
-| `WithHttp3` | `with_http3` | bool? | profile default | `null` keeps the profile's choice, `false` removes `h3` from ALPN — see [HTTP/3](#http3) |
+| `WithHttp3` | `with_http3` | bool? | off | `null` and `false` send `h2, http/1.1`; only `true` prepends `h3` — see [HTTP/3](#http3) |
 | `RandomExtensionOrder` | `random_extension_order` | bool | false | shuffle the TLS extension order |
 | `NotFollowRedirects` | `not_follow_redirects` | bool | false | stop at a 3xx instead of following it |
 | `WithDebug` | `with_debug` | bool | false | library debug logging to stderr |
@@ -217,22 +217,16 @@ exception too.
 
 ## HTTP/3
 
-Some profiles advertise `h3` in their ALPN list and some do not — the Chrome, Edge, Opera
-and Brave anchors do (`h3, h2, http/1.1`), Firefox and Safari do not (`h2, http/1.1`). Two
-things follow, and both surprise people:
+Off by default. Every profile sends the ALPN list a real browser sends over TCP —
+`h2, http/1.1` — and HTTP/3 is reached through `Alt-Svc` rather than by claiming `h3`
+in a TCP handshake. Pass `WithHttp3 = true` on a request to advertise `h3` as well.
 
-* Fingerprint sites disagree about what to report. browserleaks reads the **first** ALPN
-  entry and shows `ja4` as `t13d1516h3` for `chrome_141`, while tls.peet.ws reports
-  `t13d1516h2` for the same ClientHello. `WithHttp3 = false` puts browserleaks back to
-  `h2`, which is what you want when comparing against a browser capture.
-* When a server answers `h3` over TCP ALPN, the client opens a separate QUIC connection
-  whose ClientHello is the library's own, **not** the browser you asked to impersonate.
-  Treat HTTP/3 as advertised, not impersonated; some hosts also end up as `error_code: 5`
-  with an `H3 error` or a timeout.
-
-Leave the default alone otherwise. Under heavy concurrent traffic against
-Cloudflare-fronted sites, the same Chrome profile with `h3` removed drew clearly more
-challenges and errors than with it on.
+Two things to know when you do: browserleaks then scores `ja4` with an `h3` tag, so a
+comparison against a browser capture is no longer like for like; and if a server accepts
+`h3`, the client continues on a **separate QUIC connection** whose ClientHello is the
+library's own, not the browser you asked to impersonate — some hosts also end up as
+`error_code: 5` with an `H3 error` or a timeout. Treat HTTP/3 as advertised, not
+impersonated.
 
 ## Where the library comes from
 
